@@ -4,8 +4,9 @@
 #include "cef_handler.h"
 #include "cef_embed_window_linux.h"
 
-QPointer<QWidget> CefWidget::EmbedBrowser(QMainWindow *main_win,
-                                          QLineEdit *url_line_edit) {
+//TODO
+/*
+QPointer<QWidget> CefWidget::EmbedBrowser() {
   CefWindowInfo win_info;
   auto win = new CefEmbedWindow(this);
   win_info.SetAsChild((CefWindowHandle) win->winId(),
@@ -40,3 +41,4 @@ void CefWidget::UpdateSize() {
     browser_host->NotifyMoveOrResizeStarted();
   }
 }
+*/

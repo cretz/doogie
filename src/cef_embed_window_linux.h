@@ -7,7 +7,7 @@
 class CefEmbedWindow : public QWindow {
   Q_OBJECT
  public:
-  CefEmbedWindow(QPointer<CefWidget> cef_widget, QWindow *parent = 0);
+  CefEmbedWindow(QPointer<CefWidget> cef_widget, QWindow *parent = nullptr);
  protected:
   void moveEvent(QMoveEvent *);
   void resizeEvent(QResizeEvent *);

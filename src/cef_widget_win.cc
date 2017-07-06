@@ -1,23 +1,18 @@
 #include "cef_widget.h"
 #include <Windows.h>
 #include "include/cef_client.h"
-#include "cef_handler.h"
 
-QPointer<QWidget> CefWidget::EmbedBrowser(QMainWindow *main_win,
-                                          QLineEdit *url_line_edit) {
+void CefWidget::InitBrowser() {
   CefWindowInfo win_info;
   win_info.SetAsChild((CefWindowHandle) winId(),
                       RECT { 0, 0, width(), height() });
   CefBrowserSettings settings;
-  CefRefPtr<CefHandler> handler(new CefHandler(main_win,
-                                               url_line_edit,
-                                               this));
+  handler_ = CefRefPtr<CefHandler>(new CefHandler());
   browser_ = CefBrowserHost::CreateBrowserSync(win_info,
-                                               handler,
+                                               handler_,
                                                CefString("http://example.com"),
                                                settings,
                                                nullptr);
-  return NULL;
 }
 
 void CefWidget::UpdateSize() {

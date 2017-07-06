@@ -9,7 +9,7 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
-  MainWindow(Cef *cef, QWidget *parent = 0);
+  MainWindow(Cef *cef, QWidget *parent = nullptr);
   ~MainWindow();
 
  protected:
@@ -17,12 +17,6 @@ class MainWindow : public QMainWindow {
 
  private:
   Cef *cef_;
-  CefWidget *cef_widg_;
-  QLineEdit *url_line_edit_;
-  QGridLayout *layout;
-
- private slots:
-  void UrlEntered();
 };
 
 #endif // DOOGIE_MAINWINDOW_H_

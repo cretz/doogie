@@ -8,18 +8,26 @@ CONFIG += c++14
 # We want a console window for logs during debug
 debug:CONFIG += console
 
+# Keep all sources and headers in alphabetical order
+
 SOURCES += \
+    browser_stack.cc \
+    browser_widget.cc \
     cef.cc \
     cef_handler.cc \
     cef_widget.cc \
     main.cc \
-    main_window.cc
+    main_window.cc \
+    page_tree.cc
 
 HEADERS  += \
+    browser_stack.h \
+    browser_widget.h \
     cef.h \
     cef_handler.h \
     cef_widget.h \
-    main_window.h
+    main_window.h \
+    page_tree.h
 
 release:PROFILE = Release
 debug:PROFILE = Debug

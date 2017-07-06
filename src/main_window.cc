@@ -1,4 +1,6 @@
 #include "main_window.h"
+#include "page_tree.h"
+#include "browser_stack.h"
 
 MainWindow::MainWindow(Cef *cef, QWidget *parent)
     : QMainWindow(parent), cef_(cef) {
@@ -13,26 +15,11 @@ MainWindow::MainWindow(Cef *cef, QWidget *parent)
   setFocusPolicy(Qt::FocusPolicy::StrongFocus);
   resize(1024, 768);
 
-  cef_widg_ = new CefWidget(cef);
+  auto browser_stack = new BrowserStack(cef, this);
+  setCentralWidget(browser_stack);
 
-  url_line_edit_ = new QLineEdit;
-  connect(url_line_edit_, SIGNAL(returnPressed()), this, SLOT(UrlEntered()));
-
-  auto layout = new QGridLayout;
-  layout->addWidget(url_line_edit_, 0, 0);
-  layout->addWidget(cef_widg_, 1, 0);
-  layout->setContentsMargins(0, 0, 0, 0);
-  layout->setSpacing(0);
-  layout->setRowStretch(0, 0);
-  layout->setRowStretch(1, 1);
-  auto frame = new QFrame;
-  frame->setLayout(layout);
-  setCentralWidget(frame);
-
-  auto override_widg = cef_widg_->EmbedBrowser(this, url_line_edit_);
-  if (override_widg) {
-    layout->addWidget(override_widg, 1, 0);
-  }
+  auto page_tree = new PageTree(browser_stack, this);
+  addDockWidget(Qt::LeftDockWidgetArea, page_tree);
 }
 
 MainWindow::~MainWindow() {
@@ -40,8 +27,4 @@ MainWindow::~MainWindow() {
 
 void MainWindow::timerEvent(QTimerEvent*) {
   cef_->Tick();
-}
-
-void MainWindow::UrlEntered() {
-  cef_widg_->LoadUrl(url_line_edit_->text());
 }

@@ -1,11 +1,19 @@
 #include "cef_widget.h"
 
-CefWidget::CefWidget(Cef *cef, QWidget *parent) : QWidget(parent), cef_(cef) {}
+CefWidget::CefWidget(Cef *cef, QWidget *parent) : QWidget(parent), cef_(cef) {
+  InitBrowser();
+
+  connect(handler_, &CefHandler::UrlChanged, this, &CefWidget::UrlChanged);
+}
 
 CefWidget::~CefWidget() {
   if (browser_) {
     browser_->GetHost()->CloseBrowser(true);
   }
+}
+
+QPointer<QWidget> CefWidget::OverrideWidget() {
+  return override_widget_;
 }
 
 void CefWidget::LoadUrl(const QString &url) {
