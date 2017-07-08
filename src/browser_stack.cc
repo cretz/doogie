@@ -5,8 +5,8 @@ BrowserStack::BrowserStack(Cef *cef, QWidget *parent)
 
 }
 
-QPointer<BrowserWidget> BrowserStack::NewBrowser() {
-  auto widg = new BrowserWidget(cef_);
+QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString &url) {
+  auto widg = new BrowserWidget(cef_, url);
   addWidget(widg);
   return widg;
 }

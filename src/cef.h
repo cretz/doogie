@@ -1,7 +1,16 @@
 #ifndef DOOGIE_CEF_H_
 #define DOOGIE_CEF_H_
 
+#if defined(_MSC_VER)
+# pragma warning(push)
+# pragma warning(disable: 4100)
+#endif
 #include "include/cef_app.h"
+#include "include/cef_browser.h"
+#include "include/cef_client.h"
+#if defined(_MSC_VER)
+# pragma warning(pop)
+#endif
 
 class Cef {
  public:

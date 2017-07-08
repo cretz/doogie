@@ -1,7 +1,20 @@
 #include "browser_widget.h"
 
-BrowserWidget::BrowserWidget(Cef *cef, QWidget *parent) : QWidget(parent), cef_(cef) {
-  cef_widg_ = new CefWidget(cef, this);
+BrowserWidget::BrowserWidget(Cef *cef,
+                             const QString &url,
+                             QWidget *parent)
+    : QWidget(parent), cef_(cef) {
+  cef_widg_ = new CefWidget(cef, url, this);
+  connect(cef_widg_, &CefWidget::TitleChanged,
+          this, &BrowserWidget::TitleChanged);
+  connect(cef_widg_, &CefWidget::FaviconChanged,
+          this, &BrowserWidget::FaviconChanged);
+  connect(cef_widg_, &CefWidget::TabOpen,
+          [this](CefRequestHandler::WindowOpenDisposition type,
+                 const QString &url,
+                 bool user_gesture) {
+    emit TabOpen((WindowOpenType) type, url, user_gesture);
+  });
 
   url_edit_ = new QLineEdit(this);
   connect(url_edit_, &QLineEdit::returnPressed, [this]() {
@@ -24,4 +37,42 @@ BrowserWidget::BrowserWidget(Cef *cef, QWidget *parent) : QWidget(parent), cef_(
   connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString &url) {
     url_edit_->setText(url);
   });
+
+  status_bar_ = new QStatusBar(this);
+  status_bar_->setSizeGripEnabled(false);
+  status_bar_->hide();
+  // TODO: intelligently set the width based on message size,
+  //  placement of scrollbars, mouse position, and window size
+  // TODO: handle overflow w/ ellipses
+  status_bar_->resize(300, status_bar_->height());
+  this->UpdateStatusBarLocation();
+  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString &status) {
+    if (status.isEmpty()) {
+      status_bar_->hide();
+      status_bar_->clearMessage();
+    } else {
+      status_bar_->showMessage(status);
+      status_bar_->show();
+    }
+  });
+}
+
+void BrowserWidget::FocusUrlEdit() {
+  url_edit_->setFocus();
+}
+
+void BrowserWidget::FocusBrowser() {
+  cef_widg_->setFocus();
+}
+
+void BrowserWidget::moveEvent(QMoveEvent *event) {
+  this->UpdateStatusBarLocation();
+}
+
+void BrowserWidget::resizeEvent(QResizeEvent *event) {
+  this->UpdateStatusBarLocation();
+}
+
+void BrowserWidget::UpdateStatusBarLocation() {
+  status_bar_->move(0, this->height() - status_bar_->height());
 }

@@ -2,6 +2,7 @@
 #define DOOGIE_CEFEMBEDWINDOW_H_
 
 #include <QtWidgets>
+#include "cef.h"
 #include "cef_widget.h"
 
 class CefEmbedWindow : public QWindow {

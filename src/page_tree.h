@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "browser_stack.h"
+#include "page_tree_item.h"
 
 class PageTree : public QDockWidget {
   Q_OBJECT
@@ -11,6 +12,12 @@ class PageTree : public QDockWidget {
 
  private:
   BrowserStack *browser_stack_;
+  QTreeWidget *tree_;
+  PageTreeItem *active_item_;
+
+  void AddBrowser(QPointer<BrowserWidget> browser,
+                  PageTreeItem *parent,
+                  bool make_current);
 };
 
 #endif // DOOGIE_PAGETREE_H_

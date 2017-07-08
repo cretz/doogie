@@ -9,7 +9,7 @@ class BrowserStack : public QStackedWidget {
  public:
   explicit BrowserStack(Cef *cef, QWidget *parent = nullptr);
 
-  QPointer<BrowserWidget> NewBrowser();
+  QPointer<BrowserWidget> NewBrowser(const QString &url);
 
  private:
   Cef *cef_;

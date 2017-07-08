@@ -18,7 +18,8 @@ SOURCES += \
     cef_widget.cc \
     main.cc \
     main_window.cc \
-    page_tree.cc
+    page_tree.cc \
+    page_tree_item.cc
 
 HEADERS  += \
     browser_stack.h \
@@ -27,7 +28,8 @@ HEADERS  += \
     cef_handler.h \
     cef_widget.h \
     main_window.h \
-    page_tree.h
+    page_tree.h \
+    page_tree_item.h
 
 release:PROFILE = Release
 debug:PROFILE = Debug
