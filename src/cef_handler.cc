@@ -25,6 +25,10 @@ void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
   }
 }
 
+void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
+  emit FocusObtained();
+}
+
 bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                   CefRefPtr<CefFrame> frame,
                                   const CefString &target_url,

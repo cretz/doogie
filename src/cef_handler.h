@@ -39,6 +39,9 @@ class CefHandler :
   virtual void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
                                   const std::vector<CefString>& icon_urls) override;
 
+  // Focus handler overrides...
+  virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
+
   // Request handler overrides...
   virtual bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
@@ -54,6 +57,7 @@ class CefHandler :
   void StatusChanged(const QString &status);
   // Empty if no URL
   void FaviconUrlChanged(const QString &url);
+  void FocusObtained();
   void TabOpen(CefRequestHandler::WindowOpenDisposition type,
                const QString &url,
                bool user_gesture);

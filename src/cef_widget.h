@@ -17,6 +17,8 @@ class CefWidget : public QWidget {
   void UpdateSize();
 
  protected:
+  void focusInEvent(QFocusEvent *event);
+  void focusOutEvent(QFocusEvent *event);
   void moveEvent(QMoveEvent *event);
   void resizeEvent(QResizeEvent *event);
 

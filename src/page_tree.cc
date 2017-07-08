@@ -1,42 +1,22 @@
 #include "page_tree.h"
 
 PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
-    : QDockWidget("Pages", parent),
-      browser_stack_(browser_stack) {
-  active_item_ = nullptr;
-  setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-  setFeatures(QDockWidget::DockWidgetMovable |
-              QDockWidget::DockWidgetFloatable);
-
-  // Create tree
-  tree_ = new QTreeWidget(this);
-  tree_->setColumnCount(1);
-  tree_->setHeaderHidden(true);
-  tree_->setCursor(Qt::PointingHandCursor);
-  //tree_->setRootIsDecorated(false);
-  tree_->setSelectionMode(QAbstractItemView::ExtendedSelection);
-  tree_->setDragDropMode(QAbstractItemView::InternalMove);
-  tree_->setDefaultDropAction(Qt::MoveAction);
-  tree_->setDragEnabled(true);
-  tree_->setDropIndicatorShown(true);
-  tree_->setAcceptDrops(true);
-
-  // Add the add page button on the bottom
-  auto add_page_button_item = new QTreeWidgetItem();
-  add_page_button_item->setFlags(Qt::ItemIsEnabled | Qt::ItemNeverHasChildren);
-  tree_->insertTopLevelItem(0, add_page_button_item);
-  auto add_page_button = new QPushButton("New Page...");
-  add_page_button->setFlat(true);
-  add_page_button->setStyleSheet("text-align: left; color: blue; font-weight: bold;");
-  tree_->setItemWidget(add_page_button_item, 0, add_page_button);
-  connect(add_page_button, &QAbstractButton::clicked, [this]() {
-    auto browser = browser_stack_->NewBrowser("");
-    AddBrowser(browser, nullptr, true);
-    browser->FocusUrlEdit();
-  });
+    : QTreeWidget(parent), browser_stack_(browser_stack) {
+  setColumnCount(1);
+  setHeaderHidden(true);
+  setCursor(Qt::PointingHandCursor);
+  setSelectionMode(QAbstractItemView::ExtendedSelection);
+  setDragDropMode(QAbstractItemView::InternalMove);
+  setDefaultDropAction(Qt::MoveAction);
+  setDragEnabled(true);
+  setDropIndicatorShown(true);
+  setAcceptDrops(true);
+  setAutoExpandDelay(500);
+  setIndentation(10);
+  setAnimated(true);
 
   // Each time one is selected, we need to make sure to show that on the stack
-  connect(tree_, &QTreeWidget::currentItemChanged,
+  connect(this, &QTreeWidget::currentItemChanged,
           [this](QTreeWidgetItem *current, QTreeWidgetItem *previous) {
     // Deactivate previous
     if (previous) {
@@ -45,7 +25,7 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
       previous->setFont(0, old_font);
     }
     // Just ignore it if it's the last top level item
-    if (tree_->indexOfTopLevelItem(current) != tree_->topLevelItemCount() - 1) {
+    if (current) {
       auto page_item = static_cast<PageTreeItem*>(current);
       browser_stack_->setCurrentWidget(page_item->Browser());
       auto new_font = page_item->font(0);
@@ -53,8 +33,24 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
       page_item->setFont(0, new_font);
     }
   });
+}
 
-  setWidget(tree_);
+void PageTree::NewBrowser() {
+  auto browser = browser_stack_->NewBrowser("");
+  AddBrowser(browser, nullptr, true);
+  browser->FocusUrlEdit();
+}
+
+Qt::DropActions PageTree::supportedDropActions() const {
+  // return Qt::MoveAction;
+  return QTreeWidget::supportedDropActions();
+}
+
+void PageTree::dropEvent(QDropEvent *event) {
+  // Due to bad internal Qt logic, we reset the current here
+  auto current = currentItem();
+  QTreeWidget::dropEvent(event);
+  setCurrentItem(current);
 }
 
 void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
@@ -70,12 +66,11 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
       parent->setExpanded(true);
     }
   } else {
-    tree_->insertTopLevelItem(tree_->topLevelItemCount() - 1, browser_item);
+    addTopLevelItem(browser_item);
   }
   // Whether to set it as the current active
   if (make_current) {
-    tree_->setCurrentItem(browser_item);
-    browser->FocusBrowser();
+    setCurrentItem(browser_item);
   }
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::TabOpen,
@@ -88,5 +83,6 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
       parent = browser_item;
     }
     AddBrowser(browser_stack_->NewBrowser(url), parent, make_current);
+    if (make_current) browser_item->Browser()->FocusBrowser();
   });
 }

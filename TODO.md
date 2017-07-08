@@ -6,3 +6,4 @@
 * Configurable set of tab-open-styles to do certain things instead of assuming all non-normal clicks are of a certain
   type
 * Better default no-favicon and "(New Window)" defaults
+* Change focus proxy of main window to active browser window

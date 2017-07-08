@@ -19,6 +19,7 @@ SOURCES += \
     main.cc \
     main_window.cc \
     page_tree.cc \
+    page_tree_dock.cc \
     page_tree_item.cc
 
 HEADERS  += \
@@ -29,7 +30,11 @@ HEADERS  += \
     cef_widget.h \
     main_window.h \
     page_tree.h \
+    page_tree_dock.h \
     page_tree_item.h
+
+RESOURCES += \
+    doogie.qrc
 
 release:PROFILE = Release
 debug:PROFILE = Debug

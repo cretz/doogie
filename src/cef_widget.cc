@@ -44,17 +44,27 @@ void CefWidget::LoadUrl(const QString &url) {
   }
 }
 
-void CefWidget::moveEvent(QMoveEvent *event) {
+void CefWidget::focusInEvent(QFocusEvent *event) {
+  QWidget::focusInEvent(event);
+  browser_->GetHost()->SetFocus(true);
+}
+
+void CefWidget::focusOutEvent(QFocusEvent *event) {
+  QWidget::focusOutEvent(event);
+  browser_->GetHost()->SetFocus(false);
+}
+
+void CefWidget::moveEvent(QMoveEvent *) {
   this->UpdateSize();
 }
 
-void CefWidget::resizeEvent(QResizeEvent *event) {
+void CefWidget::resizeEvent(QResizeEvent *) {
   this->UpdateSize();
 }
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
-    const CefString &image_url,
-    int http_status_code,
+    const CefString &,
+    int,
     CefRefPtr<CefImage> image) {
   // TODO: should I somehow check if the page has changed before this came back?
   QIcon icon;
@@ -69,7 +79,7 @@ void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
       std::vector<uchar> data(size);
       png->GetData(&data[0], size, 0);
       QPixmap pixmap;
-      if (!pixmap.loadFromData(&data[0], size, "PNG")) {
+      if (!pixmap.loadFromData(&data[0], (uint)size, "PNG")) {
         qDebug("Unable to convert icon as PNG");
       } else {
         icon.addPixmap(pixmap);

@@ -1,5 +1,5 @@
 #include "main_window.h"
-#include "page_tree.h"
+#include "page_tree_dock.h"
 #include "browser_stack.h"
 
 MainWindow::MainWindow(Cef *cef, QWidget *parent)
@@ -18,7 +18,7 @@ MainWindow::MainWindow(Cef *cef, QWidget *parent)
   auto browser_stack = new BrowserStack(cef, this);
   setCentralWidget(browser_stack);
 
-  auto page_tree = new PageTree(browser_stack, this);
+  auto page_tree = new PageTreeDock(browser_stack, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree);
 }
 

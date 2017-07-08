@@ -19,6 +19,7 @@ BrowserWidget::BrowserWidget(Cef *cef,
   url_edit_ = new QLineEdit(this);
   connect(url_edit_, &QLineEdit::returnPressed, [this]() {
     cef_widg_->LoadUrl(url_edit_->text());
+    cef_widg_->setFocus();
   });
   auto layout = new QGridLayout;
   layout->addWidget(url_edit_, 0, 0);
@@ -59,17 +60,18 @@ BrowserWidget::BrowserWidget(Cef *cef,
 
 void BrowserWidget::FocusUrlEdit() {
   url_edit_->setFocus();
+  url_edit_->activateWindow();
 }
 
 void BrowserWidget::FocusBrowser() {
   cef_widg_->setFocus();
 }
 
-void BrowserWidget::moveEvent(QMoveEvent *event) {
+void BrowserWidget::moveEvent(QMoveEvent *) {
   this->UpdateStatusBarLocation();
 }
 
-void BrowserWidget::resizeEvent(QResizeEvent *event) {
+void BrowserWidget::resizeEvent(QResizeEvent *) {
   this->UpdateStatusBarLocation();
 }
 

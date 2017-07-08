@@ -3,17 +3,20 @@
 
 #include <QtWidgets>
 #include "browser_stack.h"
+#include "browser_widget.h"
 #include "page_tree_item.h"
 
-class PageTree : public QDockWidget {
+class PageTree : public QTreeWidget {
   Q_OBJECT
  public:
-  PageTree(BrowserStack *browser_stack, QWidget *parent = nullptr);
+  explicit PageTree(BrowserStack *browser_stack, QWidget *parent = nullptr);
 
+  void NewBrowser();
+ protected:
+  virtual Qt::DropActions supportedDropActions() const override;
+  virtual void dropEvent(QDropEvent *event) override;
  private:
   BrowserStack *browser_stack_;
-  QTreeWidget *tree_;
-  PageTreeItem *active_item_;
 
   void AddBrowser(QPointer<BrowserWidget> browser,
                   PageTreeItem *parent,
