@@ -24,18 +24,40 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
   });
 }
 
+PageTreeItem::~PageTreeItem() {
+  // TODO: do I need to delete the close button?
+}
+
 QPointer<BrowserWidget> PageTreeItem::Browser() {
   return browser_;
 }
 
+QToolButton* PageTreeItem::CloseButton() {
+  return close_button_;
+}
+
 void PageTreeItem::AfterAdded() {
-  // Create the close button
-  auto close_button = new QToolButton();
-  close_button->setIcon(QIcon(":/res/images/fontawesome/times.png"));
-  close_button->setText("Close");
-  close_button->setAutoRaise(true);
-  treeWidget()->connect(close_button, &QAbstractButton::clicked, [this](bool) {
+  close_button_ = new QToolButton();
+  close_button_->setCheckable(true);
+  close_button_->setIcon(QIcon(":/res/images/fontawesome/times.png"));
+  close_button_->setText("Close");
+  close_button_->setAutoRaise(true);
+  close_button_->setStyleSheet(":pressed:!checked { background-color: transparent; }");
+  // Yes, we know we can override one already set, on purpose. When moving
+  // items, Qt deletes it (I think, TODO: check life span and ownership of this
+  // button as these items are moved).
+  treeWidget()->connect(close_button_, &QAbstractButton::clicked, [this](bool) {
     emit ((PageTree*)treeWidget())->ItemClose(this);
   });
-  treeWidget()->setItemWidget(this, 1, close_button);
+  treeWidget()->connect(close_button_, &QAbstractButton::pressed, [this]() {
+    emit ((PageTree*)treeWidget())->ItemClosePress(this);
+  });
+  treeWidget()->connect(close_button_, &QAbstractButton::released, [this]() {
+    emit ((PageTree*)treeWidget())->ItemCloseRelease(this);
+  });
+  treeWidget()->setItemWidget(this, 1, close_button_);
+  // Gotta call it on my children too sadly
+  for (int i = 0; i < childCount(); i++) {
+    ((PageTreeItem*)child(i))->AfterAdded();
+  }
 }

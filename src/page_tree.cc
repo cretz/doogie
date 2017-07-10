@@ -36,11 +36,32 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
     }
   });
 
-  // Close browser and delete item when closed
-  connect(this, &PageTree::ItemClose, [this](PageTreeItem* item) {
-    browser_stack_->removeWidget(item->Browser());
-    delete item->Browser();
-    delete item;
+  // Connect the simple close
+  connect(this, &PageTree::ItemClose, this, &PageTree::CloseItem);
+
+  connect(this, &PageTree::ItemCloseRelease, [this](PageTreeItem* item) {
+    auto button_down = QApplication::mouseButtons().testFlag(Qt::LeftButton);
+    if (button_down) {
+      item->CloseButton()->setDown(true);
+
+      // First drag?
+      if (!close_dragging_) {
+        close_dragging_ = true;
+        close_dragging_on_ = item;
+        item->CloseButton()->setChecked(true);
+      }
+
+      // We are dragging, grab the one under the mouse
+      auto local_pos = mapFromGlobal(QCursor::pos());
+      auto mouse_item = (PageTreeItem*)itemAt(local_pos);
+      // Only applies if there is a close button under the mouse. It also
+      // can't be the last one we saw being dragged on
+      if (mouse_item && mouse_item != close_dragging_on_ && columnAt(local_pos.x()) == 1) {
+        // Flip the checked state
+        mouse_item->CloseButton()->setChecked(!mouse_item->CloseButton()->isChecked());
+        close_dragging_on_ = mouse_item;
+      }
+    }
   });
 }
 
@@ -62,14 +83,43 @@ void PageTree::dropEvent(QDropEvent *event) {
   setCurrentItem(current);
 }
 
+void PageTree::mousePressEvent(QMouseEvent *event) {
+  QTreeWidget::mousePressEvent(event);
+}
+
 void PageTree::mouseMoveEvent(QMouseEvent *event) {
+  // Prevent the drag-select
   if (state() != DragSelectingState) {
-    QTreeView::mouseMoveEvent(event);
+    QTreeWidget::mouseMoveEvent(event);
+  }
+}
+
+void PageTree::mouseReleaseEvent(QMouseEvent *event) {
+  QTreeWidget::mouseReleaseEvent(event);
+  if (close_dragging_) {
+    // Close-button drag has completed, close what's checked
+    close_dragging_on_ = nullptr;
+    close_dragging_ = false;
+    // Obtain a list of what to close
+    QTreeWidgetItemIterator it(this);
+    QList<QPersistentModelIndex> to_close;
+    while (*it) {
+      auto tree_item = (PageTreeItem*)*it;
+      if (tree_item->CloseButton()->isChecked()) {
+        to_close.append(indexFromItem(tree_item));
+      }
+      ++it;
+    }
+    // Now try to close each one
+    for (const auto &index : to_close) {
+      auto tree_item = (PageTreeItem*)itemFromIndex(index);
+      if (tree_item) CloseItem(tree_item);
+    }
   }
 }
 
 void PageTree::rowsInserted(const QModelIndex &parent, int start, int end) {
-  // We have to override this to call after-added due to how row
+  // We have to override this to re-add the child widget due to how row
   // movement occurs.
   // Ref: https://stackoverflow.com/questions/25559221/qtreewidgetitem-issue-items-set-using-setwidgetitem-are-dispearring-after-movin
   for (int i = start; i <= end; i++) {
@@ -112,4 +162,25 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
     AddBrowser(browser_stack_->NewBrowser(url), parent, make_current);
     if (make_current) browser_item->Browser()->FocusBrowser();
   });
+}
+
+void PageTree::CloseItem(PageTreeItem *item) {
+  // If we have children and we are expanded, we do not delete them, we move em up
+  if (item->isExpanded()) {
+    if (item->parent()) {
+      item->parent()->insertChildren(item->parent()->indexOfChild(item), item->takeChildren());
+    } else {
+      insertTopLevelItems(indexOfTopLevelItem(item), item->takeChildren());
+    }
+  } else {
+    // Gotta go over each child and delete the browser stuff
+    for (int i = 0; i < item->childCount(); i++) {
+      auto child_item = (PageTreeItem*) item->child(i);
+      browser_stack_->removeWidget(child_item->Browser());
+      delete child_item->Browser();
+    }
+  }
+  browser_stack_->removeWidget(item->Browser());
+  delete item->Browser();
+  delete item;
 }
