@@ -1,4 +1,5 @@
 #include "page_tree_item.h"
+#include "page_tree.h"
 
 PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     : browser_(browser) {
@@ -25,4 +26,16 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
 
 QPointer<BrowserWidget> PageTreeItem::Browser() {
   return browser_;
+}
+
+void PageTreeItem::AfterAdded() {
+  // Create the close button
+  auto close_button = new QToolButton();
+  close_button->setIcon(QIcon(":/res/images/fontawesome/times.png"));
+  close_button->setText("Close");
+  close_button->setAutoRaise(true);
+  treeWidget()->connect(close_button, &QAbstractButton::clicked, [this](bool) {
+    emit ((PageTree*)treeWidget())->ItemClose(this);
+  });
+  treeWidget()->setItemWidget(this, 1, close_button);
 }

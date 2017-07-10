@@ -9,6 +9,7 @@ class CefHandler :
     public CefClient,
     public CefDisplayHandler,
     public CefFocusHandler,
+    public CefLifeSpanHandler,
     public CefRequestHandler {
   Q_OBJECT
  public:
@@ -19,6 +20,10 @@ class CefHandler :
   }
 
   virtual CefRefPtr<CefFocusHandler> GetFocusHandler() override {
+    return this;
+  }
+
+  virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override {
     return this;
   }
 
@@ -41,6 +46,13 @@ class CefHandler :
 
   // Focus handler overrides...
   virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
+
+  // Life span handler overrides...
+  virtual bool DoClose(CefRefPtr<CefBrowser> browser) override {
+    // Per the docs, we want to return tru here to prevent CEF from
+    // closing our window.
+    return true;
+  }
 
   // Request handler overrides...
   virtual bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,

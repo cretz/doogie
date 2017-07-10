@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/res">
         <file>images/fontawesome/plus.png</file>
+        <file>images/fontawesome/times.png</file>
     </qresource>
 </RCC>

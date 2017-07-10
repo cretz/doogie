@@ -8,6 +8,7 @@ class PageTreeItem : public QTreeWidgetItem {
  public:
   explicit PageTreeItem(QPointer<BrowserWidget> browser);
   QPointer<BrowserWidget> Browser();
+  void AfterAdded();
  private:
   QPointer<BrowserWidget> browser_;
 };
