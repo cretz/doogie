@@ -22,6 +22,8 @@ Before running the build script on Windows, you must have the prerequisites:
 
 ### Linux Prerequisites
 
+(NOTE: Linux support is not yet complete)
+
 Before running the build script on Windows, you must have the prerequisites:
 
 * Latest Qt (5.x) installed w/ `qmake` on the `PATH`

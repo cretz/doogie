@@ -4,6 +4,7 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
     : QTreeWidget(parent), browser_stack_(browser_stack) {
   setColumnCount(2);
   setHeaderHidden(true);
+  setSelectionBehavior(QAbstractItemView::SelectItems);
   setSelectionMode(QAbstractItemView::ExtendedSelection);
   setDragDropMode(QAbstractItemView::InternalMove);
   setDefaultDropAction(Qt::MoveAction);
@@ -84,17 +85,65 @@ void PageTree::dropEvent(QDropEvent *event) {
 }
 
 void PageTree::mousePressEvent(QMouseEvent *event) {
+  // We start a rubber band selection if left of the tree or if there is no
+  // item where we pressed.
+  auto item = itemAt(event->pos());
+  if (event->x() <= indentation() || !item) {
+    // We'll clear the select if control is not pressed
+    if (!QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+      clearSelection();
+      rubber_band_orig_selected_ = QItemSelection();
+    } else {
+      rubber_band_orig_selected_ = selectionModel()->selection();
+    }
+    rubber_band_origin_ = event->pos();
+    if (!rubber_band_) {
+      rubber_band_ = new QRubberBand(QRubberBand::Rectangle, this);
+    }
+    rubber_band_->setGeometry(QRect(rubber_band_origin_, QSize()));
+    rubber_band_->show();
+    // As a special case, if the item doesn't have children and the click
+    // was in the indentation, we don't want to continue because it starts
+    // a drag. But we do want to continue if it has children because that's
+    // where the expander button is.
+    if (event->x() <= indentation() && item && item->childCount() == 0) {
+      return;
+    }
+  }
   QTreeWidget::mousePressEvent(event);
 }
 
 void PageTree::mouseMoveEvent(QMouseEvent *event) {
-  // Prevent the drag-select
+  // If we are rubber band selecting, keep using that
+  if (rubber_band_ && !rubber_band_->isHidden()) {
+    // Restore the selection we knew
+    selectionModel()->select(rubber_band_orig_selected_,
+                             QItemSelectionModel::ClearAndSelect);
+    // Basically, we are just going to take a peek at the top and then work
+    // downwards Selecting the first column.
+    auto rect = QRect(rubber_band_origin_, event->pos()).normalized();
+    auto index = indexAt(QPoint(0, rect.top()));
+    while (index.isValid()) {
+      // We toggle here so during ctrl+drag they can keep the originals
+      selectionModel()->select(index, QItemSelectionModel::Toggle);
+      index = indexBelow(index);
+      if (index.isValid() && visualRect(index).y() > rect.bottom()) {
+        index = QModelIndex();
+      }
+    }
+    rubber_band_->setGeometry(QRect(rubber_band_origin_, event->pos()).normalized());
+  }
   if (state() != DragSelectingState) {
+    // Prevent the drag-select
     QTreeWidget::mouseMoveEvent(event);
   }
 }
 
 void PageTree::mouseReleaseEvent(QMouseEvent *event) {
+  // End rubber band selection
+  if (rubber_band_ && !rubber_band_->isHidden()) {
+    rubber_band_->hide();
+  }
   QTreeWidget::mouseReleaseEvent(event);
   if (close_dragging_) {
     // Close-button drag has completed, close what's checked
@@ -172,12 +221,15 @@ void PageTree::CloseItem(PageTreeItem *item) {
     } else {
       insertTopLevelItems(indexOfTopLevelItem(item), item->takeChildren());
     }
-  } else {
-    // Gotta go over each child and delete the browser stuff
+  }
+  DestroyItem(item, !item->isExpanded());
+}
+
+void PageTree::DestroyItem(PageTreeItem *item, bool include_children) {
+  // We just call this recursively if include_children is true
+  if (include_children) {
     for (int i = 0; i < item->childCount(); i++) {
-      auto child_item = (PageTreeItem*) item->child(i);
-      browser_stack_->removeWidget(child_item->Browser());
-      delete child_item->Browser();
+      DestroyItem((PageTreeItem*) item->child(i), true);
     }
   }
   browser_stack_->removeWidget(item->Browser());

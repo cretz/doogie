@@ -21,14 +21,18 @@ class PageTree : public QTreeWidget {
                             int start,
                             int end) override;
  private:
-  BrowserStack *browser_stack_;
+  BrowserStack *browser_stack_ = nullptr;
   bool close_dragging_ = false;
-  PageTreeItem* close_dragging_on_;
+  PageTreeItem* close_dragging_on_ = nullptr;
+  QRubberBand* rubber_band_ = nullptr;
+  QPoint rubber_band_origin_;
+  QItemSelection rubber_band_orig_selected_;
 
   void AddBrowser(QPointer<BrowserWidget> browser,
                   PageTreeItem *parent,
                   bool make_current);
   void CloseItem(PageTreeItem *item);
+  void DestroyItem(PageTreeItem *item, bool include_children);
 
  signals:
   void ItemClose(PageTreeItem *item);
