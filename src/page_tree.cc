@@ -72,6 +72,23 @@ void PageTree::NewBrowser() {
   browser->FocusUrlEdit();
 }
 
+QMovie* PageTree::LoadingIconMovie() {
+  if (!loading_icon_movie_) {
+    loading_icon_movie_ = new QMovie(":/res/images/loading-icon.gif");
+    // We use a bad method to update the icon on frames of this,
+    // so slow it down.
+    loading_icon_movie_->setSpeed(70);
+  }
+  return loading_icon_movie_;
+}
+
+QIcon PageTree::CloseButtonIcon() {
+  if (close_button_icon_.isNull()) {
+    close_button_icon_ = QIcon(":/res/images/fontawesome/times.png");
+  }
+  return close_button_icon_;
+}
+
 Qt::DropActions PageTree::supportedDropActions() const {
   // return Qt::MoveAction;
   return QTreeWidget::supportedDropActions();
@@ -199,7 +216,7 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
     setCurrentItem(browser_item);
   }
   // Make all tab opens open as child
-  connect(browser, &BrowserWidget::TabOpen,
+  connect(browser, &BrowserWidget::PageOpen,
           [this, browser_item](BrowserWidget::WindowOpenType type,
                                const QString &url,
                                bool user_gesture) {

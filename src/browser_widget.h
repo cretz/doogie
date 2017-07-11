@@ -13,6 +13,11 @@ class BrowserWidget : public QWidget {
 
   void FocusUrlEdit();
   void FocusBrowser();
+  QIcon CurrentFavicon();
+  QString CurrentTitle();
+  bool Loading();
+  bool CanGoBack();
+  bool CanGoForward();
 
   // Matches CEF's numbering, don't change
   enum WindowOpenType {
@@ -38,13 +43,19 @@ class BrowserWidget : public QWidget {
   QLineEdit *url_edit_;
   CefWidget *cef_widg_;
   QStatusBar *status_bar_;
+  QIcon current_favicon_;
+  QString current_title_;
+  bool loading_ = false;
+  bool can_go_back_ = false;
+  bool can_go_forward_ = false;
 
   void UpdateStatusBarLocation();
 
  signals:
-  void TitleChanged(const QString &title);
-  void FaviconChanged(const QIcon &icon);
-  void TabOpen(WindowOpenType type, const QString &url, bool user_gesture);
+  void TitleChanged();
+  void FaviconChanged();
+  void LoadingStateChanged();
+  void PageOpen(WindowOpenType type, const QString &url, bool user_gesture);
 };
 
 #endif // DOOGIE_BROWSERWIDGET_H_

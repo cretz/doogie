@@ -13,7 +13,10 @@ class PageTreeItem : public QTreeWidgetItem {
   void AfterAdded();
  private:
   QPointer<BrowserWidget> browser_;
-  QToolButton* close_button_;
+  QToolButton* close_button_ = nullptr;
+  QMetaObject::Connection loading_icon_frame_conn_;
+
+  void ApplyFavicon();
 };
 
 #endif // DOOGIE_PAGETREEITEM_H_

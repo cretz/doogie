@@ -49,9 +49,12 @@ class CefWidget : public QWidget {
   void TitleChanged(const QString &title);
   void StatusChanged(const QString &status);
   void FaviconChanged(const QIcon &icon);
-  void TabOpen(CefRequestHandler::WindowOpenDisposition type,
-               const QString &url,
-               bool user_gesture);
+  void LoadStateChanged(bool is_loading,
+                        bool can_go_back,
+                        bool can_go_forward);
+  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
+                const QString &url,
+                bool user_gesture);
 };
 
 #endif // DOOGIE_CEFWIDGET_H_

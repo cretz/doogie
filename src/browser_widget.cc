@@ -5,15 +5,26 @@ BrowserWidget::BrowserWidget(Cef *cef,
                              QWidget *parent)
     : QWidget(parent), cef_(cef) {
   cef_widg_ = new CefWidget(cef, url, this);
-  connect(cef_widg_, &CefWidget::TitleChanged,
-          this, &BrowserWidget::TitleChanged);
-  connect(cef_widg_, &CefWidget::FaviconChanged,
-          this, &BrowserWidget::FaviconChanged);
-  connect(cef_widg_, &CefWidget::TabOpen,
+  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString &title) {
+    current_title_ = title;
+    emit TitleChanged();
+  });
+  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon &icon) {
+    current_favicon_ = icon;
+    emit FaviconChanged();
+  });
+  connect(cef_widg_, &CefWidget::LoadStateChanged,
+          [this](bool is_loading, bool can_go_back, bool can_go_forward) {
+    loading_ = is_loading;
+    can_go_back_ = can_go_back;
+    can_go_forward_ = can_go_forward;
+    emit LoadingStateChanged();
+  });
+  connect(cef_widg_, &CefWidget::PageOpen,
           [this](CefRequestHandler::WindowOpenDisposition type,
                  const QString &url,
                  bool user_gesture) {
-    emit TabOpen((WindowOpenType) type, url, user_gesture);
+    emit PageOpen((WindowOpenType) type, url, user_gesture);
   });
 
   url_edit_ = new QLineEdit(this);
@@ -65,6 +76,26 @@ void BrowserWidget::FocusUrlEdit() {
 
 void BrowserWidget::FocusBrowser() {
   cef_widg_->setFocus();
+}
+
+QIcon BrowserWidget::CurrentFavicon() {
+  return current_favicon_;
+}
+
+QString BrowserWidget::CurrentTitle() {
+  return current_title_;
+}
+
+bool BrowserWidget::Loading() {
+  return loading_;
+}
+
+bool BrowserWidget::CanGoBack() {
+  return can_go_back_;
+}
+
+bool BrowserWidget::CanGoForward() {
+  return can_go_forward_;
 }
 
 void BrowserWidget::moveEvent(QMoveEvent *) {

@@ -10,6 +10,7 @@ class CefHandler :
     public CefDisplayHandler,
     public CefFocusHandler,
     public CefLifeSpanHandler,
+    public CefLoadHandler,
     public CefRequestHandler {
   Q_OBJECT
  public:
@@ -24,6 +25,10 @@ class CefHandler :
   }
 
   virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override {
+    return this;
+  }
+
+  virtual CefRefPtr<CefLoadHandler> GetLoadHandler() override {
     return this;
   }
 
@@ -54,6 +59,12 @@ class CefHandler :
     return true;
   }
 
+  // Load handler overrides...
+  virtual void OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
+                                    bool is_loading,
+                                    bool can_go_back,
+                                    bool can_go_forward);
+
   // Request handler overrides...
   virtual bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
@@ -70,9 +81,12 @@ class CefHandler :
   // Empty if no URL
   void FaviconUrlChanged(const QString &url);
   void FocusObtained();
-  void TabOpen(CefRequestHandler::WindowOpenDisposition type,
-               const QString &url,
-               bool user_gesture);
+  void LoadStateChanged(bool is_loading,
+                        bool can_go_back,
+                        bool can_go_forward);
+  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
+                const QString &url,
+                bool user_gesture);
 };
 
 #endif // DOOGIE_CEFHANDLER_H_

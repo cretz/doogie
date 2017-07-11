@@ -22,8 +22,10 @@ CefWidget::CefWidget(Cef *cef, const QString &url, QWidget *parent)
                                          new CefWidget::FaviconDownloadCallback(this));
     }
   });
-  connect(handler_, &CefHandler::TabOpen,
-          this, &CefWidget::TabOpen);
+  connect(handler_, &CefHandler::LoadStateChanged,
+          this, &CefWidget::LoadStateChanged);
+  connect(handler_, &CefHandler::PageOpen,
+          this, &CefWidget::PageOpen);
 
   InitBrowser(url);
 }
