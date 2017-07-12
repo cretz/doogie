@@ -14,8 +14,10 @@ SOURCES += \
     browser_stack.cc \
     browser_widget.cc \
     cef.cc \
+    cef_base_widget.cc \
     cef_handler.cc \
     cef_widget.cc \
+    dev_tools_dock.cc \
     main.cc \
     main_window.cc \
     page_tree.cc \
@@ -27,8 +29,10 @@ HEADERS  += \
     browser_stack.h \
     browser_widget.h \
     cef.h \
+    cef_base_widget.h \
     cef_handler.h \
     cef_widget.h \
+    dev_tools_dock.h \
     main_window.h \
     page_tree.h \
     page_tree_dock.h \
@@ -45,6 +49,7 @@ INCLUDEPATH += $$(CEF_DIR)
 
 win32 {
     SOURCES += \
+        cef_base_widget_win.cc \
         cef_widget_win.cc \
         cef_win.cc
 

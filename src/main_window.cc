@@ -1,6 +1,7 @@
 #include "main_window.h"
 #include "page_tree_dock.h"
 #include "browser_stack.h"
+#include "dev_tools_dock.h"
 
 MainWindow::MainWindow(Cef *cef, QWidget *parent)
     : QMainWindow(parent), cef_(cef) {
@@ -18,8 +19,13 @@ MainWindow::MainWindow(Cef *cef, QWidget *parent)
   auto browser_stack = new BrowserStack(cef, this);
   setCentralWidget(browser_stack);
 
+  resizeDocks({dev_tools}, {300}, Qt::Vertical);
+
   auto page_tree = new PageTreeDock(browser_stack, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree);
+
+  auto dev_tools = new DevToolsDock(browser_stack, this);
+  addDockWidget(Qt::BottomDockWidgetArea, dev_tools);
 }
 
 MainWindow::~MainWindow() {

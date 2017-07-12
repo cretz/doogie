@@ -2,11 +2,8 @@
 #include <Windows.h>
 
 void CefWidget::InitBrowser(const QString &url) {
-  CefWindowInfo win_info;
-  win_info.SetAsChild((CefWindowHandle) winId(),
-                      RECT { 0, 0, width(), height() });
   CefBrowserSettings settings;
-  browser_ = CefBrowserHost::CreateBrowserSync(win_info,
+  browser_ = CefBrowserHost::CreateBrowserSync(window_info_,
                                                handler_,
                                                CefString(url.toStdString()),
                                                settings,

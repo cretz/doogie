@@ -2,10 +2,10 @@
 #define DOOGIE_CEFWIDGET_H_
 
 #include <QtWidgets>
-#include "cef.h"
+#include "cef_base_widget.h"
 #include "cef_handler.h"
 
-class CefWidget : public QWidget {
+class CefWidget : public CefBaseWidget {
   Q_OBJECT
  public:
   CefWidget(Cef *cef, const QString &url = "", QWidget *parent = nullptr);
@@ -14,7 +14,7 @@ class CefWidget : public QWidget {
   // If result is non-null, it needs to replace this widget
   QPointer<QWidget> OverrideWidget();\
   void LoadUrl(const QString &url);
-  void UpdateSize();
+
   // Basically just calls history.go
   void Go(int num);
   void Refresh(bool ignore_cache);
@@ -28,13 +28,11 @@ class CefWidget : public QWidget {
   std::vector<NavEntry> NavEntries();
 
  protected:
-  void focusInEvent(QFocusEvent *event);
-  void focusOutEvent(QFocusEvent *event);
-  void moveEvent(QMoveEvent *event);
-  void resizeEvent(QResizeEvent *event);
+  void focusInEvent(QFocusEvent *event) override;
+  void focusOutEvent(QFocusEvent *event) override;
+  void UpdateSize() override;
 
  private:
-  Cef *cef_;
   CefRefPtr<CefHandler> handler_;
   CefRefPtr<CefBrowser> browser_;
   QPointer<QWidget> override_widget_;

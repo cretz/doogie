@@ -1,7 +1,7 @@
 #include "cef_widget.h"
 
 CefWidget::CefWidget(Cef *cef, const QString &url, QWidget *parent)
-    : QWidget(parent), cef_(cef) {
+    : CefBaseWidget(cef, parent) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   connect(handler_, &CefHandler::UrlChanged,
           this, &CefWidget::UrlChanged);
@@ -88,14 +88,6 @@ void CefWidget::focusOutEvent(QFocusEvent *event) {
   if (browser_) {
     browser_->GetHost()->SetFocus(false);
   }
-}
-
-void CefWidget::moveEvent(QMoveEvent *) {
-  this->UpdateSize();
-}
-
-void CefWidget::resizeEvent(QResizeEvent *) {
-  this->UpdateSize();
 }
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(

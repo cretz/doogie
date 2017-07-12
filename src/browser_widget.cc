@@ -189,11 +189,10 @@ void BrowserWidget::RebuildNavMenu() {
   }
   // Now that we have the current, we know the index to go back or forward
   // We have to go backwards...
-  for (int i = entries.size() - 1; i >= 0; i--) {
+  for (int i = (int)entries.size() - 1; i >= 0; i--) {
     auto entry = entries[i];
     auto action = nav_menu_->addAction(entry.title);
     auto nav_index = i - current_item_index;
-    qDebug() << "Adding item with nav index: " << nav_index;
     if (nav_index != 0) {
       connect(action, &QAction::triggered, [this, nav_index]() {
         cef_widg_->Go(nav_index);
