@@ -20,7 +20,8 @@ SOURCES += \
     main_window.cc \
     page_tree.cc \
     page_tree_dock.cc \
-    page_tree_item.cc
+    page_tree_item.cc \
+    util.cc
 
 HEADERS  += \
     browser_stack.h \
@@ -31,7 +32,8 @@ HEADERS  += \
     main_window.h \
     page_tree.h \
     page_tree_dock.h \
-    page_tree_item.h
+    page_tree_item.h \
+    util.h
 
 RESOURCES += \
     doogie.qrc

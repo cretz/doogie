@@ -57,7 +57,8 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
       auto mouse_item = (PageTreeItem*)itemAt(local_pos);
       // Only applies if there is a close button under the mouse. It also
       // can't be the last one we saw being dragged on
-      if (mouse_item && mouse_item != close_dragging_on_ && columnAt(local_pos.x()) == 1) {
+      if (mouse_item && mouse_item != close_dragging_on_ &&
+          columnAt(local_pos.x()) == 1) {
         // Flip the checked state
         mouse_item->CloseButton()->setChecked(!mouse_item->CloseButton()->isChecked());
         close_dragging_on_ = mouse_item;
@@ -80,13 +81,6 @@ QMovie* PageTree::LoadingIconMovie() {
     loading_icon_movie_->setSpeed(70);
   }
   return loading_icon_movie_;
-}
-
-QIcon PageTree::CloseButtonIcon() {
-  if (close_button_icon_.isNull()) {
-    close_button_icon_ = QIcon(":/res/images/fontawesome/times.png");
-  }
-  return close_button_icon_;
 }
 
 Qt::DropActions PageTree::supportedDropActions() const {

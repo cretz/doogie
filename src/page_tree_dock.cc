@@ -1,4 +1,5 @@
 #include "page_tree_dock.h"
+#include "util.h"
 
 PageTreeDock::PageTreeDock(BrowserStack *browser_stack, QWidget *parent)
     : QDockWidget("Pages", parent) {
@@ -16,9 +17,10 @@ PageTreeDock::PageTreeDock(BrowserStack *browser_stack, QWidget *parent)
   // Create tree
   tree_ = new PageTree(browser_stack, inner_win);
   inner_win->setCentralWidget(tree_);
-  toolbar->addAction(QIcon(":/res/images/fontawesome/plus.png"), "New Page", [this]() {
-    tree_->NewBrowser();
-  });
+  toolbar->addAction(
+        Util::CachedIcon(":/res/images/fontawesome/plus.png"),
+        "New Page",
+        [this]() { tree_->NewBrowser(); });
 
   setWidget(inner_win);
 }

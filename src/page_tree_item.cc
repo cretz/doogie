@@ -1,5 +1,6 @@
 #include "page_tree_item.h"
 #include "page_tree.h"
+#include "util.h"
 
 PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     : browser_(browser) {
@@ -8,7 +9,7 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
   // Connect title and favicon change
   setText(0, "(New Window)");
   browser->connect(browser, &BrowserWidget::TitleChanged, [this]() {
-    setText(0, browser_->CurrentTitle());
+    if (browser_) setText(0, browser_->CurrentTitle());
   });
   browser->connect(browser, &BrowserWidget::LoadingStateChanged,
                    [this]() { ApplyFavicon(); });
@@ -18,6 +19,9 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
 
 PageTreeItem::~PageTreeItem() {
   // TODO: do I need to delete the widgets?
+  if (loading_icon_frame_conn_) {
+    treeWidget()->disconnect(loading_icon_frame_conn_);
+  }
 }
 
 QPointer<BrowserWidget> PageTreeItem::Browser() {
@@ -35,7 +39,8 @@ void PageTreeItem::AfterAdded() {
   // Create a new close button everytime because it is destroyed otherwise
   close_button_ = new QToolButton();
   close_button_->setCheckable(true);
-  close_button_->setIcon(tree->CloseButtonIcon());
+  close_button_->setIcon(
+        Util::CachedIcon(":/res/images/fontawesome/times.png"));
   close_button_->setText("Close");
   close_button_->setAutoRaise(true);
   close_button_->setStyleSheet(":pressed:!checked { background-color: transparent; }");
@@ -61,23 +66,25 @@ void PageTreeItem::AfterAdded() {
 void PageTreeItem::ApplyFavicon() {
   auto tree = (PageTree*) treeWidget();
   if (loading_icon_frame_conn_) tree->disconnect(loading_icon_frame_conn_);
-  if (browser_->Loading()) {
-    tree->LoadingIconMovie()->start();
-    // We don't like constantly setting the icon here, but there's not
-    // a much better option. Putting a QMovie as a setItemWidget has other
-    // display problems and I'm too lazy to create an item delegate.
-    loading_icon_frame_conn_ = tree->connect(tree->LoadingIconMovie(),
-                                             &QMovie::frameChanged,
-                                             [this, tree](int) {
-      setIcon(0, QIcon(tree->LoadingIconMovie()->currentPixmap()));
-    });
-  } else {
-    auto icon = browser_->CurrentFavicon();
-    if (icon.isNull()) {
-      QPixmap whiteMap(16, 16);
-      whiteMap.fill();
-      icon = QIcon(whiteMap);
+  if (browser_) {
+    if (browser_->Loading()) {
+      tree->LoadingIconMovie()->start();
+      // We don't like constantly setting the icon here, but there's not
+      // a much better option. Putting a QMovie as a setItemWidget has other
+      // display problems and I'm too lazy to create an item delegate.
+      loading_icon_frame_conn_ = tree->connect(tree->LoadingIconMovie(),
+                                               &QMovie::frameChanged,
+                                               [this, tree](int) {
+        setIcon(0, QIcon(tree->LoadingIconMovie()->currentPixmap()));
+      });
+    } else {
+      auto icon = browser_->CurrentFavicon();
+      if (icon.isNull()) {
+        QPixmap whiteMap(16, 16);
+        whiteMap.fill();
+        icon = QIcon(whiteMap);
+      }
+      setIcon(0, icon);
     }
-    setIcon(0, icon);
   }
 }

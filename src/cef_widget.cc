@@ -46,14 +46,48 @@ void CefWidget::LoadUrl(const QString &url) {
   }
 }
 
+void CefWidget::Go(int num) {
+  if (browser_) {
+    browser_->GetMainFrame()->ExecuteJavaScript(
+        CefString(std::string("history.go(") + std::to_string(num) + ")"),
+        CefString("<doogie>"),
+        0);
+  }
+}
+
+void CefWidget::Refresh(bool ignore_cache) {
+  if (browser_) {
+    if (ignore_cache) browser_->ReloadIgnoreCache();
+    else browser_->Reload();
+  }
+}
+
+void CefWidget::Stop() {
+  if (browser_) {
+    browser_->StopLoad();
+  }
+}
+
+std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
+  CefRefPtr<CefWidget::NavEntryVisitor> visitor = new CefWidget::NavEntryVisitor;
+  if (browser_) {
+    browser_->GetHost()->GetNavigationEntries(visitor, false);
+  }
+  return visitor->Entries();
+}
+
 void CefWidget::focusInEvent(QFocusEvent *event) {
   QWidget::focusInEvent(event);
-  browser_->GetHost()->SetFocus(true);
+  if (browser_) {
+    browser_->GetHost()->SetFocus(true);
+  }
 }
 
 void CefWidget::focusOutEvent(QFocusEvent *event) {
   QWidget::focusOutEvent(event);
-  browser_->GetHost()->SetFocus(false);
+  if (browser_) {
+    browser_->GetHost()->SetFocus(false);
+  }
 }
 
 void CefWidget::moveEvent(QMoveEvent *) {

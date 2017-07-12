@@ -40,7 +40,12 @@ class BrowserWidget : public QWidget {
 
  private:
   Cef *cef_;
+  QToolButton* back_button_;
+  QToolButton* forward_button_;
+  QMenu* nav_menu_;
   QLineEdit *url_edit_;
+  QToolButton* refresh_button_;
+  QToolButton* stop_button_;
   CefWidget *cef_widg_;
   QStatusBar *status_bar_;
   QIcon current_favicon_;
@@ -50,6 +55,7 @@ class BrowserWidget : public QWidget {
   bool can_go_forward_ = false;
 
   void UpdateStatusBarLocation();
+  void RebuildNavMenu();
 
  signals:
   void TitleChanged();

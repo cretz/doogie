@@ -9,6 +9,7 @@ Small:
   type
 * Better default no-favicon and "(New Window)" defaults
 * Change focus proxy of main window to active browser window
+* Determine/test how to handle back/forward/refresh over form post
 
 Medium:
 

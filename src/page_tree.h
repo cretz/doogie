@@ -12,7 +12,6 @@ class PageTree : public QTreeWidget {
   explicit PageTree(BrowserStack *browser_stack, QWidget *parent = nullptr);
   void NewBrowser();
   QMovie* LoadingIconMovie();
-  QIcon CloseButtonIcon();
  protected:
   virtual Qt::DropActions supportedDropActions() const override;
   virtual void dropEvent(QDropEvent *event) override;
@@ -25,7 +24,6 @@ class PageTree : public QTreeWidget {
  private:
   BrowserStack *browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;
-  QIcon close_button_icon_;
   bool close_dragging_ = false;
   PageTreeItem* close_dragging_on_ = nullptr;
   QRubberBand* rubber_band_ = nullptr;

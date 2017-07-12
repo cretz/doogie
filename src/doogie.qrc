@@ -1,7 +1,11 @@
 <RCC>
     <qresource prefix="/res">
         <file>images/loading-icon.gif</file>
+        <file>images/fontawesome/arrow-left.png</file>
+        <file>images/fontawesome/arrow-right.png</file>
         <file>images/fontawesome/plus.png</file>
+        <file>images/fontawesome/repeat.png</file>
         <file>images/fontawesome/times.png</file>
+        <file>images/fontawesome/times-circle.png</file>
     </qresource>
 </RCC>

@@ -15,6 +15,17 @@ class CefWidget : public QWidget {
   QPointer<QWidget> OverrideWidget();\
   void LoadUrl(const QString &url);
   void UpdateSize();
+  // Basically just calls history.go
+  void Go(int num);
+  void Refresh(bool ignore_cache);
+  void Stop();
+
+  struct NavEntry {
+    QString url;
+    QString title;
+    bool current;
+  };
+  std::vector<NavEntry> NavEntries();
 
  protected:
   void focusInEvent(QFocusEvent *event);
@@ -42,6 +53,24 @@ class CefWidget : public QWidget {
     QPointer<CefWidget> cef_widg_;
     IMPLEMENT_REFCOUNTING(FaviconDownloadCallback);
     DISALLOW_COPY_AND_ASSIGN(FaviconDownloadCallback);
+  };
+
+  class NavEntryVisitor : public CefNavigationEntryVisitor {
+   public:
+    bool Visit(CefRefPtr<CefNavigationEntry> entry,
+               bool current, int, int) override {
+      NavEntry nav_entry = {
+        QString::fromStdString(entry->GetURL().ToString()),
+        QString::fromStdString(entry->GetTitle().ToString()),
+        current
+      };
+      entries_.push_back(nav_entry);
+      return true;
+    }
+    std::vector<NavEntry> Entries() { return entries_; }
+   private:
+    std::vector<NavEntry> entries_;
+    IMPLEMENT_REFCOUNTING(NavEntryVisitor);
   };
 
  signals:
