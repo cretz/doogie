@@ -19,6 +19,9 @@ class BrowserWidget : public QWidget {
   bool CanGoBack();
   bool CanGoForward();
 
+  void ShowDevTools(CefBaseWidget* widg);
+  void ExecDevToolsJs(const QString &js);
+
   // Matches CEF's numbering, don't change
   enum WindowOpenType {
     OpenTypeUnknown,
@@ -62,6 +65,8 @@ class BrowserWidget : public QWidget {
   void FaviconChanged();
   void LoadingStateChanged();
   void PageOpen(WindowOpenType type, const QString &url, bool user_gesture);
+  void DevToolsLoadComplete();
+  void DevToolsClosed();
 };
 
 #endif // DOOGIE_BROWSERWIDGET_H_

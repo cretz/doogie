@@ -20,6 +20,9 @@ class CefWidget : public CefBaseWidget {
   void Refresh(bool ignore_cache);
   void Stop();
 
+  void ShowDevTools(CefBaseWidget* widg);
+  void ExecDevToolsJs(const QString &js);
+
   struct NavEntry {
     QString url;
     QString title;
@@ -35,6 +38,8 @@ class CefWidget : public CefBaseWidget {
  private:
   CefRefPtr<CefHandler> handler_;
   CefRefPtr<CefBrowser> browser_;
+  CefRefPtr<CefHandler> dev_tools_handler_;
+  CefRefPtr<CefBrowser> dev_tools_browser_;
   QPointer<QWidget> override_widget_;
   bool download_favicon_;
 
@@ -82,6 +87,8 @@ class CefWidget : public CefBaseWidget {
   void PageOpen(CefRequestHandler::WindowOpenDisposition type,
                 const QString &url,
                 bool user_gesture);
+  void DevToolsLoadComplete();
+  void DevToolsClosed();
 };
 
 #endif // DOOGIE_CEFWIDGET_H_

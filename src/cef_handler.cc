@@ -29,11 +29,28 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
   emit FocusObtained();
 }
 
+bool CefHandler::DoClose(CefRefPtr<CefBrowser> browser) {
+  emit Closed();
+  // Per the docs, we want to return tru here to prevent CEF from
+  // closing our window.
+  return true;
+}
+
+void CefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
+  emit AfterCreated(browser);
+}
+
 void CefHandler::OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
                                       bool is_loading,
                                       bool can_go_back,
                                       bool can_go_forward) {
   emit LoadStateChanged(is_loading, can_go_back, can_go_forward);
+}
+
+void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                           CefRefPtr<CefFrame> frame,
+                           int http_status_code) {
+  emit LoadEnd(frame, http_status_code);
 }
 
 bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,

@@ -19,13 +19,19 @@ MainWindow::MainWindow(Cef *cef, QWidget *parent)
   auto browser_stack = new BrowserStack(cef, this);
   setCentralWidget(browser_stack);
 
-  resizeDocks({dev_tools}, {300}, Qt::Vertical);
-
   auto page_tree = new PageTreeDock(browser_stack, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree);
 
-  auto dev_tools = new DevToolsDock(browser_stack, this);
+  auto dev_tools = new DevToolsDock(cef, browser_stack, this);
   addDockWidget(Qt::BottomDockWidgetArea, dev_tools);
+
+  resizeDocks({dev_tools}, {300}, Qt::Vertical);
+
+  // We choose for verticle windows to occupy the corners
+  setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
+  setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+  setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
+  setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 }
 
 MainWindow::~MainWindow() {

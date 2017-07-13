@@ -8,7 +8,8 @@
 class DevToolsDock : public QDockWidget {
   Q_OBJECT
  public:
-  explicit DevToolsDock(BrowserStack *browser_stack,
+  explicit DevToolsDock(Cef* cef,
+                        BrowserStack *browser_stack,
                         QWidget *parent = nullptr);
 
  public slots:
@@ -16,8 +17,12 @@ class DevToolsDock : public QDockWidget {
   void ShowDevTools(BrowserWidget* browser);
 
  private:
+  Cef* cef_;
   BrowserStack* browser_stack_;
   QStackedWidget* tools_stack_;
+  QMap<BrowserWidget*, QWidget*> tools_widgets_;
+
+  void DevToolsClosed(BrowserWidget* browser);
 };
 
 #endif // DOOGIE_DEVTOOLSDOCK_H_

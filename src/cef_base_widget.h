@@ -10,6 +10,8 @@ class CefBaseWidget : public QWidget {
   CefBaseWidget(Cef *cef, QWidget *parent = nullptr);
   ~CefBaseWidget();
 
+  const CefWindowInfo& WindowInfo();
+
  protected:
   Cef* cef_;
   CefWindowInfo window_info_;

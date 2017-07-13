@@ -11,13 +11,6 @@ void CefWidget::InitBrowser(const QString &url) {
 }
 
 void CefWidget::UpdateSize() {
-  // Basically just set the browser handle to the same dimensions as widget
-  if (browser_) {
-    auto browser_host = browser_->GetHost();
-    auto browser_win = browser_host->GetWindowHandle();
-    SetWindowPos(browser_win, (HWND) this->winId(), 0, 0,
-                 this->width(), this->height(),
-                 SWP_NOZORDER);
-    browser_host->NotifyMoveOrResizeStarted();
-  }
+  CefBaseWidget::UpdateSize();
+  if (browser_) browser_->GetHost()->NotifyMoveOrResizeStarted();
 }

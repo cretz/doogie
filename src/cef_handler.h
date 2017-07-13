@@ -53,17 +53,18 @@ class CefHandler :
   virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
 
   // Life span handler overrides...
-  virtual bool DoClose(CefRefPtr<CefBrowser> browser) override {
-    // Per the docs, we want to return tru here to prevent CEF from
-    // closing our window.
-    return true;
-  }
+  virtual bool DoClose(CefRefPtr<CefBrowser> browser) override;
+
+  virtual void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
 
   // Load handler overrides...
   virtual void OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
                                     bool is_loading,
                                     bool can_go_back,
-                                    bool can_go_forward);
+                                    bool can_go_forward) override;
+  virtual void OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                         CefRefPtr<CefFrame> frame,
+                         int httpStatusCode) override;
 
   // Request handler overrides...
   virtual bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
@@ -81,9 +82,13 @@ class CefHandler :
   // Empty if no URL
   void FaviconUrlChanged(const QString &url);
   void FocusObtained();
+  void Closed();
+  void AfterCreated(CefRefPtr<CefBrowser> browser);
   void LoadStateChanged(bool is_loading,
                         bool can_go_back,
                         bool can_go_forward);
+  void LoadEnd(CefRefPtr<CefFrame> frame,
+               int httpStatusCode);
   void PageOpen(CefRequestHandler::WindowOpenDisposition type,
                 const QString &url,
                 bool user_gesture);

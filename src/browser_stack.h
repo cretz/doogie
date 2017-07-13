@@ -11,6 +11,11 @@ class BrowserStack : public QStackedWidget {
 
   QPointer<BrowserWidget> NewBrowser(const QString &url);
 
+  BrowserWidget* CurrentBrowser();
+
+ signals:
+  void BrowserChanged(BrowserWidget* browser);
+
  private:
   Cef *cef_;
 };

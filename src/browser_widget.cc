@@ -97,6 +97,10 @@ BrowserWidget::BrowserWidget(Cef *cef,
                  bool user_gesture) {
     emit PageOpen((WindowOpenType) type, url, user_gesture);
   });
+  connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
+          this, &BrowserWidget::DevToolsLoadComplete);
+  connect(cef_widg_, &CefWidget::DevToolsClosed,
+          this, &BrowserWidget::DevToolsClosed);
 
   auto layout = new QGridLayout;
   layout->addWidget(top_widg, 0, 0);
@@ -162,6 +166,14 @@ bool BrowserWidget::CanGoBack() {
 
 bool BrowserWidget::CanGoForward() {
   return can_go_forward_;
+}
+
+void BrowserWidget::ShowDevTools(CefBaseWidget *widg) {
+  cef_widg_->ShowDevTools(widg);
+}
+
+void BrowserWidget::ExecDevToolsJs(const QString &js) {
+  cef_widg_->ExecDevToolsJs(js);
 }
 
 void BrowserWidget::moveEvent(QMoveEvent *) {

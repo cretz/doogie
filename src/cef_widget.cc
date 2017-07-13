@@ -68,6 +68,44 @@ void CefWidget::Stop() {
   }
 }
 
+void CefWidget::ShowDevTools(CefBaseWidget *widg) {
+  if (browser_) {
+    CefBrowserSettings settings;
+    if (!dev_tools_handler_) {
+      dev_tools_handler_ = CefRefPtr<CefHandler>(new CefHandler);
+      connect(dev_tools_handler_, &CefHandler::AfterCreated,
+              [this](CefRefPtr<CefBrowser> b) {
+        dev_tools_browser_ = b;
+      });
+      connect(dev_tools_handler_, &CefHandler::LoadEnd,
+              [this](CefRefPtr<CefFrame> frame, int) {
+        if (frame->IsMain()) emit DevToolsLoadComplete();
+      });
+      connect(dev_tools_handler_, &CefHandler::Closed, [this]() {
+        // We have to nullify the dev tools browser to make this reentrant
+        // Sadly, HasDevTools is not false after CloseDevTools
+        if (dev_tools_browser_) {
+          dev_tools_browser_->GetHost()->CloseDevTools();
+          dev_tools_browser_ = nullptr;
+          emit DevToolsClosed();
+        }
+      });
+    }
+    browser_->GetHost()->ShowDevTools(
+          widg->WindowInfo(),
+          dev_tools_handler_,
+          settings,
+          CefPoint());
+  }
+}
+
+void CefWidget::ExecDevToolsJs(const QString &js) {
+  if (dev_tools_browser_) {
+    dev_tools_browser_->GetMainFrame()->ExecuteJavaScript(
+          CefString(js.toStdString()), "<doogie>", 0);
+  }
+}
+
 std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
   CefRefPtr<CefWidget::NavEntryVisitor> visitor = new CefWidget::NavEntryVisitor;
   if (browser_) {
