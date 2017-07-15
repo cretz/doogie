@@ -8,32 +8,9 @@ PageTreeDock::PageTreeDock(BrowserStack* browser_stack, QWidget* parent)
   setFeatures(QDockWidget::DockWidgetMovable |
               QDockWidget::DockWidgetFloatable);
 
-  // We're going to make a main window inside of here for toolbar reasons
-  auto inner_win = new QMainWindow();
-  auto toolbar = new QToolBar(inner_win);
-  toolbar->setMovable(false);
-  toolbar->setIconSize(QSize(16, 16));
-  auto spacer = new QWidget;
-  spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  inner_win->addToolBar(toolbar);
-
   // Create tree
-  tree_ = new PageTree(browser_stack, inner_win);
-  inner_win->setCentralWidget(tree_);
-
-  toolbar->addAction(
-        Util::CachedIcon(":/res/images/fontawesome/plus.png"),
-        "New Page",
-        [this]() {
-    if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-      NewChildPage("");
-    } else {
-      NewTopLevelPage("");
-    }
-  });
-  toolbar->addWidget(spacer);
-
-  setWidget(inner_win);
+  tree_ = new PageTree(browser_stack, this);
+  setWidget(tree_);
 }
 
 void PageTreeDock::FocusPageTree() {

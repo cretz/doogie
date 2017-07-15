@@ -121,7 +121,34 @@ void PageTree::dropEvent(QDropEvent* event) {
   // Due to bad internal Qt logic, we reset the current here
   auto current = currentItem();
   QTreeWidget::dropEvent(event);
-  setCurrentItem(current);
+  setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
+}
+
+void PageTree::keyPressEvent(QKeyEvent *event) {
+  if (event->key() == Qt::Key_Delete) {
+    if (!event->isAutoRepeat()) {
+      // Close all selected items
+      QList<QPersistentModelIndex> to_close;
+      for (const auto &item : selectedIndexes()) {
+        to_close.append(item);
+      }
+      for (const auto &index : to_close) {
+        auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
+        if (tree_item) CloseItem(tree_item);
+      }
+    }
+  } else {
+    QTreeWidget::keyPressEvent(event);
+  }
+}
+
+void PageTree::mouseDoubleClickEvent(QMouseEvent *event) {
+  if (itemAt(event->pos())) {
+    QTreeWidget::mouseDoubleClickEvent(event);
+  } else {
+    NewPage("",
+            !QApplication::keyboardModifiers().testFlag(Qt::ControlModifier));
+  }
 }
 
 void PageTree::mousePressEvent(QMouseEvent* event) {
@@ -162,7 +189,7 @@ void PageTree::mouseMoveEvent(QMouseEvent* event) {
     // Basically, we are just going to take a peek at the top and then work
     // downwards Selecting the first column.
     auto rect = QRect(rubber_band_origin_, event->pos()).normalized();
-    auto index = indexAt(QPoint(0, rect.top()));
+    auto index = indexAt(QPoint(0, std::max(0, rect.top())));
     while (index.isValid()) {
       // We toggle here so during ctrl+drag they can keep the originals
       selectionModel()->select(index, QItemSelectionModel::Toggle);
@@ -173,8 +200,7 @@ void PageTree::mouseMoveEvent(QMouseEvent* event) {
     }
     rubber_band_->setGeometry(QRect(rubber_band_origin_,
                                     event->pos()).normalized());
-  }
-  if (state() != DragSelectingState) {
+  } else if (state() != DragSelectingState) {
     // Prevent the drag-select
     QTreeWidget::mouseMoveEvent(event);
   }
@@ -184,26 +210,27 @@ void PageTree::mouseReleaseEvent(QMouseEvent* event) {
   // End rubber band selection
   if (rubber_band_ && !rubber_band_->isHidden()) {
     rubber_band_->hide();
-  }
-  QTreeWidget::mouseReleaseEvent(event);
-  if (close_dragging_) {
-    // Close-button drag has completed, close what's checked
-    close_dragging_on_ = nullptr;
-    close_dragging_ = false;
-    // Obtain a list of what to close
-    QTreeWidgetItemIterator it(this);
-    QList<QPersistentModelIndex> to_close;
-    while (*it) {
-      auto tree_item = static_cast<PageTreeItem*>(*it);
-      if (tree_item->CloseButton()->isChecked()) {
-        to_close.append(indexFromItem(tree_item));
+  } else {
+    QTreeWidget::mouseReleaseEvent(event);
+    if (close_dragging_) {
+      // Close-button drag has completed, close what's checked
+      close_dragging_on_ = nullptr;
+      close_dragging_ = false;
+      // Obtain a list of what to close
+      QTreeWidgetItemIterator it(this);
+      QList<QPersistentModelIndex> to_close;
+      while (*it) {
+        auto tree_item = static_cast<PageTreeItem*>(*it);
+        if (tree_item->CloseButton()->isChecked()) {
+          to_close.append(indexFromItem(tree_item));
+        }
+        ++it;
       }
-      ++it;
-    }
-    // Now try to close each one
-    for (const auto &index : to_close) {
-      auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
-      if (tree_item) CloseItem(tree_item);
+      // Now try to close each one
+      for (const auto &index : to_close) {
+        auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
+        if (tree_item) CloseItem(tree_item);
+      }
     }
   }
 }
@@ -238,7 +265,7 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   }
   // Whether to set it as the current active
   if (make_current) {
-    setCurrentItem(browser_item);
+    setCurrentItem(browser_item, 0, QItemSelectionModel::NoUpdate);
   }
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,

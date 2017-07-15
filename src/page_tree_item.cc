@@ -82,9 +82,7 @@ void PageTreeItem::ApplyFavicon() {
     } else {
       auto icon = browser_->CurrentFavicon();
       if (icon.isNull()) {
-        QPixmap whiteMap(16, 16);
-        whiteMap.fill();
-        icon = QIcon(whiteMap);
+        icon = Util::CachedIcon(":/res/images/fontawesome/file-o.png");
       }
       setIcon(0, icon);
     }
