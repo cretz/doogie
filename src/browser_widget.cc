@@ -94,6 +94,8 @@ BrowserWidget::BrowserWidget(Cef* cef,
           this, &BrowserWidget::DevToolsLoadComplete);
   connect(cef_widg_, &CefWidget::DevToolsClosed,
           this, &BrowserWidget::DevToolsClosed);
+  connect(cef_widg_, &CefWidget::FindResult,
+          this, &BrowserWidget::FindResult);
 
   auto layout = new QGridLayout;
   layout->addWidget(top_widg, 0, 0);
@@ -112,6 +114,25 @@ BrowserWidget::BrowserWidget(Cef* cef,
   connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString& url) {
     url_edit_->setText(url);
   });
+
+  find_widg_ = new FindWidget(this);
+  layout->addWidget(find_widg_);
+  find_widg_->setVisible(false);
+  connect(find_widg_, &FindWidget::AttemptFind,
+          [this](const QString& text, bool forward,
+                 bool match_case, bool continued) {
+    if (!text.isEmpty()) {
+      cef_widg_->Find(text, forward, match_case, continued);
+    } else {
+      cef_widg_->CancelFind(true);
+    }
+  });
+  connect(find_widg_, &FindWidget::Hidden, [this]() {
+    UpdateStatusBarLocation();
+    cef_widg_->CancelFind(true);
+  });
+  connect(this, &BrowserWidget::FindResult,
+          find_widg_, &FindWidget::FindResult);
 
   status_bar_ = new QStatusBar(this);
   status_bar_->setSizeGripEnabled(false);
@@ -185,6 +206,12 @@ void BrowserWidget::Print() {
   cef_widg_->Print();
 }
 
+void BrowserWidget::ShowFind() {
+  find_widg_->show();
+  find_widg_->setFocus();
+  UpdateStatusBarLocation();
+}
+
 void BrowserWidget::ShowDevTools(CefBaseWidget* widg) {
   cef_widg_->ShowDevTools(widg);
 }
@@ -214,7 +241,9 @@ void BrowserWidget::resizeEvent(QResizeEvent*) {
 }
 
 void BrowserWidget::UpdateStatusBarLocation() {
-  status_bar_->move(0, this->height() - status_bar_->height());
+  auto new_y = this->height() - status_bar_->height();
+  if (find_widg_->isVisible()) new_y -= find_widg_->height();
+  status_bar_->move(0, new_y);
 }
 
 void BrowserWidget::RebuildNavMenu() {

@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "cef_widget.h"
+#include "find_widget.h"
 
 namespace doogie {
 
@@ -42,6 +43,7 @@ class BrowserWidget : public QWidget {
   void Back();
   void Forward();
   void Print();
+  void ShowFind();
 
   void ShowDevTools(CefBaseWidget* widg);
   void ExecDevToolsJs(const QString& js);
@@ -57,6 +59,7 @@ class BrowserWidget : public QWidget {
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
   void DevToolsLoadComplete();
   void DevToolsClosed();
+  void FindResult(int count, int index);
 
  protected:
   void moveEvent(QMoveEvent* event) override;
@@ -74,6 +77,7 @@ class BrowserWidget : public QWidget {
   QToolButton* refresh_button_;
   QToolButton* stop_button_;
   CefWidget* cef_widg_;
+  FindWidget* find_widg_;
   QStatusBar* status_bar_;
   QIcon current_favicon_;
   QString current_title_;

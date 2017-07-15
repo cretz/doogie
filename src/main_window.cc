@@ -38,22 +38,22 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
 
   // Setup the menu options...
   // TODO: configurable hotkeys and better organization
-  auto file_menu = menuBar()->addMenu("&Pages");
-  file_menu->addAction("New Top-Level Page", [this, page_tree]() {
+  auto pages_menu = menuBar()->addMenu("&Pages");
+  pages_menu->addAction("New Top-Level Page", [this, page_tree]() {
     page_tree->NewTopLevelPage("");
   })->setShortcut(Qt::CTRL + Qt::Key_T);
-  file_menu->addAction("New Child Page", [this, page_tree]() {
+  pages_menu->addAction("New Child Page", [this, page_tree]() {
     page_tree->NewChildPage("");
   })->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_T);
-  file_menu->addAction("Close Page", [this, page_tree]() {
+  pages_menu->addAction("Close Page", [this, page_tree]() {
     page_tree->CloseCurrentPage();
   })->setShortcuts({Qt::CTRL + Qt::Key_F4, Qt::CTRL + Qt::Key_W});
-  file_menu->addAction("Close All Pages", [this, page_tree]() {
+  pages_menu->addAction("Close All Pages", [this, page_tree]() {
     page_tree->CloseAllPages();
   })->setShortcuts({Qt::CTRL + Qt::SHIFT + Qt::Key_F4,
                     Qt::CTRL + Qt::SHIFT + Qt::Key_W});
-  file_menu->addAction("Toggle Dev Tools",
-      [this, browser_stack, dev_tools]() {
+  pages_menu->addAction("Toggle Dev Tools",
+                        [this, browser_stack, dev_tools]() {
     // Here's how it works:
     // * F12 (Ctrl or not) - If tools not open, open dock if not open then tools
     // * F12 - If tools open, close tools and dock
@@ -73,47 +73,51 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
     }
   })->setShortcuts({Qt::Key_F12, Qt::CTRL + Qt::Key_F12});
 
-  auto browser_menu = menuBar()->addMenu("&Page");
-  browser_menu->addAction("Refresh", [this, browser_stack]() {
+  auto page_menu = menuBar()->addMenu("&Page");
+  page_menu->addAction("Refresh", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->Refresh();
   })->setShortcuts({Qt::Key_F5, Qt::CTRL + Qt::Key_F5, Qt::CTRL + Qt::Key_R});
-  browser_menu->addAction("Stop", [this, browser_stack]() {
+  page_menu->addAction("Stop", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->Stop();
   })->setShortcut(Qt::Key_Escape);
-  browser_menu->addAction("Back", [this, browser_stack]() {
+  page_menu->addAction("Back", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->Back();
   })->setShortcuts({Qt::CTRL + Qt::Key_PageUp,
                     Qt::CTRL + Qt::SHIFT + Qt::Key_PageDown,
                     Qt::Key_Backspace});
-  browser_menu->addAction("Forward", [this, browser_stack]() {
+  page_menu->addAction("Forward", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->Forward();
   })->setShortcuts({Qt::CTRL + Qt::Key_PageDown,
                     Qt::CTRL + Qt::SHIFT + Qt::Key_PageUp,
                     Qt::SHIFT + Qt::Key_Backspace});
-  browser_menu->addAction("Print", [this, browser_stack]() {
+  page_menu->addAction("Print", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->Print();
   })->setShortcut(Qt::CTRL + Qt::Key_P);
-  browser_menu->addAction("Zoom In", [this, browser_stack]() {
+  page_menu->addAction("Zoom In", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) {
       curr_browser->SetZoomLevel(curr_browser->GetZoomLevel() + 0.1);
     }
   })->setShortcuts({Qt::CTRL + Qt::Key_Plus, Qt::CTRL + Qt::Key_Equal});
-  browser_menu->addAction("Zoom Out", [this, browser_stack]() {
+  page_menu->addAction("Zoom Out", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) {
       curr_browser->SetZoomLevel(curr_browser->GetZoomLevel() - 0.1);
     }
   })->setShortcut(Qt::CTRL + Qt::Key_Minus);
-  browser_menu->addAction("Reset Zoom", [this, browser_stack]() {
+  page_menu->addAction("Reset Zoom", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->SetZoomLevel(0.0);
   })->setShortcut(Qt::CTRL + Qt::Key_0);
+  page_menu->addAction("Find", [this, browser_stack]() {
+    auto curr_browser = browser_stack->CurrentBrowser();
+    if (curr_browser) curr_browser->ShowFind();
+  })->setShortcut(Qt::CTRL + Qt::Key_F);
 
   auto win_menu = menuBar()->addMenu("&Window");
   win_menu->addAction("Focus Page Tree", [this, page_tree]() {

@@ -31,6 +31,12 @@ class CefWidget : public CefBaseWidget {
   void Stop();
   void Print();
 
+  void Find(const QString& text,
+            bool forward,
+            bool match_case,
+            bool continued);
+  void CancelFind(bool clear_selection);
+
   void ShowDevTools(CefBaseWidget* widg);
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
@@ -51,6 +57,7 @@ class CefWidget : public CefBaseWidget {
                 bool user_gesture);
   void DevToolsLoadComplete();
   void DevToolsClosed();
+  void FindResult(int count, int index);
 
  protected:
   void focusInEvent(QFocusEvent* event) override;

@@ -29,6 +29,11 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
           this, &CefWidget::LoadStateChanged);
   connect(handler_, &CefHandler::PageOpen,
           this, &CefWidget::PageOpen);
+  connect(handler_, &CefHandler::FindResult,
+          [this](int, int count, const CefRect&,
+          int active_match_ordinal, bool) {
+    FindResult(count, active_match_ordinal);
+  });
 
   InitBrowser(url);
 }
@@ -74,6 +79,22 @@ void CefWidget::Stop() {
 void CefWidget::Print() {
   if (browser_) {
     browser_->GetHost()->Print();
+  }
+}
+
+void CefWidget::Find(const QString& text,
+                     bool forward,
+                     bool match_case,
+                     bool continued) {
+  if (browser_) {
+    browser_->GetHost()->Find(0, CefString(text.toStdString()),
+                              forward, match_case, continued);
+  }
+}
+
+void CefWidget::CancelFind(bool clear_selection) {
+  if (browser_) {
+    browser_->GetHost()->StopFinding(clear_selection);
   }
 }
 

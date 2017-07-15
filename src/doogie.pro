@@ -18,6 +18,7 @@ SOURCES += \
     cef_handler.cc \
     cef_widget.cc \
     dev_tools_dock.cc \
+    find_widget.cc \
     main.cc \
     main_window.cc \
     page_tree.cc \
@@ -33,6 +34,7 @@ HEADERS  += \
     cef_handler.h \
     cef_widget.h \
     dev_tools_dock.h \
+    find_widget.h \
     main_window.h \
     page_tree.h \
     page_tree_dock.h \

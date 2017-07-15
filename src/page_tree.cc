@@ -124,7 +124,7 @@ void PageTree::dropEvent(QDropEvent* event) {
   setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
 }
 
-void PageTree::keyPressEvent(QKeyEvent *event) {
+void PageTree::keyPressEvent(QKeyEvent* event) {
   if (event->key() == Qt::Key_Delete) {
     if (!event->isAutoRepeat()) {
       // Close all selected items

@@ -27,6 +27,16 @@ void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
   }
 }
 
+void CefHandler::OnFindResult(CefRefPtr<CefBrowser> browser,
+                              int identifier,
+                              int count,
+                              const CefRect& selection_rect,
+                              int active_match_ordinal,
+                              bool final_update) {
+  emit FindResult(identifier, count, selection_rect,
+                  active_match_ordinal, final_update);
+}
+
 void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
   emit FocusObtained();
 }

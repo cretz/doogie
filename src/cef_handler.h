@@ -10,6 +10,7 @@ class CefHandler :
     public QObject,
     public CefClient,
     public CefDisplayHandler,
+    public CefFindHandler,
     public CefFocusHandler,
     public CefKeyboardHandler,
     public CefLifeSpanHandler,
@@ -21,6 +22,10 @@ class CefHandler :
   CefHandler();
 
   virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
+    return this;
+  }
+
+  virtual CefRefPtr<CefFindHandler> GetFindHandler() override {
     return this;
   }
 
@@ -57,6 +62,14 @@ class CefHandler :
   virtual void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
                                   const std::vector<CefString>& icon_urls) override;
 
+  // Find handler overrides...
+  virtual void OnFindResult(CefRefPtr<CefBrowser> browser,
+                            int identifier,
+                            int count,
+                            const CefRect& selection_rect,
+                            int active_match_ordinal,
+                            bool final_update);
+
   // Focus handler overrides...
   virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
 
@@ -92,6 +105,11 @@ class CefHandler :
   void StatusChanged(const QString& status);
   // Empty if no URL
   void FaviconUrlChanged(const QString& url);
+  void FindResult(int identifier,
+                  int count,
+                  const CefRect& selection_rect,
+                  int active_match_ordinal,
+                  bool final_update);
   void FocusObtained();
   void KeyEvent(const CefKeyEvent& event, CefEventHandle os_event);
   void Closed();
