@@ -2,13 +2,13 @@
 #include "main_window.h"
 #include "cef.h"
 
-int main(int argc, char *argv[]) {
-  Cef cef(argc, argv);
+int main(int argc, char* argv[]) {
+  doogie::Cef cef(argc, argv);
   if (cef.EarlyExitCode() >= 0) return cef.EarlyExitCode();
 
   QApplication app(argc, argv);
 
-  MainWindow win(&cef);
+  doogie::MainWindow win(&cef);
   win.show();
   win.activateWindow();
   win.raise();

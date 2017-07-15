@@ -1,9 +1,11 @@
 #include "browser_widget.h"
 #include "util.h"
 
-BrowserWidget::BrowserWidget(Cef *cef,
-                             const QString &url,
-                             QWidget *parent)
+namespace doogie {
+
+BrowserWidget::BrowserWidget(Cef* cef,
+                             const QString& url,
+                             QWidget* parent)
     : QWidget(parent), cef_(cef) {
 
   nav_menu_ = new QMenu(this);
@@ -62,11 +64,11 @@ BrowserWidget::BrowserWidget(Cef *cef,
   top_widg->setLayout(top_layout);
 
   cef_widg_ = new CefWidget(cef, url, this);
-  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString &title) {
+  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString& title) {
     current_title_ = title;
     emit TitleChanged();
   });
-  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon &icon) {
+  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon& icon) {
     current_favicon_ = icon;
     emit FaviconChanged();
   });
@@ -84,9 +86,9 @@ BrowserWidget::BrowserWidget(Cef *cef,
   });
   connect(cef_widg_, &CefWidget::PageOpen,
           [this](CefRequestHandler::WindowOpenDisposition type,
-                 const QString &url,
+                 const QString& url,
                  bool user_gesture) {
-    emit PageOpen((WindowOpenType) type, url, user_gesture);
+    emit PageOpen(static_cast<WindowOpenType>(type), url, user_gesture);
   });
   connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
           this, &BrowserWidget::DevToolsLoadComplete);
@@ -107,7 +109,7 @@ BrowserWidget::BrowserWidget(Cef *cef,
     layout->addWidget(override_widg, 1, 0);
   }
 
-  connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString &url) {
+  connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString& url) {
     url_edit_->setText(url);
   });
 
@@ -119,7 +121,7 @@ BrowserWidget::BrowserWidget(Cef *cef,
   // TODO: handle overflow w/ ellipses
   status_bar_->resize(300, status_bar_->height());
   this->UpdateStatusBarLocation();
-  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString &status) {
+  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {
     if (status.isEmpty()) {
       status_bar_->hide();
       status_bar_->clearMessage();
@@ -183,11 +185,11 @@ void BrowserWidget::Print() {
   cef_widg_->Print();
 }
 
-void BrowserWidget::ShowDevTools(CefBaseWidget *widg) {
+void BrowserWidget::ShowDevTools(CefBaseWidget* widg) {
   cef_widg_->ShowDevTools(widg);
 }
 
-void BrowserWidget::ExecDevToolsJs(const QString &js) {
+void BrowserWidget::ExecDevToolsJs(const QString& js) {
   cef_widg_->ExecDevToolsJs(js);
 }
 
@@ -203,11 +205,11 @@ void BrowserWidget::SetZoomLevel(double level) {
   cef_widg_->SetZoomLevel(level);
 }
 
-void BrowserWidget::moveEvent(QMoveEvent *) {
+void BrowserWidget::moveEvent(QMoveEvent*) {
   this->UpdateStatusBarLocation();
 }
 
-void BrowserWidget::resizeEvent(QResizeEvent *) {
+void BrowserWidget::resizeEvent(QResizeEvent*) {
   this->UpdateStatusBarLocation();
 }
 
@@ -228,7 +230,7 @@ void BrowserWidget::RebuildNavMenu() {
   }
   // Now that we have the current, we know the index to go back or forward
   // We have to go backwards...
-  for (int i = (int)entries.size() - 1; i >= 0; i--) {
+  for (int i = static_cast<int>(entries.size()) - 1; i >= 0; i--) {
     auto entry = entries[i];
     auto action = nav_menu_->addAction(entry.title);
     auto nav_index = i - current_item_index;
@@ -244,3 +246,5 @@ void BrowserWidget::RebuildNavMenu() {
     }
   }
 }
+
+}  // namespace doogie

@@ -1,6 +1,8 @@
 #include "page_tree.h"
 
-PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
+namespace doogie {
+
+PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     : QTreeWidget(parent), browser_stack_(browser_stack) {
   setColumnCount(2);
   setHeaderHidden(true);
@@ -20,7 +22,7 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
 
   // Each time one is selected, we need to make sure to show that on the stack
   connect(this, &QTreeWidget::currentItemChanged,
-          [this](QTreeWidgetItem *current, QTreeWidgetItem *previous) {
+          [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
     // Deactivate previous
     if (previous) {
       auto old_font = previous->font(0);
@@ -54,7 +56,7 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
 
       // We are dragging, grab the one under the mouse
       auto local_pos = mapFromGlobal(QCursor::pos());
-      auto mouse_item = (PageTreeItem*)itemAt(local_pos);
+      auto mouse_item = static_cast<PageTreeItem*>(itemAt(local_pos));
       // Only applies if there is a close button under the mouse. It also
       // can't be the last one we saw being dragged on
       if (mouse_item && mouse_item != close_dragging_on_ &&
@@ -67,15 +69,16 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
   });
 }
 
-void PageTree::NewPage(const QString &url, bool top_level) {
+void PageTree::NewPage(const QString& url, bool top_level) {
   auto browser = browser_stack_->NewBrowser(url);
-  auto parent = (top_level) ? nullptr : (PageTreeItem*) currentItem();
+  auto parent = (top_level) ?
+        nullptr : static_cast<PageTreeItem*>(currentItem());
   AddBrowser(browser, parent, true);
   browser->FocusUrlEdit();
 }
 
 void PageTree::CloseCurrentPage() {
-  auto current_item = (PageTreeItem*) currentItem();
+  auto current_item = static_cast<PageTreeItem*>(currentItem());
   if (current_item) {
     // We always expand here if there are child items so
     // that we don't close those too
@@ -94,7 +97,7 @@ void PageTree::CloseAllPages() {
   }
   // Now try to close each one
   for (const auto &index : to_close) {
-    auto tree_item = (PageTreeItem*)itemFromIndex(index);
+    auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
     if (tree_item) DestroyItem(tree_item, false);
   }
 }
@@ -114,14 +117,14 @@ Qt::DropActions PageTree::supportedDropActions() const {
   return QTreeWidget::supportedDropActions();
 }
 
-void PageTree::dropEvent(QDropEvent *event) {
+void PageTree::dropEvent(QDropEvent* event) {
   // Due to bad internal Qt logic, we reset the current here
   auto current = currentItem();
   QTreeWidget::dropEvent(event);
   setCurrentItem(current);
 }
 
-void PageTree::mousePressEvent(QMouseEvent *event) {
+void PageTree::mousePressEvent(QMouseEvent* event) {
   // We start a rubber band selection if left of the tree or if there is no
   // item where we pressed.
   auto item = itemAt(event->pos());
@@ -150,7 +153,7 @@ void PageTree::mousePressEvent(QMouseEvent *event) {
   QTreeWidget::mousePressEvent(event);
 }
 
-void PageTree::mouseMoveEvent(QMouseEvent *event) {
+void PageTree::mouseMoveEvent(QMouseEvent* event) {
   // If we are rubber band selecting, keep using that
   if (rubber_band_ && !rubber_band_->isHidden()) {
     // Restore the selection we knew
@@ -168,7 +171,8 @@ void PageTree::mouseMoveEvent(QMouseEvent *event) {
         index = QModelIndex();
       }
     }
-    rubber_band_->setGeometry(QRect(rubber_band_origin_, event->pos()).normalized());
+    rubber_band_->setGeometry(QRect(rubber_band_origin_,
+                                    event->pos()).normalized());
   }
   if (state() != DragSelectingState) {
     // Prevent the drag-select
@@ -176,7 +180,7 @@ void PageTree::mouseMoveEvent(QMouseEvent *event) {
   }
 }
 
-void PageTree::mouseReleaseEvent(QMouseEvent *event) {
+void PageTree::mouseReleaseEvent(QMouseEvent* event) {
   // End rubber band selection
   if (rubber_band_ && !rubber_band_->isHidden()) {
     rubber_band_->hide();
@@ -190,7 +194,7 @@ void PageTree::mouseReleaseEvent(QMouseEvent *event) {
     QTreeWidgetItemIterator it(this);
     QList<QPersistentModelIndex> to_close;
     while (*it) {
-      auto tree_item = (PageTreeItem*)*it;
+      auto tree_item = static_cast<PageTreeItem*>(*it);
       if (tree_item->CloseButton()->isChecked()) {
         to_close.append(indexFromItem(tree_item));
       }
@@ -198,25 +202,26 @@ void PageTree::mouseReleaseEvent(QMouseEvent *event) {
     }
     // Now try to close each one
     for (const auto &index : to_close) {
-      auto tree_item = (PageTreeItem*)itemFromIndex(index);
+      auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
       if (tree_item) CloseItem(tree_item);
     }
   }
 }
 
-void PageTree::rowsInserted(const QModelIndex &parent, int start, int end) {
+void PageTree::rowsInserted(const QModelIndex& parent, int start, int end) {
   // We have to override this to re-add the child widget due to how row
   // movement occurs.
   // Ref: https://stackoverflow.com/questions/25559221/qtreewidgetitem-issue-items-set-using-setwidgetitem-are-dispearring-after-movin
   for (int i = start; i <= end; i++) {
-    auto item = (PageTreeItem*) itemFromIndex(model()->index(i, 0, parent));
+    auto item = static_cast<PageTreeItem*>(
+          itemFromIndex(model()->index(i, 0, parent)));
     item->AfterAdded();
   }
   QTreeWidget::rowsInserted(parent, start, end);
 }
 
 void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
-                          PageTreeItem *parent,
+                          PageTreeItem* parent,
                           bool make_current) {
   // Create the tree item
   auto browser_item = new PageTreeItem(browser);
@@ -238,10 +243,11 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,
           [this, browser_item](BrowserWidget::WindowOpenType type,
-                               const QString &url,
+                               const QString& url,
                                bool user_gesture) {
-    PageTreeItem *parent = nullptr;
-    bool make_current = user_gesture && type != BrowserWidget::OpenTypeNewBackgroundTab;
+    PageTreeItem* parent = nullptr;
+    bool make_current = user_gesture &&
+        type != BrowserWidget::OpenTypeNewBackgroundTab;
     if (type != BrowserWidget::OpenTypeNewWindow) {
       parent = browser_item;
     }
@@ -250,11 +256,12 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   });
 }
 
-void PageTree::CloseItem(PageTreeItem *item) {
+void PageTree::CloseItem(PageTreeItem* item) {
   // If we have children and we are expanded, we do not delete them, we move em up
   if (item->isExpanded()) {
     if (item->parent()) {
-      item->parent()->insertChildren(item->parent()->indexOfChild(item), item->takeChildren());
+      item->parent()->insertChildren(item->parent()->indexOfChild(item),
+                                     item->takeChildren());
     } else {
       insertTopLevelItems(indexOfTopLevelItem(item), item->takeChildren());
     }
@@ -262,14 +269,16 @@ void PageTree::CloseItem(PageTreeItem *item) {
   DestroyItem(item, !item->isExpanded());
 }
 
-void PageTree::DestroyItem(PageTreeItem *item, bool include_children) {
+void PageTree::DestroyItem(PageTreeItem* item, bool include_children) {
   // We just call this recursively if include_children is true
   if (include_children) {
     for (int i = 0; i < item->childCount(); i++) {
-      DestroyItem((PageTreeItem*) item->child(i), true);
+      DestroyItem(static_cast<PageTreeItem*>(item->child(i)), true);
     }
   }
   browser_stack_->removeWidget(item->Browser());
   delete item->Browser();
   delete item;
 }
+
+}  // namespace doogie

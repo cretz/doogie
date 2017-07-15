@@ -3,6 +3,8 @@
 #include "cef_handler.h"
 #include "cef_embed_window_linux.h"
 
+namespace doogie {
+
 //TODO
 /*
 QPointer<QWidget> CefWidget::EmbedBrowser() {
@@ -41,3 +43,5 @@ void CefWidget::UpdateSize() {
   }
 }
 */
+
+}  // namespace doogie

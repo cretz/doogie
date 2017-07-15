@@ -2,6 +2,8 @@
 #include "page_tree.h"
 #include "util.h"
 
+namespace doogie {
+
 PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     : browser_(browser) {
   setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled |
@@ -33,7 +35,7 @@ QToolButton* PageTreeItem::CloseButton() {
 }
 
 void PageTreeItem::AfterAdded() {
-  auto tree = (PageTree*) treeWidget();
+  auto tree = static_cast<PageTree*>(treeWidget());
   ApplyFavicon();
 
   // Create a new close button everytime because it is destroyed otherwise
@@ -59,12 +61,12 @@ void PageTreeItem::AfterAdded() {
   tree->setItemWidget(this, 1, close_button_);
   // Gotta call it on my children too sadly
   for (int i = 0; i < childCount(); i++) {
-    ((PageTreeItem*)child(i))->AfterAdded();
+    static_cast<PageTreeItem*>(child(i))->AfterAdded();
   }
 }
 
 void PageTreeItem::ApplyFavicon() {
-  auto tree = (PageTree*) treeWidget();
+  auto tree = static_cast<PageTree*>(treeWidget());
   if (loading_icon_frame_conn_) tree->disconnect(loading_icon_frame_conn_);
   if (browser_) {
     if (browser_->Loading()) {
@@ -88,3 +90,5 @@ void PageTreeItem::ApplyFavicon() {
     }
   }
 }
+
+}  // namespace doogie

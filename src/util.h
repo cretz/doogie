@@ -3,14 +3,16 @@
 
 #include <QtWidgets>
 
+namespace doogie {
+
 class Util
 {
-public:
-  static QPixmap* CachedPixmap(const QString &resName);
-
-  static QIcon CachedIcon(const QString &resName);
-
-  static QIcon CachedIconLighterDisabled(const QString &resName);
+ public:
+  static QPixmap* CachedPixmap(const QString& resName);
+  static QIcon CachedIcon(const QString& resName);
+  static QIcon CachedIconLighterDisabled(const QString& resName);
 };
 
-#endif // DOOGIE_UTIL_H_
+}  // namespace doogie
+
+#endif  // DOOGIE_UTIL_H_

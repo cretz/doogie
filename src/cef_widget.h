@@ -1,19 +1,29 @@
-#ifndef DOOGIE_CEFWIDGET_H_
-#define DOOGIE_CEFWIDGET_H_
+#ifndef DOOGIE_CEF_WIDGET_H_
+#define DOOGIE_CEF_WIDGET_H_
 
 #include <QtWidgets>
 #include "cef_base_widget.h"
 #include "cef_handler.h"
 
+namespace doogie {
+
 class CefWidget : public CefBaseWidget {
   Q_OBJECT
+
  public:
-  CefWidget(Cef *cef, const QString &url = "", QWidget *parent = nullptr);
+  struct NavEntry {
+    QString url;
+    QString title;
+    bool current;
+  };
+  std::vector<NavEntry> NavEntries();
+
+  CefWidget(Cef* cef, const QString& url = "", QWidget* parent = nullptr);
   ~CefWidget();
 
   // If result is non-null, it needs to replace this widget
   QPointer<QWidget> OverrideWidget();\
-  void LoadUrl(const QString &url);
+  void LoadUrl(const QString& url);
 
   // Basically just calls history.go
   void Go(int num);
@@ -22,34 +32,32 @@ class CefWidget : public CefBaseWidget {
   void Print();
 
   void ShowDevTools(CefBaseWidget* widg);
-  void ExecDevToolsJs(const QString &js);
+  void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
 
   double GetZoomLevel();
   void SetZoomLevel(double level);
 
-  struct NavEntry {
-    QString url;
-    QString title;
-    bool current;
-  };
-  std::vector<NavEntry> NavEntries();
+ signals:
+  void UrlChanged(const QString& url);
+  void TitleChanged(const QString& title);
+  void StatusChanged(const QString& status);
+  void FaviconChanged(const QIcon& icon);
+  void LoadStateChanged(bool is_loading,
+                        bool can_go_back,
+                        bool can_go_forward);
+  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
+                const QString& url,
+                bool user_gesture);
+  void DevToolsLoadComplete();
+  void DevToolsClosed();
 
  protected:
-  void focusInEvent(QFocusEvent *event) override;
-  void focusOutEvent(QFocusEvent *event) override;
+  void focusInEvent(QFocusEvent* event) override;
+  void focusOutEvent(QFocusEvent* event) override;
   void UpdateSize() override;
 
  private:
-  CefRefPtr<CefHandler> handler_;
-  CefRefPtr<CefBrowser> browser_;
-  CefRefPtr<CefHandler> dev_tools_handler_;
-  CefRefPtr<CefBrowser> dev_tools_browser_;
-  QPointer<QWidget> override_widget_;
-  bool download_favicon_;
-
-  void InitBrowser(const QString &url);
-
   class FaviconDownloadCallback : public CefDownloadImageCallback {
    public:
     explicit FaviconDownloadCallback(QPointer<CefWidget> cef_widg)
@@ -59,7 +67,7 @@ class CefWidget : public CefBaseWidget {
                                  CefRefPtr<CefImage> image) override;
    private:
     QPointer<CefWidget> cef_widg_;
-    IMPLEMENT_REFCOUNTING(FaviconDownloadCallback);
+    IMPLEMENT_REFCOUNTING(FaviconDownloadCallback)
     DISALLOW_COPY_AND_ASSIGN(FaviconDownloadCallback);
   };
 
@@ -76,24 +84,22 @@ class CefWidget : public CefBaseWidget {
       return true;
     }
     std::vector<NavEntry> Entries() { return entries_; }
+
    private:
     std::vector<NavEntry> entries_;
-    IMPLEMENT_REFCOUNTING(NavEntryVisitor);
+    IMPLEMENT_REFCOUNTING(NavEntryVisitor)
   };
 
- signals:
-  void UrlChanged(const QString &url);
-  void TitleChanged(const QString &title);
-  void StatusChanged(const QString &status);
-  void FaviconChanged(const QIcon &icon);
-  void LoadStateChanged(bool is_loading,
-                        bool can_go_back,
-                        bool can_go_forward);
-  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
-                const QString &url,
-                bool user_gesture);
-  void DevToolsLoadComplete();
-  void DevToolsClosed();
+  void InitBrowser(const QString& url);
+
+  CefRefPtr<CefHandler> handler_;
+  CefRefPtr<CefBrowser> browser_;
+  CefRefPtr<CefHandler> dev_tools_handler_;
+  CefRefPtr<CefBrowser> dev_tools_browser_;
+  QPointer<QWidget> override_widget_;
+  bool download_favicon_;
 };
 
-#endif // DOOGIE_CEFWIDGET_H_
+}  // namespace doogie
+
+#endif  // DOOGIE_CEF_WIDGET_H_

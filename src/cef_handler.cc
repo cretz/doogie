@@ -1,10 +1,12 @@
 #include "cef_handler.h"
 
+namespace doogie {
+
 CefHandler::CefHandler() {}
 
 void CefHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
                                  CefRefPtr<CefFrame> frame,
-                                 const CefString &url) {
+                                 const CefString& url) {
   if (frame->IsMain()) emit UrlChanged(QString::fromStdString(url.ToString()));
 }
 
@@ -19,7 +21,7 @@ void CefHandler::OnStatusMessage(CefRefPtr<CefBrowser> browser,
 }
 
 void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
-                                    const std::vector<CefString> &icon_urls) {
+                                    const std::vector<CefString>& icon_urls) {
   if (!icon_urls.empty()) {
     emit FaviconUrlChanged(QString::fromStdString(icon_urls[0].ToString()));
   }
@@ -30,7 +32,7 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
 }
 
 bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
-                            const CefKeyEvent &event,
+                            const CefKeyEvent& event,
                             CefEventHandle os_event) {
   emit KeyEvent(event, os_event);
   // Let's set true to say we handled it
@@ -63,7 +65,7 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 
 bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                   CefRefPtr<CefFrame> frame,
-                                  const CefString &target_url,
+                                  const CefString& target_url,
                                   CefRequestHandler::WindowOpenDisposition target_disposition,
                                   bool user_gesture) {
   emit PageOpen(target_disposition,
@@ -71,3 +73,5 @@ bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                user_gesture);
   return true;
 }
+
+}  // namespace doogie

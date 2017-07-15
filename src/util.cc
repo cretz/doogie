@@ -1,6 +1,8 @@
 #include "util.h"
 
-QPixmap* Util::CachedPixmap(const QString &resName) {
+namespace doogie {
+
+QPixmap* Util::CachedPixmap(const QString& resName) {
   auto ret = QPixmapCache::find(resName);
   if (!ret) {
     ret = new QPixmap(resName);
@@ -9,11 +11,11 @@ QPixmap* Util::CachedPixmap(const QString &resName) {
   return ret;
 }
 
-QIcon Util::CachedIcon(const QString &resName) {
+QIcon Util::CachedIcon(const QString& resName) {
   return QIcon(*CachedPixmap(resName));
 }
 
-QIcon Util::CachedIconLighterDisabled(const QString &resName) {
+QIcon Util::CachedIconLighterDisabled(const QString& resName) {
   // I didn't feel some of the disabled icons were lightened enough
   auto pixmap = CachedPixmap(resName);
   auto disabled_key = resName + "_lighter_disabled";
@@ -33,3 +35,5 @@ QIcon Util::CachedIconLighterDisabled(const QString &resName) {
   ret.addPixmap(*pixmap_disabled, QIcon::Disabled);
   return ret;
 }
+
+}  // namespace doogie

@@ -12,18 +12,22 @@
 # pragma warning(pop)
 #endif
 
+namespace doogie {
+
 class Cef {
  public:
-  Cef(int argc, char *argv[]);
+  Cef(int argc, char* argv[]);
   ~Cef();
   // If >= 0, this is a child and not the UI window
   int EarlyExitCode();
   void Tick();
 
  private:
-  int early_exit_code_;
+  cef_main_args_t MainArgs(int argc, char* argv[]);
 
-  cef_main_args_t MainArgs(int argc, char *argv[]);
+  int early_exit_code_;
 };
 
-#endif // DOOGIE_CEF_H_
+}  // namespace doogie
+
+#endif  // DOOGIE_CEF_H_

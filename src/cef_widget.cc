@@ -1,6 +1,8 @@
 #include "cef_widget.h"
 
-CefWidget::CefWidget(Cef *cef, const QString &url, QWidget *parent)
+namespace doogie {
+
+CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
     : CefBaseWidget(cef, parent) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
@@ -11,7 +13,7 @@ CefWidget::CefWidget(Cef *cef, const QString &url, QWidget *parent)
   connect(handler_, &CefHandler::StatusChanged,
           this, &CefWidget::StatusChanged);
   connect(handler_, &CefHandler::FaviconUrlChanged,
-          [this](const QString &url) {
+          [this](const QString& url) {
     static const auto favicon_sig =
         QMetaMethod::fromSignal(&CefWidget::FaviconChanged);
     if (this->isSignalConnected(favicon_sig) && browser_) {
@@ -41,7 +43,7 @@ QPointer<QWidget> CefWidget::OverrideWidget() {
   return override_widget_;
 }
 
-void CefWidget::LoadUrl(const QString &url) {
+void CefWidget::LoadUrl(const QString& url) {
   if (browser_) {
     browser_->GetMainFrame()->LoadURL(CefString(url.toStdString()));
   }
@@ -75,7 +77,7 @@ void CefWidget::Print() {
   }
 }
 
-void CefWidget::ShowDevTools(CefBaseWidget *widg) {
+void CefWidget::ShowDevTools(CefBaseWidget* widg) {
   if (browser_) {
     CefBrowserSettings settings;
     if (!dev_tools_handler_) {
@@ -101,7 +103,7 @@ void CefWidget::ShowDevTools(CefBaseWidget *widg) {
   }
 }
 
-void CefWidget::ExecDevToolsJs(const QString &js) {
+void CefWidget::ExecDevToolsJs(const QString& js) {
   if (dev_tools_browser_) {
     dev_tools_browser_->GetMainFrame()->ExecuteJavaScript(
           CefString(js.toStdString()), "<doogie>", 0);
@@ -139,14 +141,14 @@ std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
   return visitor->Entries();
 }
 
-void CefWidget::focusInEvent(QFocusEvent *event) {
+void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
   if (browser_) {
     browser_->GetHost()->SetFocus(true);
   }
 }
 
-void CefWidget::focusOutEvent(QFocusEvent *event) {
+void CefWidget::focusOutEvent(QFocusEvent* event) {
   QWidget::focusOutEvent(event);
   if (browser_) {
     browser_->GetHost()->SetFocus(false);
@@ -154,9 +156,7 @@ void CefWidget::focusOutEvent(QFocusEvent *event) {
 }
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
-    const CefString &,
-    int,
-    CefRefPtr<CefImage> image) {
+    const CefString&, int, CefRefPtr<CefImage> image) {
   // TODO: should I somehow check if the page has changed before this came back?
   QIcon icon;
   if (image) {
@@ -179,3 +179,5 @@ void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
   }
   emit cef_widg_->FaviconChanged(icon);
 }
+
+}  // namespace doogie

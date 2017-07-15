@@ -1,16 +1,17 @@
-#ifndef DOOGIE_BROWSERSTACK_H_
-#define DOOGIE_BROWSERSTACK_H_
+#ifndef DOOGIE_BROWSER_STACK_H_
+#define DOOGIE_BROWSER_STACK_H_
 
 #include <QtWidgets>
 #include "browser_widget.h"
 
+namespace doogie {
+
 class BrowserStack : public QStackedWidget {
   Q_OBJECT
+
  public:
-  explicit BrowserStack(Cef *cef, QWidget *parent = nullptr);
-
-  QPointer<BrowserWidget> NewBrowser(const QString &url);
-
+  explicit BrowserStack(Cef* cef, QWidget* parent = nullptr);
+  QPointer<BrowserWidget> NewBrowser(const QString& url);
   BrowserWidget* CurrentBrowser();
 
  signals:
@@ -18,7 +19,9 @@ class BrowserStack : public QStackedWidget {
   void CurrentBrowserOrLoadingStateChanged();
 
  private:
-  Cef *cef_;
+  Cef* cef_;
 };
 
-#endif // DOOGIE_BROWSERSTACK_H_
+}  // namespace doogie
+
+#endif  // DOOGIE_BROWSER_STACK_H_

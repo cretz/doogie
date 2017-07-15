@@ -3,7 +3,9 @@
 #include "browser_stack.h"
 #include "dev_tools_dock.h"
 
-MainWindow::MainWindow(Cef *cef, QWidget *parent)
+namespace doogie {
+
+MainWindow::MainWindow(Cef* cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
   // TODO: how to determine best interval
   // TODO: is the timer stopped for us?
@@ -130,10 +132,12 @@ MainWindow::MainWindow(Cef *cef, QWidget *parent)
 MainWindow::~MainWindow() {
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event) {
+void MainWindow::keyPressEvent(QKeyEvent* event) {
   QMainWindow::keyPressEvent(event);
 }
 
 void MainWindow::timerEvent(QTimerEvent*) {
   cef_->Tick();
 }
+
+}  // namespace doogie

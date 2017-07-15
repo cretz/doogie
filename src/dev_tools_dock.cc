@@ -1,8 +1,10 @@
 #include "dev_tools_dock.h"
 
+namespace doogie {
+
 DevToolsDock::DevToolsDock(Cef* cef,
-                           BrowserStack *browser_stack,
-                           QWidget *parent)
+                           BrowserStack* browser_stack,
+                           QWidget* parent)
     : QDockWidget("Dev Tools", parent),
       cef_(cef),
       browser_stack_(browser_stack) {
@@ -82,13 +84,13 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser) {
   tools_stack_->setCurrentWidget(widg);
 }
 
-void DevToolsDock::CloseDevTools(BrowserWidget *browser) {
+void DevToolsDock::CloseDevTools(BrowserWidget* browser) {
   // Call DevToolsClosed first so we can get it out of the map
   DevToolsClosed(browser);
   browser->CloseDevTools();
 }
 
-void DevToolsDock::closeEvent(QCloseEvent *event) {
+void DevToolsDock::closeEvent(QCloseEvent* event) {
   QDockWidget::closeEvent(event);
   auto keys = tools_widgets_.keys();
   for (int i = 0; i < keys.size(); i++) {
@@ -96,7 +98,7 @@ void DevToolsDock::closeEvent(QCloseEvent *event) {
   }
 }
 
-void DevToolsDock::DevToolsClosed(BrowserWidget *browser) {
+void DevToolsDock::DevToolsClosed(BrowserWidget* browser) {
   auto widg = tools_widgets_[browser];
   if (widg) {
     tools_widgets_.remove(browser);
@@ -107,3 +109,5 @@ void DevToolsDock::DevToolsClosed(BrowserWidget *browser) {
     delete widg;
   }
 }
+
+}  // namespace doogie

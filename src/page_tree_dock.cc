@@ -1,7 +1,9 @@
 #include "page_tree_dock.h"
 #include "util.h"
 
-PageTreeDock::PageTreeDock(BrowserStack *browser_stack, QWidget *parent)
+namespace doogie {
+
+PageTreeDock::PageTreeDock(BrowserStack* browser_stack, QWidget* parent)
     : QDockWidget("Pages", parent) {
   setFeatures(QDockWidget::DockWidgetMovable |
               QDockWidget::DockWidgetFloatable);
@@ -38,11 +40,11 @@ void PageTreeDock::FocusPageTree() {
   tree_->setFocus();
 }
 
-void PageTreeDock::NewTopLevelPage(const QString &url) {
+void PageTreeDock::NewTopLevelPage(const QString& url) {
   tree_->NewPage(url, true);
 }
 
-void PageTreeDock::NewChildPage(const QString &url) {
+void PageTreeDock::NewChildPage(const QString& url) {
   tree_->NewPage(url, false);
 }
 
@@ -53,3 +55,5 @@ void PageTreeDock::CloseCurrentPage() {
 void PageTreeDock::CloseAllPages() {
   tree_->CloseAllPages();
 }
+
+}  // namespace doogie

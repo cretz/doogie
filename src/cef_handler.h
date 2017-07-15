@@ -1,8 +1,10 @@
-#ifndef DOOGIE_CEFHANDLER_H_
-#define DOOGIE_CEFHANDLER_H_
+#ifndef DOOGIE_CEF_HANDLER_H_
+#define DOOGIE_CEF_HANDLER_H_
 
 #include <QtWidgets>
 #include "cef.h"
+
+namespace doogie {
 
 class CefHandler :
     public QObject,
@@ -14,6 +16,7 @@ class CefHandler :
     public CefLoadHandler,
     public CefRequestHandler {
   Q_OBJECT
+
  public:
   CefHandler();
 
@@ -82,17 +85,15 @@ class CefHandler :
                                 const CefString& target_url,
                                 CefRequestHandler::WindowOpenDisposition target_disposition,
                                 bool user_gesture) override;
- private:
-  IMPLEMENT_REFCOUNTING(CefHandler);
 
  signals:
-  void UrlChanged(const QString &url);
-  void TitleChanged(const QString &title);
-  void StatusChanged(const QString &status);
+  void UrlChanged(const QString& url);
+  void TitleChanged(const QString& title);
+  void StatusChanged(const QString& status);
   // Empty if no URL
-  void FaviconUrlChanged(const QString &url);
+  void FaviconUrlChanged(const QString& url);
   void FocusObtained();
-  void KeyEvent(const CefKeyEvent &event, CefEventHandle os_event);
+  void KeyEvent(const CefKeyEvent& event, CefEventHandle os_event);
   void Closed();
   void AfterCreated(CefRefPtr<CefBrowser> browser);
   void LoadStateChanged(bool is_loading,
@@ -101,8 +102,13 @@ class CefHandler :
   void LoadEnd(CefRefPtr<CefFrame> frame,
                int httpStatusCode);
   void PageOpen(CefRequestHandler::WindowOpenDisposition type,
-                const QString &url,
+                const QString& url,
                 bool user_gesture);
+
+ private:
+  IMPLEMENT_REFCOUNTING(CefHandler)
 };
 
-#endif // DOOGIE_CEFHANDLER_H_
+}  // namespace doogie
+
+#endif  // DOOGIE_CEF_HANDLER_H_
