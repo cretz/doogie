@@ -19,9 +19,14 @@ class CefWidget : public CefBaseWidget {
   void Go(int num);
   void Refresh(bool ignore_cache);
   void Stop();
+  void Print();
 
   void ShowDevTools(CefBaseWidget* widg);
   void ExecDevToolsJs(const QString &js);
+  void CloseDevTools();
+
+  double GetZoomLevel();
+  void SetZoomLevel(double level);
 
   struct NavEntry {
     QString url;

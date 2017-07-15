@@ -19,8 +19,18 @@ class BrowserWidget : public QWidget {
   bool CanGoBack();
   bool CanGoForward();
 
+  void Refresh();
+  void Stop();
+  void Back();
+  void Forward();
+  void Print();
+
   void ShowDevTools(CefBaseWidget* widg);
   void ExecDevToolsJs(const QString &js);
+  void CloseDevTools();
+
+  double GetZoomLevel();
+  void SetZoomLevel(double level);
 
   // Matches CEF's numbering, don't change
   enum WindowOpenType {

@@ -12,15 +12,21 @@ class DevToolsDock : public QDockWidget {
                         BrowserStack *browser_stack,
                         QWidget *parent = nullptr);
 
+  bool DevToolsShowing();
+
  public slots:
   void BrowserChanged(BrowserWidget* browser);
   void ShowDevTools(BrowserWidget* browser);
+  void CloseDevTools(BrowserWidget* browser);
+
+ protected:
+  void closeEvent(QCloseEvent *event);
 
  private:
   Cef* cef_;
   BrowserStack* browser_stack_;
   QStackedWidget* tools_stack_;
-  QMap<BrowserWidget*, QWidget*> tools_widgets_;
+  QHash<BrowserWidget*, QWidget*> tools_widgets_;
 
   void DevToolsClosed(BrowserWidget* browser);
 };

@@ -29,6 +29,14 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
   emit FocusObtained();
 }
 
+bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
+                            const CefKeyEvent &event,
+                            CefEventHandle os_event) {
+  emit KeyEvent(event, os_event);
+  // Let's set true to say we handled it
+  return true;
+}
+
 bool CefHandler::DoClose(CefRefPtr<CefBrowser> browser) {
   emit Closed();
   // Per the docs, we want to return tru here to prevent CEF from

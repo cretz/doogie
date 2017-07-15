@@ -9,6 +9,7 @@ class CefHandler :
     public CefClient,
     public CefDisplayHandler,
     public CefFocusHandler,
+    public CefKeyboardHandler,
     public CefLifeSpanHandler,
     public CefLoadHandler,
     public CefRequestHandler {
@@ -21,6 +22,10 @@ class CefHandler :
   }
 
   virtual CefRefPtr<CefFocusHandler> GetFocusHandler() override {
+    return this;
+  }
+
+  virtual CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override {
     return this;
   }
 
@@ -52,6 +57,11 @@ class CefHandler :
   // Focus handler overrides...
   virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
 
+  // Key handler overrides...
+  virtual bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
+                          const CefKeyEvent& event,
+                          CefEventHandle os_event) override;
+
   // Life span handler overrides...
   virtual bool DoClose(CefRefPtr<CefBrowser> browser) override;
 
@@ -82,6 +92,7 @@ class CefHandler :
   // Empty if no URL
   void FaviconUrlChanged(const QString &url);
   void FocusObtained();
+  void KeyEvent(const CefKeyEvent &event, CefEventHandle os_event);
   void Closed();
   void AfterCreated(CefRefPtr<CefBrowser> browser);
   void LoadStateChanged(bool is_loading,

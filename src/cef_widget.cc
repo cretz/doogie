@@ -3,6 +3,7 @@
 CefWidget::CefWidget(Cef *cef, const QString &url, QWidget *parent)
     : CefBaseWidget(cef, parent) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
+  ForwardKeyboardEventsFrom(handler_);
   connect(handler_, &CefHandler::UrlChanged,
           this, &CefWidget::UrlChanged);
   connect(handler_, &CefHandler::TitleChanged,
@@ -68,11 +69,18 @@ void CefWidget::Stop() {
   }
 }
 
+void CefWidget::Print() {
+  if (browser_) {
+    browser_->GetHost()->Print();
+  }
+}
+
 void CefWidget::ShowDevTools(CefBaseWidget *widg) {
   if (browser_) {
     CefBrowserSettings settings;
     if (!dev_tools_handler_) {
       dev_tools_handler_ = CefRefPtr<CefHandler>(new CefHandler);
+      widg->ForwardKeyboardEventsFrom(dev_tools_handler_);
       connect(dev_tools_handler_, &CefHandler::AfterCreated,
               [this](CefRefPtr<CefBrowser> b) {
         dev_tools_browser_ = b;
@@ -82,13 +90,7 @@ void CefWidget::ShowDevTools(CefBaseWidget *widg) {
         if (frame->IsMain()) emit DevToolsLoadComplete();
       });
       connect(dev_tools_handler_, &CefHandler::Closed, [this]() {
-        // We have to nullify the dev tools browser to make this reentrant
-        // Sadly, HasDevTools is not false after CloseDevTools
-        if (dev_tools_browser_) {
-          dev_tools_browser_->GetHost()->CloseDevTools();
-          dev_tools_browser_ = nullptr;
-          emit DevToolsClosed();
-        }
+        CloseDevTools();
       });
     }
     browser_->GetHost()->ShowDevTools(
@@ -103,6 +105,29 @@ void CefWidget::ExecDevToolsJs(const QString &js) {
   if (dev_tools_browser_) {
     dev_tools_browser_->GetMainFrame()->ExecuteJavaScript(
           CefString(js.toStdString()), "<doogie>", 0);
+  }
+}
+
+void CefWidget::CloseDevTools() {
+  // We have to nullify the dev tools browser to make this reentrant
+  // Sadly, HasDevTools is not false after CloseDevTools
+  if (dev_tools_browser_) {
+    dev_tools_browser_->GetHost()->CloseDevTools();
+    dev_tools_browser_ = nullptr;
+    emit DevToolsClosed();
+  }
+}
+
+double CefWidget::GetZoomLevel() {
+  if (browser_) {
+    return browser_->GetHost()->GetZoomLevel();
+  }
+  return 0.0;
+}
+
+void CefWidget::SetZoomLevel(double level) {
+  if (browser_) {
+    browser_->GetHost()->SetZoomLevel(level);
   }
 }
 

@@ -14,24 +14,20 @@ BrowserWidget::BrowserWidget(Cef *cef,
   back_button_ = new QToolButton();
   back_button_->setText("Back");
   back_button_->setMenu(nav_menu_);
-  back_button_->setIcon(
-        Util::CachedIconLighterDisabled(":/res/images/fontawesome/arrow-left.png"));
+  back_button_->setIcon(Util::CachedIconLighterDisabled(
+      ":/res/images/fontawesome/arrow-left.png"));
   back_button_->setAutoRaise(true);
   back_button_->setDisabled(true);
-  connect(back_button_, &QToolButton::clicked, [this](bool) {
-    cef_widg_->Go(-1);
-  });
+  connect(back_button_, &QToolButton::clicked, [this](bool) { Back(); });
 
   forward_button_ = new QToolButton();
   forward_button_->setText("Forward");
   forward_button_->setMenu(nav_menu_);
-  forward_button_->setIcon(
-        Util::CachedIconLighterDisabled(":/res/images/fontawesome/arrow-right.png"));
+  forward_button_->setIcon(Util::CachedIconLighterDisabled(
+      ":/res/images/fontawesome/arrow-right.png"));
   forward_button_->setAutoRaise(true);
   forward_button_->setDisabled(true);
-  connect(forward_button_, &QToolButton::clicked, [this](bool) {
-    cef_widg_->Go(1);
-  });
+  connect(forward_button_, &QToolButton::clicked, [this](bool) { Forward(); });
 
   url_edit_ = new QLineEdit(this);
   connect(url_edit_, &QLineEdit::returnPressed, [this]() {
@@ -41,14 +37,11 @@ BrowserWidget::BrowserWidget(Cef *cef,
 
   refresh_button_ = new QToolButton();
   refresh_button_->setText("Refresh");
-  refresh_button_->setIcon(
-        Util::CachedIconLighterDisabled(":/res/images/fontawesome/repeat.png"));
+  refresh_button_->setIcon(Util::CachedIconLighterDisabled(
+      ":/res/images/fontawesome/repeat.png"));
   refresh_button_->setAutoRaise(true);
   refresh_button_->setDisabled(true);
-  connect(refresh_button_, &QToolButton::clicked, [this](bool) {
-    auto ignore_cache = QApplication::keyboardModifiers().testFlag(Qt::ControlModifier);
-    cef_widg_->Refresh(ignore_cache);
-  });
+  connect(refresh_button_, &QToolButton::clicked, [this](bool) { Refresh(); });
 
   stop_button_ = new QToolButton();
   stop_button_->setText("Refresh");
@@ -56,9 +49,7 @@ BrowserWidget::BrowserWidget(Cef *cef,
         Util::CachedIcon(":/res/images/fontawesome/times-circle.png"));
   stop_button_->setAutoRaise(true);
   stop_button_->setVisible(false);
-  connect(stop_button_, &QToolButton::clicked, [this](bool) {
-    cef_widg_->Stop();
-  });
+  connect(stop_button_, &QToolButton::clicked, [this](bool) { Stop(); });
 
   auto top_layout = new QHBoxLayout();
   top_layout->setMargin(0);
@@ -142,6 +133,8 @@ BrowserWidget::BrowserWidget(Cef *cef,
 void BrowserWidget::FocusUrlEdit() {
   url_edit_->setFocus();
   url_edit_->activateWindow();
+  // We choose to select the entire text here to make nav easier
+  url_edit_->selectAll();
 }
 
 void BrowserWidget::FocusBrowser() {
@@ -168,12 +161,46 @@ bool BrowserWidget::CanGoForward() {
   return can_go_forward_;
 }
 
+void BrowserWidget::Refresh() {
+  auto ignore_cache = QApplication::keyboardModifiers().
+      testFlag(Qt::ControlModifier);
+  cef_widg_->Refresh(ignore_cache);
+}
+
+void BrowserWidget::Stop() {
+  cef_widg_->Stop();
+}
+
+void BrowserWidget::Back() {
+  cef_widg_->Go(-1);
+}
+
+void BrowserWidget::Forward() {
+  cef_widg_->Go(1);
+}
+
+void BrowserWidget::Print() {
+  cef_widg_->Print();
+}
+
 void BrowserWidget::ShowDevTools(CefBaseWidget *widg) {
   cef_widg_->ShowDevTools(widg);
 }
 
 void BrowserWidget::ExecDevToolsJs(const QString &js) {
   cef_widg_->ExecDevToolsJs(js);
+}
+
+void BrowserWidget::CloseDevTools() {
+  cef_widg_->CloseDevTools();
+}
+
+double BrowserWidget::GetZoomLevel() {
+  return cef_widg_->GetZoomLevel();
+}
+
+void BrowserWidget::SetZoomLevel(double level) {
+  cef_widg_->SetZoomLevel(level);
 }
 
 void BrowserWidget::moveEvent(QMoveEvent *) {

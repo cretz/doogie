@@ -10,7 +10,9 @@ class PageTree : public QTreeWidget {
   Q_OBJECT
  public:
   explicit PageTree(BrowserStack *browser_stack, QWidget *parent = nullptr);
-  void NewBrowser();
+  void NewPage(const QString &url, bool top_level);
+  void CloseCurrentPage();
+  void CloseAllPages();
   QMovie* LoadingIconMovie();
  protected:
   virtual Qt::DropActions supportedDropActions() const override;

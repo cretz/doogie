@@ -37,6 +37,10 @@ DevToolsDock::DevToolsDock(Cef* cef,
   BrowserChanged(browser_stack->CurrentBrowser());
 }
 
+bool DevToolsDock::DevToolsShowing() {
+  return tools_stack_->currentIndex() > 1;
+}
+
 void DevToolsDock::BrowserChanged(BrowserWidget* browser) {
   if (!browser) {
     tools_stack_->setCurrentIndex(0);
@@ -76,6 +80,20 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser) {
           this, [this, browser]() { DevToolsClosed(browser); });
   browser->ShowDevTools(widg);
   tools_stack_->setCurrentWidget(widg);
+}
+
+void DevToolsDock::CloseDevTools(BrowserWidget *browser) {
+  // Call DevToolsClosed first so we can get it out of the map
+  DevToolsClosed(browser);
+  browser->CloseDevTools();
+}
+
+void DevToolsDock::closeEvent(QCloseEvent *event) {
+  QDockWidget::closeEvent(event);
+  auto keys = tools_widgets_.keys();
+  for (int i = 0; i < keys.size(); i++) {
+    CloseDevTools(keys[0]);
+  }
 }
 
 void DevToolsDock::DevToolsClosed(BrowserWidget *browser) {

@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "cef.h"
+#include "cef_handler.h"
 
 class CefBaseWidget : public QWidget {
   Q_OBJECT
@@ -11,6 +12,7 @@ class CefBaseWidget : public QWidget {
   ~CefBaseWidget();
 
   const CefWindowInfo& WindowInfo();
+  void ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler);
 
  protected:
   Cef* cef_;

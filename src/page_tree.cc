@@ -67,10 +67,36 @@ PageTree::PageTree(BrowserStack *browser_stack, QWidget *parent)
   });
 }
 
-void PageTree::NewBrowser() {
-  auto browser = browser_stack_->NewBrowser("");
-  AddBrowser(browser, nullptr, true);
+void PageTree::NewPage(const QString &url, bool top_level) {
+  auto browser = browser_stack_->NewBrowser(url);
+  auto parent = (top_level) ? nullptr : (PageTreeItem*) currentItem();
+  AddBrowser(browser, parent, true);
   browser->FocusUrlEdit();
+}
+
+void PageTree::CloseCurrentPage() {
+  auto current_item = (PageTreeItem*) currentItem();
+  if (current_item) {
+    // We always expand here if there are child items so
+    // that we don't close those too
+    if (current_item->childCount() > 0) current_item->setExpanded(true);
+    CloseItem(current_item);
+  }
+}
+
+void PageTree::CloseAllPages() {
+  // Get persistent indices for everything, then close em all
+  QTreeWidgetItemIterator it(this);
+  QList<QPersistentModelIndex> to_close;
+  while (*it) {
+    to_close.append(indexFromItem(*it));
+    it++;
+  }
+  // Now try to close each one
+  for (const auto &index : to_close) {
+    auto tree_item = (PageTreeItem*)itemFromIndex(index);
+    if (tree_item) DestroyItem(tree_item, false);
+  }
 }
 
 QMovie* PageTree::LoadingIconMovie() {

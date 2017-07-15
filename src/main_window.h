@@ -13,6 +13,7 @@ class MainWindow : public QMainWindow {
   ~MainWindow();
 
  protected:
+  void keyPressEvent(QKeyEvent *event);
   void timerEvent(QTimerEvent *event);
 
  private:
