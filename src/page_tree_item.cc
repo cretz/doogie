@@ -20,7 +20,7 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
 }
 
 PageTreeItem::~PageTreeItem() {
-  // TODO: do I need to delete the widgets?
+  // TODO(cretz): do I need to delete the widgets?
   if (loading_icon_frame_conn_) {
     treeWidget()->disconnect(loading_icon_frame_conn_);
   }
@@ -45,7 +45,8 @@ void PageTreeItem::AfterAdded() {
         Util::CachedIcon(":/res/images/fontawesome/times.png"));
   close_button_->setText("Close");
   close_button_->setAutoRaise(true);
-  close_button_->setStyleSheet(":pressed:!checked { background-color: transparent; }");
+  close_button_->setStyleSheet(
+        ":pressed:!checked { background-color: transparent; }");
   // Yes, we know we can override one already set, on purpose. When moving
   // items, Qt deletes it (I think, TODO: check life span and ownership of this
   // button as these items are moved).

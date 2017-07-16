@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"bufio"
 )
 
 func main() {
@@ -59,6 +60,8 @@ func start() error {
 		return pkg()
 	case "build-cef":
 		return buildCef()
+	case "lint":
+		return lint()
 	default:
 		return fmt.Errorf("Unrecognized command '%v'", os.Args[1])
 	}
@@ -257,6 +260,69 @@ func buildCefWindows() error {
 	}
 	if err = execCmdInDir(dllWrapperDir, "msbuild", "libcef_dll_wrapper.vcxproj", "/p:Configuration=Release"); err != nil {
 		return fmt.Errorf("Unable to build release wrapper: %v", err)
+	}
+	return nil
+}
+
+func lint() error {
+	toIgnore := []string {
+		"No copyright message found.",
+		"#ifndef header guard has wrong style, please use: SRC_",
+		"#endif line should be \"#endif  // SRC_",
+		"Include the directory when naming .h files",
+		"Done processing",
+		"Total errors found",
+	}
+	// Run lint on all cc and h files, and trim off any of the toIgnore stuff
+	depotToolsDir := os.Getenv("DEPOT_TOOLS_DIR")
+	if depotToolsDir == "" {
+		return fmt.Errorf("Unable to find DEPOT_TOOLS_DIR env var")
+	}
+	args := []string{
+		filepath.Join(depotToolsDir, "cpplint.py"),
+		// Can't use, ref: https://github.com/google/styleguide/issues/22
+		// "--root=doogie\\",
+	}
+	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if (!info.IsDir() && !strings.HasPrefix(info.Name(), "moc_") &&
+				(strings.HasSuffix(path, ".cc") || strings.HasSuffix(path, ".h"))) {
+			args = append(args, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("python", args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil && len(out) == 0 {
+		return fmt.Errorf("Unable to run cpplint: %v", err)
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	foundAny := false
+	for scanner.Scan() {
+		// If after the trimmed string after the second colon starts w/ any toIgnore, we ignore it
+		ignore := false
+		origLine := scanner.Text()
+		checkLine := origLine
+		if firstColon := strings.Index(origLine, ":"); firstColon != -1 {
+			if secondColon := strings.Index(origLine[firstColon+1:], ":"); secondColon != -1 {
+				checkLine = strings.TrimSpace(origLine[firstColon+secondColon+2:])
+			}
+		}
+		for _, toCheck := range toIgnore {
+			if strings.HasPrefix(checkLine, toCheck) {
+				ignore = true
+				break
+			}
+		}
+		if (!ignore) {
+			fmt.Println(origLine)
+			foundAny = true
+		}
+	}
+	if foundAny {
+		return fmt.Errorf("Lint check returned one or more errors")
 	}
 	return nil
 }

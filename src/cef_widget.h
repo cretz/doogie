@@ -2,6 +2,7 @@
 #define DOOGIE_CEF_WIDGET_H_
 
 #include <QtWidgets>
+#include <vector>
 #include "cef_base_widget.h"
 #include "cef_handler.h"
 
@@ -18,7 +19,9 @@ class CefWidget : public CefBaseWidget {
   };
   std::vector<NavEntry> NavEntries();
 
-  CefWidget(Cef* cef, const QString& url = "", QWidget* parent = nullptr);
+  explicit CefWidget(Cef* cef,
+                     const QString& url = "",
+                     QWidget* parent = nullptr);
   ~CefWidget();
 
   // If result is non-null, it needs to replace this widget

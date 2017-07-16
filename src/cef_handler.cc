@@ -76,7 +76,7 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                   CefRefPtr<CefFrame> frame,
                                   const CefString& target_url,
-                                  CefRequestHandler::WindowOpenDisposition target_disposition,
+                                  CefRequestHandler::WindowOpenDisposition target_disposition,  // NOLINT(whitespace/line_length)
                                   bool user_gesture) {
   emit PageOpen(target_disposition,
                QString::fromStdString(target_url.ToString()),

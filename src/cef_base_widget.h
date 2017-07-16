@@ -11,15 +11,15 @@ class CefBaseWidget : public QWidget {
   Q_OBJECT
 
  public:
-  CefBaseWidget(Cef* cef, QWidget* parent = nullptr);
+  explicit CefBaseWidget(Cef* cef, QWidget* parent = nullptr);
   ~CefBaseWidget();
 
   const CefWindowInfo& WindowInfo();
   void ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler);
 
  protected:
-  virtual void moveEvent(QMoveEvent* event) override;
-  virtual void resizeEvent(QResizeEvent* event) override;
+  void moveEvent(QMoveEvent* event) override;
+  void resizeEvent(QResizeEvent* event) override;
   virtual void UpdateSize();
 
   Cef* cef_;

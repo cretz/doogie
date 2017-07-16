@@ -11,7 +11,7 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
-  MainWindow(Cef* cef, QWidget* parent = nullptr);
+  explicit MainWindow(Cef* cef, QWidget* parent = nullptr);
   ~MainWindow();
 
  protected:

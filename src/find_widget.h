@@ -11,7 +11,7 @@ class FindWidget : public QFrame {
  public:
   explicit FindWidget(QWidget* parent);
 
- public slots:
+ public slots:  // NOLINT(whitespace/indent)
   void FindResult(int count, int index);
 
  signals:
@@ -22,10 +22,10 @@ class FindWidget : public QFrame {
   void Hidden();
 
  protected:
-  virtual void focusInEvent(QFocusEvent* event) override;
-  virtual void hideEvent(QHideEvent* event) override;
-  virtual void keyReleaseEvent(QKeyEvent* event) override;
-  virtual void showEvent(QShowEvent* event) override;
+  void focusInEvent(QFocusEvent* event) override;
+  void hideEvent(QHideEvent* event) override;
+  void keyReleaseEvent(QKeyEvent* event) override;
+  void showEvent(QShowEvent* event) override;
 
  private:
   void UpdateFindResults(int count,

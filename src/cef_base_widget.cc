@@ -8,7 +8,6 @@ CefBaseWidget::CefBaseWidget(Cef* cef, QWidget*  parent)
 }
 
 CefBaseWidget::~CefBaseWidget() {
-
 }
 
 const CefWindowInfo& CefBaseWidget::WindowInfo() {

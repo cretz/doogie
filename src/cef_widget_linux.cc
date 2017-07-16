@@ -5,7 +5,7 @@
 
 namespace doogie {
 
-//TODO
+// TODO(cretz): Implement this
 /*
 QPointer<QWidget> CefWidget::EmbedBrowser() {
   CefWindowInfo win_info;

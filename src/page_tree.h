@@ -19,16 +19,16 @@ class PageTree : public QTreeWidget {
   QMovie* LoadingIconMovie();
 
  protected:
-  virtual Qt::DropActions supportedDropActions() const override;
-  virtual void dropEvent(QDropEvent* event) override;
-  virtual void keyPressEvent(QKeyEvent* event) override;
-  virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
-  virtual void mousePressEvent(QMouseEvent* event) override;
-  virtual void mouseMoveEvent(QMouseEvent* event) override;
-  virtual void mouseReleaseEvent(QMouseEvent* event) override;
-  virtual void rowsInserted(const QModelIndex& parent,
-                            int start,
-                            int end) override;
+  Qt::DropActions supportedDropActions() const override;
+  void dropEvent(QDropEvent* event) override;
+  void keyPressEvent(QKeyEvent* event) override;
+  void mouseDoubleClickEvent(QMouseEvent* event) override;
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
+  void rowsInserted(const QModelIndex& parent,
+                    int start,
+                    int end) override;
 
  private:
   void AddBrowser(QPointer<BrowserWidget> browser,

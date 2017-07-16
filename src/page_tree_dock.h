@@ -10,7 +10,8 @@ class PageTreeDock : public QDockWidget {
   Q_OBJECT
 
  public:
-  PageTreeDock(BrowserStack* browser_stack, QWidget* parent = nullptr);
+  explicit PageTreeDock(BrowserStack* browser_stack,
+                        QWidget* parent = nullptr);
 
   void FocusPageTree();
   void NewTopLevelPage(const QString& url);

@@ -5,8 +5,7 @@
 
 namespace doogie {
 
-class Util
-{
+class Util {
  public:
   static QPixmap* CachedPixmap(const QString& resName);
   static QIcon CachedIcon(const QString& resName);

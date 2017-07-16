@@ -1,4 +1,5 @@
 #include "cef_widget.h"
+#include <string>
 
 namespace doogie {
 
@@ -18,11 +19,12 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
         QMetaMethod::fromSignal(&CefWidget::FaviconChanged);
     if (this->isSignalConnected(favicon_sig) && browser_) {
       // Download the favicon
-      browser_->GetHost()->DownloadImage(CefString(url.toStdString()),
-                                         true,
-                                         16,
-                                         false,
-                                         new CefWidget::FaviconDownloadCallback(this));
+      browser_->GetHost()->DownloadImage(
+            CefString(url.toStdString()),
+            true,
+            16,
+            false,
+            new CefWidget::FaviconDownloadCallback(this));
     }
   });
   connect(handler_, &CefHandler::LoadStateChanged,
@@ -65,8 +67,11 @@ void CefWidget::Go(int num) {
 
 void CefWidget::Refresh(bool ignore_cache) {
   if (browser_) {
-    if (ignore_cache) browser_->ReloadIgnoreCache();
-    else browser_->Reload();
+    if (ignore_cache) {
+      browser_->ReloadIgnoreCache();
+    } else {
+      browser_->Reload();
+    }
   }
 }
 
@@ -155,7 +160,8 @@ void CefWidget::SetZoomLevel(double level) {
 }
 
 std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
-  CefRefPtr<CefWidget::NavEntryVisitor> visitor = new CefWidget::NavEntryVisitor;
+  CefRefPtr<CefWidget::NavEntryVisitor> visitor =
+      new CefWidget::NavEntryVisitor;
   if (browser_) {
     browser_->GetHost()->GetNavigationEntries(visitor, false);
   }
@@ -178,10 +184,11 @@ void CefWidget::focusOutEvent(QFocusEvent* event) {
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
     const CefString&, int, CefRefPtr<CefImage> image) {
-  // TODO: should I somehow check if the page has changed before this came back?
+  // TODO(cretz): should I somehow check if the page has changed before
+  //  this came back?
   QIcon icon;
   if (image) {
-    // TODO: This would be quicker if we used GetAsBitmap
+    // TODO(cretz): This would be quicker if we used GetAsBitmap
     int width, height;
     auto png = image->GetAsPNG(1.0f, true, width, height);
     if (!png) {

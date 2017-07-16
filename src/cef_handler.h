@@ -2,6 +2,7 @@
 #define DOOGIE_CEF_HANDLER_H_
 
 #include <QtWidgets>
+#include <vector>
 #include "cef.h"
 
 namespace doogie {
@@ -21,83 +22,83 @@ class CefHandler :
  public:
   CefHandler();
 
-  virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
+  CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefFindHandler> GetFindHandler() override {
+  CefRefPtr<CefFindHandler> GetFindHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefFocusHandler> GetFocusHandler() override {
+  CefRefPtr<CefFocusHandler> GetFocusHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override {
+  CefRefPtr<CefKeyboardHandler> GetKeyboardHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override {
+  CefRefPtr<CefLifeSpanHandler> GetLifeSpanHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefLoadHandler> GetLoadHandler() override {
+  CefRefPtr<CefLoadHandler> GetLoadHandler() override {
     return this;
   }
 
-  virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override {
+  CefRefPtr<CefRequestHandler> GetRequestHandler() override {
     return this;
   }
 
   // Display handler overrides...
-  virtual void OnAddressChange(CefRefPtr<CefBrowser> browser,
-                               CefRefPtr<CefFrame> frame,
-                               const CefString& url) override;
+  void OnAddressChange(CefRefPtr<CefBrowser> browser,
+                       CefRefPtr<CefFrame> frame,
+                       const CefString& url) override;
 
-  virtual void OnTitleChange(CefRefPtr<CefBrowser> browser,
-                             const CefString& title) override;
+  void OnTitleChange(CefRefPtr<CefBrowser> browser,
+                     const CefString& title) override;
 
-  virtual void OnStatusMessage(CefRefPtr<CefBrowser> browser,
-                               const CefString& value) override;
-  virtual void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
-                                  const std::vector<CefString>& icon_urls) override;
+  void OnStatusMessage(CefRefPtr<CefBrowser> browser,
+                       const CefString& value) override;
+  void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
+                          const std::vector<CefString>& icon_urls) override;
 
   // Find handler overrides...
-  virtual void OnFindResult(CefRefPtr<CefBrowser> browser,
-                            int identifier,
-                            int count,
-                            const CefRect& selection_rect,
-                            int active_match_ordinal,
-                            bool final_update);
+  void OnFindResult(CefRefPtr<CefBrowser> browser,
+                    int identifier,
+                    int count,
+                    const CefRect& selection_rect,
+                    int active_match_ordinal,
+                    bool final_update) override;
 
   // Focus handler overrides...
-  virtual void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
+  void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
 
   // Key handler overrides...
-  virtual bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
-                          const CefKeyEvent& event,
-                          CefEventHandle os_event) override;
+  bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
+                  const CefKeyEvent& event,
+                  CefEventHandle os_event) override;
 
   // Life span handler overrides...
-  virtual bool DoClose(CefRefPtr<CefBrowser> browser) override;
+  bool DoClose(CefRefPtr<CefBrowser> browser) override;
 
-  virtual void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
+  void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
 
   // Load handler overrides...
-  virtual void OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
-                                    bool is_loading,
-                                    bool can_go_back,
-                                    bool can_go_forward) override;
-  virtual void OnLoadEnd(CefRefPtr<CefBrowser> browser,
-                         CefRefPtr<CefFrame> frame,
-                         int httpStatusCode) override;
+  void OnLoadingStateChange(CefRefPtr<CefBrowser> browser,
+                            bool is_loading,
+                            bool can_go_back,
+                            bool can_go_forward) override;
+  void OnLoadEnd(CefRefPtr<CefBrowser> browser,
+                 CefRefPtr<CefFrame> frame,
+                 int httpStatusCode) override;
 
   // Request handler overrides...
-  virtual bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
-                                CefRefPtr<CefFrame> frame,
-                                const CefString& target_url,
-                                CefRequestHandler::WindowOpenDisposition target_disposition,
-                                bool user_gesture) override;
+  bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
+                        CefRefPtr<CefFrame> frame,
+                        const CefString& target_url,
+                        CefRequestHandler::WindowOpenDisposition target_disposition,  // NOLINT(whitespace/line_length)
+                        bool user_gesture) override;
 
  signals:
   void UrlChanged(const QString& url);

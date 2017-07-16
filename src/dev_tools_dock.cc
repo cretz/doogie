@@ -65,7 +65,7 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser) {
   // Need to show that close button
   connect(browser, &BrowserWidget::DevToolsLoadComplete, this,
           [this, browser]() {
-    // TODO: put a unit test around this highly-volatile code
+    // TODO(cretz): put a unit test around this highly-volatile code
     QString js =
         "Components.dockController._closeButton.setVisible(true);\n"
         "Components.dockController._closeButton.addEventListener(\n"

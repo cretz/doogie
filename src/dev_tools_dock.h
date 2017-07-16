@@ -16,7 +16,7 @@ class DevToolsDock : public QDockWidget {
 
   bool DevToolsShowing();
 
- public slots:
+ public slots:  // NOLINT(whitespace/indent)
   void BrowserChanged(BrowserWidget* browser);
   void ShowDevTools(BrowserWidget* browser);
   void CloseDevTools(BrowserWidget* browser);

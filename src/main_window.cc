@@ -7,8 +7,8 @@ namespace doogie {
 
 MainWindow::MainWindow(Cef* cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
-  // TODO: how to determine best interval
-  // TODO: is the timer stopped for us?
+  // TODO(cretz): how to determine best interval
+  // TODO(cretz): is the timer stopped for us?
   if (startTimer(10) == 0) {
     throw std::runtime_error("Unable to start CEF timer");
   }
@@ -37,7 +37,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
   // Setup the menu options...
-  // TODO: configurable hotkeys and better organization
+  // TODO(cretz): configurable hotkeys and better organization
   auto pages_menu = menuBar()->addMenu("&Pages");
   pages_menu->addAction("New Top-Level Page", [this, page_tree]() {
     page_tree->NewTopLevelPage("");

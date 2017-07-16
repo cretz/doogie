@@ -62,3 +62,11 @@ previously run `release` build, run:
     go run build.go package release
 
 Once complete, the package(s) will in `release/package` (e.g. doogie.zip in Windows)
+
+### Testing
+
+To do a lint check of the code, have the
+[Chromium depot_tools](https://chromium.googlesource.com/chromium/tools/depot_tools.git) cloned somewhere and set the
+`DEPOT_TOOLS_DIR` env var to the dir. Then run:
+
+    go run build.go lint

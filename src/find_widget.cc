@@ -84,8 +84,11 @@ void FindWidget::hideEvent(QHideEvent* event) {
 }
 
 void FindWidget::keyReleaseEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_Escape) hide();
-  else QFrame::keyReleaseEvent(event);
+  if (event->key() == Qt::Key_Escape) {
+    hide();
+  } else {
+    QFrame::keyReleaseEvent(event);
+  }
 }
 
 void FindWidget::showEvent(QShowEvent* event) {

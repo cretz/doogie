@@ -137,9 +137,9 @@ BrowserWidget::BrowserWidget(Cef* cef,
   status_bar_ = new QStatusBar(this);
   status_bar_->setSizeGripEnabled(false);
   status_bar_->hide();
-  // TODO: intelligently set the width based on message size,
+  // TODO(cretz): intelligently set the width based on message size,
   //  placement of scrollbars, mouse position, and window size
-  // TODO: handle overflow w/ ellipses
+  // TODO(cretz): handle overflow w/ ellipses
   status_bar_->resize(300, status_bar_->height());
   this->UpdateStatusBarLocation();
   connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {

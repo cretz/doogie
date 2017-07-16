@@ -1,4 +1,5 @@
 #include "page_tree.h"
+#include <algorithm>
 
 namespace doogie {
 
@@ -62,7 +63,8 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
       if (mouse_item && mouse_item != close_dragging_on_ &&
           columnAt(local_pos.x()) == 1) {
         // Flip the checked state
-        mouse_item->CloseButton()->setChecked(!mouse_item->CloseButton()->isChecked());
+        mouse_item->CloseButton()->setChecked(
+              !mouse_item->CloseButton()->isChecked());
         close_dragging_on_ = mouse_item;
       }
     }
@@ -284,7 +286,8 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
 }
 
 void PageTree::CloseItem(PageTreeItem* item) {
-  // If we have children and we are expanded, we do not delete them, we move em up
+  // If we have children and we are expanded, we do not delete them,
+  //  we move em up
   if (item->isExpanded()) {
     if (item->parent()) {
       item->parent()->insertChildren(item->parent()->indexOfChild(item),
