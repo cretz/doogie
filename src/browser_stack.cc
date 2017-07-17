@@ -11,7 +11,7 @@ BrowserStack::BrowserStack(Cef* cef, QWidget* parent)
 }
 
 QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
-  auto widg = new BrowserWidget(cef_, url);
+  auto widg = new BrowserWidget(cef_, "");
   connect(widg, &BrowserWidget::LoadingStateChanged, [this, widg]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();
   });
@@ -19,6 +19,8 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
           [this, widg](const QPoint& inspect_at) {
     emit ShowDevToolsRequest(widg, inspect_at);
   });
+  // We load the URL separately so we can have the loading icon and what not
+  if (!url.isEmpty()) widg->LoadUrl(url);
   addWidget(widg);
   return widg;
 }

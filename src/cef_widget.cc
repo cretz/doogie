@@ -60,6 +60,14 @@ void CefWidget::LoadUrl(const QString& url) {
   }
 }
 
+QString CefWidget::CurrentUrl() {
+  if (browser_) {
+    return QString::fromStdString(
+          browser_->GetMainFrame()->GetURL().ToString());
+  }
+  return "";
+}
+
 void CefWidget::Go(int num) {
   if (browser_) {
     browser_->GetMainFrame()->ExecuteJavaScript(

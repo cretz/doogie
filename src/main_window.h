@@ -19,6 +19,8 @@ class MainWindow : public QMainWindow {
   QJsonObject DebugDump();
 
  protected:
+  void dropEvent(QDropEvent* event) override;
+  void dragEnterEvent(QDragEnterEvent* event) override;
   void keyPressEvent(QKeyEvent* event) override;
   void timerEvent(QTimerEvent* event) override;
 

@@ -9,11 +9,11 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   setHeaderHidden(true);
   setSelectionBehavior(QAbstractItemView::SelectItems);
   setSelectionMode(QAbstractItemView::ExtendedSelection);
-  setDragDropMode(QAbstractItemView::InternalMove);
+  setDragDropMode(QAbstractItemView::DragDrop);
   setDefaultDropAction(Qt::MoveAction);
   setDragEnabled(true);
+  viewport()->setAcceptDrops(true);
   setDropIndicatorShown(true);
-  setAcceptDrops(true);
   setAutoExpandDelay(500);
   setIndentation(10);
   setAnimated(true);
@@ -125,15 +125,63 @@ QJsonObject PageTree::DebugDump() {
 }
 
 Qt::DropActions PageTree::supportedDropActions() const {
-  // return Qt::MoveAction;
+  // return Qt::MoveAction | Qt::TargetMoveAction;
   return QTreeWidget::supportedDropActions();
+}
+
+void PageTree::dragEnterEvent(QDragEnterEvent* event) {
+  // We accept external types of URL
+  if (event->source() != this && event->mimeData()->hasUrls()) {
+    if (event->proposedAction() != Qt::CopyAction) {
+      event->ignore();
+      return;
+    }
+    event->acceptProposedAction();
+  }
+  QTreeWidget::dragEnterEvent(event);
+}
+
+void PageTree::dragMoveEvent(QDragMoveEvent* event) {
+  if (event->source() != this && event->mimeData()->hasUrls()) {
+    if (event->proposedAction() != Qt::CopyAction) {
+      event->ignore();
+      return;
+    }
+    event->acceptProposedAction();
+  }
+  QTreeWidget::dragMoveEvent(event);
 }
 
 void PageTree::dropEvent(QDropEvent* event) {
   // Due to bad internal Qt logic, we reset the current here
-  auto current = currentItem();
-  QTreeWidget::dropEvent(event);
-  setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
+  if (event->source() == this) {
+    auto current = currentItem();
+    QTreeWidget::dropEvent(event);
+    setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
+  } else {
+    if (event->mimeData()->hasUrls() &&
+        event->proposedAction() != Qt::CopyAction) {
+      event->ignore();
+      return;
+    }
+    QTreeWidget::dropEvent(event);
+  }
+}
+
+bool PageTree::dropMimeData(QTreeWidgetItem* parent,
+                            int index,
+                            const QMimeData* data,
+                            Qt::DropAction action) {
+  // If there is a URL we go ahead and put each one under the parent
+  if (data->hasUrls()) {
+    for (const auto& url : data->urls()) {
+      AddBrowser(browser_stack_->NewBrowser(url.url()),
+                 static_cast<PageTreeItem*>(parent),
+                 true);
+    }
+    return true;
+  }
+  return QTreeWidget::dropMimeData(parent, index, data, action);
 }
 
 void PageTree::keyPressEvent(QKeyEvent* event) {
@@ -152,6 +200,28 @@ void PageTree::keyPressEvent(QKeyEvent* event) {
   } else {
     QTreeWidget::keyPressEvent(event);
   }
+}
+
+QMimeData* PageTree::mimeData(const QList<QTreeWidgetItem*> items) const {
+  auto ret = QTreeWidget::mimeData(items);
+  QList<QUrl> urls;
+  for (const auto& item : items) {
+    auto browser = static_cast<PageTreeItem*>(item)->Browser();
+    if (browser) {
+      auto url = browser->CurrentUrl();
+      if (!url.isEmpty()) {
+        urls.append(QUrl(url));
+      }
+    }
+  }
+  if (!urls.isEmpty()) {
+    ret->setUrls(urls);
+  }
+  return ret;
+}
+
+QStringList PageTree::mimeTypes() const {
+  return { "text/uri-list" };
 }
 
 void PageTree::mouseDoubleClickEvent(QMouseEvent *event) {
@@ -312,8 +382,13 @@ void PageTree::CloseItem(PageTreeItem* item) {
 void PageTree::DestroyItem(PageTreeItem* item, bool include_children) {
   // We just call this recursively if include_children is true
   if (include_children) {
+    // We have to take persistent indices before destroying the children
+    QList<QPersistentModelIndex> children;
     for (int i = 0; i < item->childCount(); i++) {
-      DestroyItem(static_cast<PageTreeItem*>(item->child(i)), true);
+      children.append(indexFromItem(item->child(i)));
+    }
+    for (const auto& child : children) {
+      DestroyItem(static_cast<PageTreeItem*>(itemFromIndex(child)), true);
     }
   }
   browser_stack_->removeWidget(item->Browser());

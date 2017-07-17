@@ -27,6 +27,7 @@ class CefWidget : public CefBaseWidget {
   // If result is non-null, it needs to replace this widget
   QPointer<QWidget> OverrideWidget();\
   void LoadUrl(const QString& url);
+  QString CurrentUrl();
 
   // Basically just calls history.go
   void Go(int num);

@@ -157,6 +157,10 @@ BrowserWidget::BrowserWidget(Cef* cef,
   });
 }
 
+void BrowserWidget::LoadUrl(const QString &url) {
+  cef_widg_->LoadUrl(url);
+}
+
 void BrowserWidget::FocusUrlEdit() {
   url_edit_->setFocus();
   url_edit_->activateWindow();
@@ -174,6 +178,10 @@ QIcon BrowserWidget::CurrentFavicon() {
 
 QString BrowserWidget::CurrentTitle() {
   return current_title_;
+}
+
+QString BrowserWidget::CurrentUrl() {
+  return cef_widg_->CurrentUrl();
 }
 
 bool BrowserWidget::Loading() {

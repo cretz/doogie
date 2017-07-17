@@ -41,10 +41,12 @@ class BrowserWidget : public QWidget {
                          const QString& url = "",
                          QWidget* parent = nullptr);
 
+  void LoadUrl(const QString& url);
   void FocusUrlEdit();
   void FocusBrowser();
   QIcon CurrentFavicon();
   QString CurrentTitle();
+  QString CurrentUrl();
   bool Loading();
   bool CanGoBack();
   bool CanGoForward();

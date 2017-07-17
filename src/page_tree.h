@@ -22,8 +22,15 @@ class PageTree : public QTreeWidget {
 
  protected:
   Qt::DropActions supportedDropActions() const override;
+  void dragEnterEvent(QDragEnterEvent* event) override;
+  void dragMoveEvent(QDragMoveEvent* event) override;
   void dropEvent(QDropEvent* event) override;
+  bool dropMimeData(QTreeWidgetItem* parent,
+                    int index, const QMimeData* data,
+                    Qt::DropAction action) override;
   void keyPressEvent(QKeyEvent* event) override;
+  QMimeData* mimeData(const QList<QTreeWidgetItem*> items) const override;
+  QStringList mimeTypes() const override;
   void mouseDoubleClickEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;

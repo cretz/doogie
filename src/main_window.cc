@@ -16,6 +16,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   setWindowTitle("Doogie");
   setFocusPolicy(Qt::FocusPolicy::StrongFocus);
   resize(1024, 768);
+  setAcceptDrops(true);
 
   auto browser_stack = new BrowserStack(cef, this);
   connect(browser_stack, &BrowserStack::ShowDevToolsRequest,
@@ -128,6 +129,19 @@ QJsonObject MainWindow::DebugDump() {
     { "rect", Util::DebugWidgetGeom(this) },
     { "pageTree", page_tree_dock_->DebugDump() }
   };
+}
+
+void MainWindow::dropEvent(QDropEvent* event) {
+  for (const auto& url : event->mimeData()->urls()) {
+    page_tree_dock_->NewTopLevelPage(url.url());
+  }
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
+  if (event->mimeData()->hasUrls() &&
+      event->proposedAction() == Qt::CopyAction) {
+    event->acceptProposedAction();
+  }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event) {
