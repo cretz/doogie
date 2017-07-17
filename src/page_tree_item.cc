@@ -74,6 +74,7 @@ QJsonObject PageTreeItem::DebugDump() {
   return {
     { "current", treeWidget()->currentItem() == this },
     { "text", text(0) },
+    { "browser", (browser_) ? browser_->DebugDump() : QJsonValue() },
     { "children", children }
   };
 }

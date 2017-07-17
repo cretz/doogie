@@ -52,6 +52,8 @@ class BrowserWidget : public QWidget {
   double GetZoomLevel();
   void SetZoomLevel(double level);
 
+  QJsonObject DebugDump();
+
  signals:
   void TitleChanged();
   void FaviconChanged();

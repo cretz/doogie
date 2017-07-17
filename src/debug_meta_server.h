@@ -11,6 +11,9 @@ class DebugMetaServer : public QObject {
 
  public:
   explicit DebugMetaServer(MainWindow* parent = nullptr);
+
+ private:
+  QJsonObject SaveScreenshot(QJsonObject input);
 };
 
 }  // namespace doogie

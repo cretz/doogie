@@ -232,6 +232,12 @@ void BrowserWidget::SetZoomLevel(double level) {
   cef_widg_->SetZoomLevel(level);
 }
 
+QJsonObject BrowserWidget::DebugDump() {
+  return {
+    { "browserRect", Util::DebugWidgetGeom(cef_widg_) }
+  };
+}
+
 void BrowserWidget::moveEvent(QMoveEvent*) {
   this->UpdateStatusBarLocation();
 }

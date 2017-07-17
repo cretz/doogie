@@ -6,3 +6,4 @@
 /src/release
 /src/.qmake.stash
 /src/tests/node_modules
+/src/tests/temp

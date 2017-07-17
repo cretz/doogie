@@ -36,4 +36,14 @@ QIcon Util::CachedIconLighterDisabled(const QString& resName) {
   return ret;
 }
 
+QJsonObject Util::DebugWidgetGeom(QWidget* widg) {
+  auto topLeft = widg->mapToGlobal(QPoint(0, 0));
+  return {
+    {"x", topLeft.x() },
+    {"y", topLeft.y() },
+    {"w", widg->width() },
+    {"h", widg->height() }
+  };
+}
+
 }  // namespace doogie

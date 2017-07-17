@@ -1,6 +1,7 @@
 #include "main_window.h"
 #include "browser_stack.h"
 #include "dev_tools_dock.h"
+#include "util.h"
 
 namespace doogie {
 
@@ -138,6 +139,7 @@ MainWindow::~MainWindow() {
 QJsonObject MainWindow::DebugDump() {
   return {
     { "windowTitle", this->windowTitle() },
+    { "rect", Util::DebugWidgetGeom(this) },
     { "pageTree", page_tree_dock_->DebugDump() }
   };
 }

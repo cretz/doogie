@@ -57,4 +57,15 @@ exports.Harness = class Harness {
     this.ws.send('activate')
     return p
   }
+
+  wait (ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  screenshot (x, y, w, h, fileName) {
+    const json = JSON.stringify({ x: x, y: y, w: w, h: h, fileName: fileName })
+    const p = this.nextMessage()
+    this.ws.send('screenshot' + json)
+    return p
+  }
 }
