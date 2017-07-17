@@ -14,6 +14,8 @@ class PageTreeItem : public QTreeWidgetItem {
   QToolButton* CloseButton();
   void AfterAdded();
 
+  QJsonObject DebugDump();
+
  private:
   void ApplyFavicon();
 

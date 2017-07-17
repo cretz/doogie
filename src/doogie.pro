@@ -44,6 +44,11 @@ HEADERS  += \
 RESOURCES += \
     doogie.qrc
 
+# We need web sockets for debug meta server
+debug:QT += websockets
+debug:SOURCES += debug_meta_server.cc
+debug:HEADERS += debug_meta_server.h
+
 release:PROFILE = Release
 debug:PROFILE = Debug
 

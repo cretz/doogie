@@ -19,6 +19,8 @@ class PageTreeDock : public QDockWidget {
   void CloseCurrentPage();
   void CloseAllPages();
 
+  QJsonObject DebugDump();
+
  private:
   PageTree* tree_;
 };

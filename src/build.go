@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"bufio"
 )
 
 func main() {
@@ -265,7 +265,7 @@ func buildCefWindows() error {
 }
 
 func lint() error {
-	toIgnore := []string {
+	toIgnore := []string{
 		"No copyright message found.",
 		"#ifndef header guard has wrong style, please use: SRC_",
 		"#endif line should be \"#endif  // SRC_",
@@ -284,8 +284,9 @@ func lint() error {
 		// "--root=doogie\\",
 	}
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if (!info.IsDir() && !strings.HasPrefix(info.Name(), "moc_") &&
-				(strings.HasSuffix(path, ".cc") || strings.HasSuffix(path, ".h"))) {
+		if !info.IsDir() && !strings.HasPrefix(info.Name(), "moc_") &&
+			!strings.HasPrefix(path, "tests") &&
+			(strings.HasSuffix(path, ".cc") || strings.HasSuffix(path, ".h")) {
 			args = append(args, path)
 		}
 		return nil
@@ -316,7 +317,7 @@ func lint() error {
 				break
 			}
 		}
-		if (!ignore) {
+		if !ignore {
 			fmt.Println(origLine)
 			foundAny = true
 		}

@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "cef.h"
 #include "cef_widget.h"
+#include "page_tree_dock.h"
 
 namespace doogie {
 
@@ -14,12 +15,15 @@ class MainWindow : public QMainWindow {
   explicit MainWindow(Cef* cef, QWidget* parent = nullptr);
   ~MainWindow();
 
+  QJsonObject DebugDump();
+
  protected:
   void keyPressEvent(QKeyEvent* event) override;
   void timerEvent(QTimerEvent* event) override;
 
  private:
   Cef* cef_;
+  PageTreeDock* page_tree_dock_;
 };
 
 }  // namespace doogie

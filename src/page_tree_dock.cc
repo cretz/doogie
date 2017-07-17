@@ -33,4 +33,8 @@ void PageTreeDock::CloseAllPages() {
   tree_->CloseAllPages();
 }
 
+QJsonObject PageTreeDock::DebugDump() {
+  return tree_->DebugDump();
+}
+
 }  // namespace doogie

@@ -1,5 +1,4 @@
 #include "main_window.h"
-#include "page_tree_dock.h"
 #include "browser_stack.h"
 #include "dev_tools_dock.h"
 
@@ -21,8 +20,8 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   auto browser_stack = new BrowserStack(cef, this);
   setCentralWidget(browser_stack);
 
-  auto page_tree = new PageTreeDock(browser_stack, this);
-  addDockWidget(Qt::LeftDockWidgetArea, page_tree);
+  page_tree_dock_ = new PageTreeDock(browser_stack, this);
+  addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
 
   auto dev_tools = new DevToolsDock(cef, browser_stack, this);
   dev_tools->setVisible(false);
@@ -39,17 +38,17 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   // Setup the menu options...
   // TODO(cretz): configurable hotkeys and better organization
   auto pages_menu = menuBar()->addMenu("&Pages");
-  pages_menu->addAction("New Top-Level Page", [this, page_tree]() {
-    page_tree->NewTopLevelPage("");
+  pages_menu->addAction("New Top-Level Page", [this]() {
+    page_tree_dock_->NewTopLevelPage("");
   })->setShortcut(Qt::CTRL + Qt::Key_T);
-  pages_menu->addAction("New Child Page", [this, page_tree]() {
-    page_tree->NewChildPage("");
+  pages_menu->addAction("New Child Page", [this]() {
+    page_tree_dock_->NewChildPage("");
   })->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_T);
-  pages_menu->addAction("Close Page", [this, page_tree]() {
-    page_tree->CloseCurrentPage();
+  pages_menu->addAction("Close Page", [this]() {
+    page_tree_dock_->CloseCurrentPage();
   })->setShortcuts({Qt::CTRL + Qt::Key_F4, Qt::CTRL + Qt::Key_W});
-  pages_menu->addAction("Close All Pages", [this, page_tree]() {
-    page_tree->CloseAllPages();
+  pages_menu->addAction("Close All Pages", [this]() {
+    page_tree_dock_->CloseAllPages();
   })->setShortcuts({Qt::CTRL + Qt::SHIFT + Qt::Key_F4,
                     Qt::CTRL + Qt::SHIFT + Qt::Key_W});
   pages_menu->addAction("Toggle Dev Tools",
@@ -120,8 +119,8 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   })->setShortcut(Qt::CTRL + Qt::Key_F);
 
   auto win_menu = menuBar()->addMenu("&Window");
-  win_menu->addAction("Focus Page Tree", [this, page_tree]() {
-    page_tree->FocusPageTree();
+  win_menu->addAction("Focus Page Tree", [this]() {
+    page_tree_dock_->FocusPageTree();
   })->setShortcut(Qt::ALT + Qt::Key_1);
   win_menu->addAction("Focus Address Bar", [this, browser_stack]() {
     auto curr_browser = browser_stack->CurrentBrowser();
@@ -134,6 +133,13 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
 }
 
 MainWindow::~MainWindow() {
+}
+
+QJsonObject MainWindow::DebugDump() {
+  return {
+    { "windowTitle", this->windowTitle() },
+    { "pageTree", page_tree_dock_->DebugDump() }
+  };
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event) {

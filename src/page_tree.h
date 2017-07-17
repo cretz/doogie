@@ -18,6 +18,8 @@ class PageTree : public QTreeWidget {
   void CloseAllPages();
   QMovie* LoadingIconMovie();
 
+  QJsonObject DebugDump();
+
  protected:
   Qt::DropActions supportedDropActions() const override;
   void dropEvent(QDropEvent* event) override;

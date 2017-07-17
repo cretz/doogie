@@ -66,6 +66,18 @@ void PageTreeItem::AfterAdded() {
   }
 }
 
+QJsonObject PageTreeItem::DebugDump() {
+  QJsonArray children;
+  for (int i = 0; i < childCount(); i++) {
+    children.append(static_cast<PageTreeItem*>(child(i))->DebugDump());
+  }
+  return {
+    { "current", treeWidget()->currentItem() == this },
+    { "text", text(0) },
+    { "children", children }
+  };
+}
+
 void PageTreeItem::ApplyFavicon() {
   auto tree = static_cast<PageTree*>(treeWidget());
   if (loading_icon_frame_conn_) tree->disconnect(loading_icon_frame_conn_);

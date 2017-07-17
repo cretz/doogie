@@ -1,0 +1,21 @@
+{
+  "name": "doogie-tests",
+  "version": "0.1.0",
+  "description": "Tests for Doogie",
+  "scripts": {
+    "test": "standard && mocha *.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^3.4.2",
+    "robotjs": "^0.4.7",
+    "standard": "^10.0.2",
+    "ws": "^3.0.0"
+  },
+  "standard": {
+    "env": {
+      "mocha": true
+    }
+  }
+}

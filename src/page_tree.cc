@@ -114,6 +114,16 @@ QMovie* PageTree::LoadingIconMovie() {
   return loading_icon_movie_;
 }
 
+QJsonObject PageTree::DebugDump() {
+  QJsonArray items;
+  for (int i = 0; i < topLevelItemCount(); i++) {
+    items.append(static_cast<PageTreeItem*>(topLevelItem(i))->DebugDump());
+  }
+  return  {
+    { "items", items }
+  };
+}
+
 Qt::DropActions PageTree::supportedDropActions() const {
   // return Qt::MoveAction;
   return QTreeWidget::supportedDropActions();
