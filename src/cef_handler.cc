@@ -4,6 +4,23 @@ namespace doogie {
 
 CefHandler::CefHandler() {}
 
+void CefHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
+                                     CefRefPtr<CefFrame> frame,
+                                     CefRefPtr<CefContextMenuParams> params,
+                                     CefRefPtr<CefMenuModel> model) {
+  emit PreContextMenu(params, model);
+}
+
+bool CefHandler::OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
+                                      CefRefPtr<CefFrame> frame,
+                                      CefRefPtr<CefContextMenuParams> params,
+                                      int command_id,
+                                      EventFlags event_flags) {
+  if (command_id < MENU_ID_USER_FIRST) return false;
+  emit ContextMenuCommand(params, command_id, event_flags);
+  return true;
+}
+
 void CefHandler::OnAddressChange(CefRefPtr<CefBrowser> browser,
                                  CefRefPtr<CefFrame> frame,
                                  const CefString& url) {

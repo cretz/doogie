@@ -19,7 +19,7 @@ DevToolsDock::DevToolsDock(Cef* cef,
 
   auto open_dev_tools_btn = new QPushButton("Click to open dev tools");
   connect(open_dev_tools_btn, &QPushButton::clicked, [this](bool) {
-    ShowDevTools(browser_stack_->CurrentBrowser());
+    ShowDevTools(browser_stack_->CurrentBrowser(), QPoint());
   });
   auto open_layout = new QGridLayout();
   open_layout->setColumnStretch(0, 1);
@@ -56,31 +56,36 @@ void DevToolsDock::BrowserChanged(BrowserWidget* browser) {
   }
 }
 
-void DevToolsDock::ShowDevTools(BrowserWidget* browser) {
-  auto widg = new CefBaseWidget(cef_, tools_stack_);
-  tools_stack_->addWidget(widg);
-  tools_widgets_[browser] = widg;
-  // We make "this" the context of the connections so we can
-  //  disconnect later
-  // Need to show that close button
-  connect(browser, &BrowserWidget::DevToolsLoadComplete, this,
-          [this, browser]() {
-    // TODO(cretz): put a unit test around this highly-volatile code
-    QString js =
-        "Components.dockController._closeButton.setVisible(true);\n"
-        "Components.dockController._closeButton.addEventListener(\n"
-        "  UI.ToolbarButton.Events.Click,\n"
-        "  () => window.close()\n"
-        ");\n";
-    browser->ExecDevToolsJs(js);
-  });
-  // On close, remove it
-  connect(browser, &BrowserWidget::DevToolsClosed,
-          this, [this, browser]() { DevToolsClosed(browser); });
-  // On destroy, remove it
-  connect(browser, &BrowserWidget::destroyed,
-          this, [this, browser]() { DevToolsClosed(browser); });
-  browser->ShowDevTools(widg);
+void DevToolsDock::ShowDevTools(BrowserWidget* browser,
+                                const QPoint& inspect_at) {
+  // This can be called repeatedly for the same browser
+  auto widg = static_cast<CefBaseWidget*>(tools_widgets_[browser]);
+  if (!widg) {
+    widg = new CefBaseWidget(cef_, tools_stack_);
+    tools_stack_->addWidget(widg);
+    tools_widgets_[browser] = widg;
+    // We make "this" the context of the connections so we can
+    //  disconnect later
+    // Need to show that close button
+    connect(browser, &BrowserWidget::DevToolsLoadComplete, this,
+            [this, browser]() {
+      // TODO(cretz): put a unit test around this highly-volatile code
+      QString js =
+          "Components.dockController._closeButton.setVisible(true);\n"
+          "Components.dockController._closeButton.addEventListener(\n"
+          "  UI.ToolbarButton.Events.Click,\n"
+          "  () => window.close()\n"
+          ");\n";
+      browser->ExecDevToolsJs(js);
+    });
+    // On close, remove it
+    connect(browser, &BrowserWidget::DevToolsClosed,
+            this, [this, browser]() { DevToolsClosed(browser); });
+    // On destroy, remove it
+    connect(browser, &BrowserWidget::destroyed,
+            this, [this, browser]() { DevToolsClosed(browser); });
+  }
+  browser->ShowDevTools(widg, inspect_at);
   tools_stack_->setCurrentWidget(widg);
 }
 

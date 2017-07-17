@@ -10,6 +10,7 @@ namespace doogie {
 class CefHandler :
     public QObject,
     public CefClient,
+    public CefContextMenuHandler,
     public CefDisplayHandler,
     public CefFindHandler,
     public CefFocusHandler,
@@ -21,6 +22,10 @@ class CefHandler :
 
  public:
   CefHandler();
+
+  CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() override {
+    return this;
+  }
 
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
     return this;
@@ -49,6 +54,18 @@ class CefHandler :
   CefRefPtr<CefRequestHandler> GetRequestHandler() override {
     return this;
   }
+
+  // Context menu handler overrides...
+  void OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
+                           CefRefPtr<CefFrame> frame,
+                           CefRefPtr<CefContextMenuParams> params,
+                           CefRefPtr<CefMenuModel> model) override;
+
+  bool OnContextMenuCommand(CefRefPtr<CefBrowser> browser,
+                            CefRefPtr<CefFrame> frame,
+                            CefRefPtr<CefContextMenuParams> params,
+                            int command_id,
+                            EventFlags event_flags) override;
 
   // Display handler overrides...
   void OnAddressChange(CefRefPtr<CefBrowser> browser,
@@ -101,6 +118,11 @@ class CefHandler :
                         bool user_gesture) override;
 
  signals:
+  void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
+                      CefRefPtr<CefMenuModel> model);
+  void ContextMenuCommand(CefRefPtr<CefContextMenuParams> params,
+                          int command_id,
+                          EventFlags event_flags);
   void UrlChanged(const QString& url);
   void TitleChanged(const QString& title);
   void StatusChanged(const QString& status);

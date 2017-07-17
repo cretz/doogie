@@ -7,6 +7,10 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
     : CefBaseWidget(cef, parent) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
+  connect(handler_, &CefHandler::PreContextMenu,
+          this, &CefWidget::PreContextMenu);
+  connect(handler_, &CefHandler::ContextMenuCommand,
+          this, &CefWidget::ContextMenuCommand);
   connect(handler_, &CefHandler::UrlChanged,
           this, &CefWidget::UrlChanged);
   connect(handler_, &CefHandler::TitleChanged,
@@ -103,7 +107,8 @@ void CefWidget::CancelFind(bool clear_selection) {
   }
 }
 
-void CefWidget::ShowDevTools(CefBaseWidget* widg) {
+void CefWidget::ShowDevTools(CefBaseWidget* widg,
+                             const QPoint& inspect_at) {
   if (browser_) {
     CefBrowserSettings settings;
     if (!dev_tools_handler_) {
@@ -125,7 +130,7 @@ void CefWidget::ShowDevTools(CefBaseWidget* widg) {
           widg->WindowInfo(),
           dev_tools_handler_,
           settings,
-          CefPoint());
+          CefPoint(inspect_at.x(), inspect_at.y()));
   }
 }
 

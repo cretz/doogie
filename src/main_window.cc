@@ -1,6 +1,5 @@
 #include "main_window.h"
 #include "browser_stack.h"
-#include "dev_tools_dock.h"
 #include "util.h"
 
 namespace doogie {
@@ -19,16 +18,20 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   resize(1024, 768);
 
   auto browser_stack = new BrowserStack(cef, this);
+  connect(browser_stack, &BrowserStack::ShowDevToolsRequest,
+          [this](BrowserWidget* browser, const QPoint& inspect_at) {
+    ShowDevTools(browser, inspect_at, true);
+  });
   setCentralWidget(browser_stack);
 
   page_tree_dock_ = new PageTreeDock(browser_stack, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
 
-  auto dev_tools = new DevToolsDock(cef, browser_stack, this);
-  dev_tools->setVisible(false);
-  addDockWidget(Qt::BottomDockWidgetArea, dev_tools);
+  dev_tools_dock_ = new DevToolsDock(cef, browser_stack, this);
+  dev_tools_dock_->setVisible(false);
+  addDockWidget(Qt::BottomDockWidgetArea, dev_tools_dock_);
 
-  resizeDocks({dev_tools}, {300}, Qt::Vertical);
+  resizeDocks({dev_tools_dock_}, {300}, Qt::Vertical);
 
   // We choose for verticle windows to occupy the corners
   setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
@@ -52,25 +55,8 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
     page_tree_dock_->CloseAllPages();
   })->setShortcuts({Qt::CTRL + Qt::SHIFT + Qt::Key_F4,
                     Qt::CTRL + Qt::SHIFT + Qt::Key_W});
-  pages_menu->addAction("Toggle Dev Tools",
-                        [this, browser_stack, dev_tools]() {
-    // Here's how it works:
-    // * F12 (Ctrl or not) - If tools not open, open dock if not open then tools
-    // * F12 - If tools open, close tools and dock
-    // * Ctrl F12 - Close just the tools
-    auto curr_browser = browser_stack->CurrentBrowser();
-    auto tools_showing = dev_tools->isVisible() &&
-        (dev_tools->DevToolsShowing() || !curr_browser);
-    if (!tools_showing) {
-      if (!dev_tools->isVisible()) dev_tools->show();
-      if (curr_browser) dev_tools->ShowDevTools(curr_browser);
-    } else {
-      if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
-        if (curr_browser) dev_tools->CloseDevTools(curr_browser);
-      } else {
-        dev_tools->close();
-      }
-    }
+  pages_menu->addAction("Toggle Dev Tools", [this, browser_stack]() {
+    ShowDevTools(browser_stack->CurrentBrowser(), QPoint(), false);
   })->setShortcuts({Qt::Key_F12, Qt::CTRL + Qt::Key_F12});
 
   auto page_menu = menuBar()->addMenu("&Page");
@@ -150,6 +136,27 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 void MainWindow::timerEvent(QTimerEvent*) {
   cef_->Tick();
+}
+
+void MainWindow::ShowDevTools(BrowserWidget *browser,
+                              const QPoint& inspect_at,
+                              bool force_open) {
+  // Here's how it works:
+  // * F12 (Ctrl or not) - If tools not open, open dock if not open then tools
+  // * F12 - If tools open, close tools and dock
+  // * Ctrl F12 - Close just the tools
+  auto should_close = !force_open && dev_tools_dock_->isVisible() &&
+      (dev_tools_dock_->DevToolsShowing() || !browser);
+  if (!should_close) {
+    if (!dev_tools_dock_->isVisible()) dev_tools_dock_->show();
+    if (browser) dev_tools_dock_->ShowDevTools(browser, inspect_at);
+  } else {
+    if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
+      if (browser) dev_tools_dock_->CloseDevTools(browser);
+    } else {
+      dev_tools_dock_->close();
+    }
+  }
 }
 
 }  // namespace doogie

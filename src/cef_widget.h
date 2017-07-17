@@ -40,7 +40,7 @@ class CefWidget : public CefBaseWidget {
             bool continued);
   void CancelFind(bool clear_selection);
 
-  void ShowDevTools(CefBaseWidget* widg);
+  void ShowDevTools(CefBaseWidget* widg, const QPoint& inspect_at);
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
 
@@ -48,6 +48,11 @@ class CefWidget : public CefBaseWidget {
   void SetZoomLevel(double level);
 
  signals:
+  void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
+                      CefRefPtr<CefMenuModel> model);
+  void ContextMenuCommand(CefRefPtr<CefContextMenuParams> params,
+                          int command_id,
+                          CefContextMenuHandler::EventFlags event_flags);
   void UrlChanged(const QString& url);
   void TitleChanged(const QString& title);
   void StatusChanged(const QString& status);

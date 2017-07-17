@@ -17,6 +17,7 @@ class BrowserStack : public QStackedWidget {
  signals:
   void BrowserChanged(BrowserWidget* browser);
   void CurrentBrowserOrLoadingStateChanged();
+  void ShowDevToolsRequest(BrowserWidget* browser, const QPoint& inspect_at);
 
  private:
   Cef* cef_;

@@ -5,6 +5,7 @@
 #include "cef.h"
 #include "cef_widget.h"
 #include "page_tree_dock.h"
+#include "dev_tools_dock.h"
 
 namespace doogie {
 
@@ -22,8 +23,13 @@ class MainWindow : public QMainWindow {
   void timerEvent(QTimerEvent* event) override;
 
  private:
+  void ShowDevTools(BrowserWidget* browser,
+                    const QPoint& inspect_at,
+                    bool force_open);
+
   Cef* cef_;
   PageTreeDock* page_tree_dock_;
+  DevToolsDock* dev_tools_dock_;
 };
 
 }  // namespace doogie

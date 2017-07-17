@@ -26,6 +26,17 @@ class BrowserWidget : public QWidget {
   };
   Q_ENUM(WindowOpenType)
 
+  enum ContextMenuCommand {
+    ContextMenuOpenLinkChildPage = MENU_ID_USER_FIRST,
+    ContextMenuOpenLinkChildPageBackground,
+    ContextMenuOpenLinkTopLevelPage,
+    ContextMenuCopyLinkAddress,
+    ContextMenuInspectElement,
+    ContextMenuViewPageSource,
+    ContextMenuViewFrameSource
+  };
+  Q_ENUM(ContextMenuCommand)
+
   explicit BrowserWidget(Cef* cef,
                          const QString& url = "",
                          QWidget* parent = nullptr);
@@ -45,7 +56,7 @@ class BrowserWidget : public QWidget {
   void Print();
   void ShowFind();
 
-  void ShowDevTools(CefBaseWidget* widg);
+  void ShowDevTools(CefBaseWidget* widg, const QPoint& inspect_at);
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
 
@@ -62,6 +73,7 @@ class BrowserWidget : public QWidget {
   void DevToolsLoadComplete();
   void DevToolsClosed();
   void FindResult(int count, int index);
+  void ShowDevToolsRequest(const QPoint& inspect_at);
 
  protected:
   void moveEvent(QMoveEvent* event) override;
@@ -70,6 +82,11 @@ class BrowserWidget : public QWidget {
  private:
   void UpdateStatusBarLocation();
   void RebuildNavMenu();
+  void BuildContextMenu(CefRefPtr<CefContextMenuParams> params,
+                        CefRefPtr<CefMenuModel> model);
+  void HandleContextMenuCommand(CefRefPtr<CefContextMenuParams> params,
+                                int command_id,
+                                CefContextMenuHandler::EventFlags event_flags);
 
   Cef* cef_;
   QToolButton* back_button_;

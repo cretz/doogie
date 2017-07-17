@@ -64,6 +64,10 @@ BrowserWidget::BrowserWidget(Cef* cef,
   top_widg->setLayout(top_layout);
 
   cef_widg_ = new CefWidget(cef, url, this);
+  connect(cef_widg_, &CefWidget::PreContextMenu,
+          this, &BrowserWidget::BuildContextMenu);
+  connect(cef_widg_, &CefWidget::ContextMenuCommand,
+          this, &BrowserWidget::HandleContextMenuCommand);
   connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString& title) {
     current_title_ = title;
     emit TitleChanged();
@@ -212,8 +216,9 @@ void BrowserWidget::ShowFind() {
   UpdateStatusBarLocation();
 }
 
-void BrowserWidget::ShowDevTools(CefBaseWidget* widg) {
-  cef_widg_->ShowDevTools(widg);
+void BrowserWidget::ShowDevTools(CefBaseWidget* widg,
+                                 const QPoint& inspect_at) {
+  cef_widg_->ShowDevTools(widg, inspect_at);
 }
 
 void BrowserWidget::ExecDevToolsJs(const QString& js) {
@@ -278,6 +283,89 @@ void BrowserWidget::RebuildNavMenu() {
       auto new_font = action->font();
       new_font.setBold(true);
       action->setFont(new_font);
+    }
+  }
+}
+
+void BrowserWidget::BuildContextMenu(CefRefPtr<CefContextMenuParams> params,
+                                     CefRefPtr<CefMenuModel> model) {
+  if (params->GetTypeFlags() & CM_TYPEFLAG_LINK) {
+    model->InsertItemAt(0, ContextMenuOpenLinkChildPage, "Open in Child Page");
+    model->InsertItemAt(1, ContextMenuOpenLinkChildPageBackground,
+                   "Open in Background Child Page");
+    model->InsertItemAt(2, ContextMenuOpenLinkTopLevelPage,
+                   "Open in Top-Level Page");
+    model->InsertItemAt(3, ContextMenuCopyLinkAddress,
+                   "Copy Link Address");
+    model->InsertSeparatorAt(4);
+  }
+  model->AddSeparator();
+  model->Remove(MENU_ID_VIEW_SOURCE);
+  model->AddItem(ContextMenuViewPageSource, "View Page Source");
+  if (params->GetTypeFlags() & CM_TYPEFLAG_FRAME) {
+    model->AddItem(ContextMenuViewFrameSource, "View Frame Source");
+  }
+  model->AddItem(ContextMenuInspectElement, "Inspect");
+}
+
+void BrowserWidget::HandleContextMenuCommand(
+    CefRefPtr<CefContextMenuParams> params,
+    int command_id,
+    CefContextMenuHandler::EventFlags event_flags) {
+  switch (command_id) {
+    case ContextMenuOpenLinkChildPage: {
+      auto url = QString::fromStdString(params->GetLinkUrl().ToString());
+      if (event_flags & EVENTFLAG_CONTROL_DOWN) {
+        emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+      } else {
+        emit PageOpen(OpenTypeNewForegroundTab, url, true);
+      }
+      break;
+    }
+    case ContextMenuOpenLinkChildPageBackground: {
+      emit PageOpen(OpenTypeNewBackgroundTab,
+                    QString::fromStdString(params->GetLinkUrl().ToString()),
+                    true);
+      break;
+    }
+    case ContextMenuOpenLinkTopLevelPage: {
+      emit PageOpen(OpenTypeNewWindow,
+                    QString::fromStdString(params->GetLinkUrl().ToString()),
+                    true);
+      break;
+    }
+    case ContextMenuCopyLinkAddress: {
+      QGuiApplication::clipboard()->setText(
+            QString::fromStdString(params->GetUnfilteredLinkUrl().ToString()));
+      break;
+    }
+    case ContextMenuInspectElement: {
+      emit ShowDevToolsRequest(QPoint(params->GetXCoord(),
+                                      params->GetYCoord()));
+      break;
+    }
+    case ContextMenuViewPageSource: {
+      auto url = QString("view-source:") +
+          QString::fromStdString(params->GetPageUrl().ToString());
+      if (event_flags & EVENTFLAG_CONTROL_DOWN) {
+        emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+      } else {
+        emit PageOpen(OpenTypeNewForegroundTab, url, true);
+      }
+      break;
+    }
+  case ContextMenuViewFrameSource: {
+    auto url = QString("view-source:") +
+        QString::fromStdString(params->GetFrameUrl().ToString());
+    if (event_flags & EVENTFLAG_CONTROL_DOWN) {
+      emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+    } else {
+      emit PageOpen(OpenTypeNewForegroundTab, url, true);
+    }
+    break;
+  }
+    default: {
+      throw std::invalid_argument("Unknown command");
     }
   }
 }

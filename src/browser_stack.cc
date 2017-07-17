@@ -15,6 +15,10 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
   connect(widg, &BrowserWidget::LoadingStateChanged, [this, widg]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();
   });
+  connect(widg, &BrowserWidget::ShowDevToolsRequest,
+          [this, widg](const QPoint& inspect_at) {
+    emit ShowDevToolsRequest(widg, inspect_at);
+  });
   addWidget(widg);
   return widg;
 }
