@@ -99,7 +99,7 @@ class BrowserWidget : public QWidget {
   QToolButton* stop_button_;
   CefWidget* cef_widg_;
   FindWidget* find_widg_;
-  QStatusBar* status_bar_;
+  QLabel* status_bar_;
   QIcon current_favicon_;
   QString current_title_;
   bool loading_ = false;

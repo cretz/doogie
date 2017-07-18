@@ -1,4 +1,5 @@
 #include "cef.h"
+#include <QtGlobal>
 
 namespace doogie {
 
@@ -12,6 +13,10 @@ Cef::Cef(int argc, char* argv[]) {
     // Means it is not a child process, so do other init
     CefSettings settings;
     settings.no_sandbox = true;
+    // Enable remote debugging on debug version
+#ifdef QT_DEBUG
+    settings.remote_debugging_port = 1989;
+#endif
     if (!CefInitialize(main_args, settings, nullptr, nullptr)) {
       throw std::runtime_error("Unable to initialize CEF");
     }

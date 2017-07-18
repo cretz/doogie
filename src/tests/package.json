@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "description": "Tests for Doogie",
   "scripts": {
-    "test": "standard && mocha *.js"
+    "test": "standard && mocha --timeout 10000 -b *.js"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "chrome-remote-interface": "^0.24.2",
     "mocha": "^3.4.2",
     "robotjs": "^0.4.7",
     "standard": "^10.0.2",

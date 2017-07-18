@@ -138,21 +138,36 @@ BrowserWidget::BrowserWidget(Cef* cef,
   connect(this, &BrowserWidget::FindResult,
           find_widg_, &FindWidget::FindResult);
 
-  status_bar_ = new QStatusBar(this);
-  status_bar_->setSizeGripEnabled(false);
+  status_bar_ = new QLabel(this);
   status_bar_->hide();
-  // TODO(cretz): intelligently set the width based on message size,
-  //  placement of scrollbars, mouse position, and window size
-  // TODO(cretz): handle overflow w/ ellipses
   status_bar_->resize(300, status_bar_->height());
   this->UpdateStatusBarLocation();
   connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {
     if (status.isEmpty()) {
       status_bar_->hide();
-      status_bar_->clearMessage();
     } else {
-      status_bar_->showMessage(status);
+      int change_count = status_bar_->property("change_count").toInt();
+      status_bar_->setProperty("change_count", ++change_count);
+      status_bar_->setProperty("full_text", status);
+      status_bar_->resize(300, status_bar_->height());
+      // Add ellipsis
+      status_bar_->setText(status_bar_->fontMetrics().elidedText(
+          status, Qt::ElideRight, status_bar_->width()));
+      UpdateStatusBarLocation();
       status_bar_->show();
+      // Show the full message after they stay there a couple of seconds
+      QTimer::singleShot(2000, Qt::CoarseTimer, status_bar_,
+                         [this, change_count]() {
+        if (status_bar_->isVisible() &&
+            status_bar_->property("change_count").toInt() == change_count) {
+          status_bar_->resize(width(), status_bar_->height());
+          // Add ellipsis
+          status_bar_->setText(status_bar_->fontMetrics().elidedText(
+              status_bar_->property("full_text").toString(),
+              Qt::ElideRight, status_bar_->width()));
+          UpdateStatusBarLocation();
+        }
+      });
     }
   });
 }
@@ -247,7 +262,14 @@ void BrowserWidget::SetZoomLevel(double level) {
 
 QJsonObject BrowserWidget::DebugDump() {
   return {
-    { "browserRect", Util::DebugWidgetGeom(cef_widg_) }
+    { "loading", loading_ },
+    { "rect", Util::DebugWidgetGeom(this) },
+    { "browserRect", Util::DebugWidgetGeom(cef_widg_) },
+    { "statusBar", QJsonObject({
+      { "visible", status_bar_->isVisible() },
+      { "visibleText", status_bar_->text() },
+      { "rect", Util::DebugWidgetGeom(status_bar_) }
+    })}
   };
 }
 
