@@ -264,7 +264,15 @@ QJsonObject BrowserWidget::DebugDump() {
   return {
     { "loading", loading_ },
     { "rect", Util::DebugWidgetGeom(this) },
-    { "browserRect", Util::DebugWidgetGeom(cef_widg_) },
+    { "urlEdit", QJsonObject({
+      { "text", url_edit_->text() },
+      { "focus", url_edit_->hasFocus() },
+      { "rect", Util::DebugWidgetGeom(url_edit_) }
+    })},
+    { "main", QJsonObject({
+      { "focus", cef_widg_->hasFocus() },
+      { "rect", Util::DebugWidgetGeom(cef_widg_) }
+    })},
     { "statusBar", QJsonObject({
       { "visible", status_bar_->isVisible() },
       { "visibleText", status_bar_->text() },

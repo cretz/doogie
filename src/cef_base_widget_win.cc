@@ -6,6 +6,7 @@ namespace doogie {
 void CefBaseWidget::InitWindowInfo() {
   window_info_.SetAsChild(reinterpret_cast<CefWindowHandle>(winId()),
                           RECT { 0, 0, width(), height() });
+  window_info_.ex_style = WS_EX_NOACTIVATE;
 }
 
 void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler) {

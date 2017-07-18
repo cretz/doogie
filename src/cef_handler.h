@@ -91,6 +91,8 @@ class CefHandler :
   // Focus handler overrides...
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
 
+  bool OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) override;
+
   // Key handler overrides...
   bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
                   const CefKeyEvent& event,

@@ -31,6 +31,9 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
             new CefWidget::FaviconDownloadCallback(this));
     }
   });
+  connect(handler_, &CefHandler::FocusObtained, [this]() {
+    setFocus();
+  });
   connect(handler_, &CefHandler::LoadStateChanged,
           this, &CefWidget::LoadStateChanged);
   connect(handler_, &CefHandler::PageOpen,
@@ -184,14 +187,14 @@ std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
   if (browser_) {
-    browser_->GetHost()->SetFocus(true);
+    browser_->GetHost()->SendFocusEvent(true);
   }
 }
 
 void CefWidget::focusOutEvent(QFocusEvent* event) {
   QWidget::focusOutEvent(event);
   if (browser_) {
-    browser_->GetHost()->SetFocus(false);
+    browser_->GetHost()->SendFocusEvent(false);
   }
 }
 

@@ -23,8 +23,8 @@ exports.Harness = class Harness {
     return path.join(__dirname, 'resources')
   }
 
-  inspect (obj) {
-    return util.inspect(obj)
+  inspect (obj, opts) {
+    return util.inspect(obj, opts)
   }
 
   moveMouse (x, y, style = 'fastWithJitter') {
@@ -40,6 +40,10 @@ exports.Harness = class Harness {
       default:
         robot.moveMouse(x, y)
     }
+  }
+
+  clickMouse (button = 'left') {
+    robot.mouseClick(button)
   }
 
   connect () {
@@ -138,17 +142,17 @@ exports.Harness = class Harness {
   }
 
   getCdp () {
-    if (this.cdp) return this.cdp
-    this.cdp = CDP({ host: 'localhost', port: 1989 })
-    return this.cdp
+    if (this.cdp) return Promise.resolve(this.cdp)
+    return CDP({ host: 'localhost', port: 1989 }).then(cdp => {
+      cdp.once('disconnect', () => { this.cdp = null })
+      this.cdp = cdp
+      return cdp
+    })
   }
 
   closeCdp () {
     if (!this.cdp) return Promise.resolve()
-    return this.getCdp().then(cdp => {
-      this.cdp = null
-      cdp.close()
-    })
+    return this.cdp.close()
   }
 
   selectElement (selector, required = true) {
@@ -171,8 +175,8 @@ exports.Harness = class Harness {
   elementRect (selector) {
     return this.elementBox(selector).then(elemBox =>
       this.treeItem().then(item => ({
-        x: item.browser.browserRect.x + elemBox.model.content[0],
-        y: item.browser.browserRect.y + elemBox.model.content[1],
+        x: item.browser.main.rect.x + elemBox.model.content[0],
+        y: item.browser.main.rect.y + elemBox.model.content[1],
         w: elemBox.model.width,
         h: elemBox.model.height
       }))

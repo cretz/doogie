@@ -18,7 +18,7 @@ describe('Status bar', function () {
   it('adds ellipsis on long URL', function () {
     return harn.openResource('big-link-block.html')
       .then(() => harn.treeItem().then(item =>
-        harn.moveMouse(item.browser.browserRect.x + 100, item.browser.browserRect.y + 100)
+        harn.moveMouse(item.browser.main.rect.x + 100, item.browser.main.rect.y + 100)
       ))
       .then(() => harn.repeatedlyTry(10, () => harn.treeItem().then(item => {
         assert(item.browser.statusBar.visible)

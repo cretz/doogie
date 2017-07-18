@@ -58,6 +58,11 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
   emit FocusObtained();
 }
 
+bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser> browser,
+                            FocusSource source) {
+  return false;
+}
+
 bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
                             const CefKeyEvent& event,
                             CefEventHandle os_event) {
