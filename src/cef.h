@@ -1,16 +1,8 @@
 #ifndef DOOGIE_CEF_H_
 #define DOOGIE_CEF_H_
 
-#if defined(_MSC_VER)
-# pragma warning(push)
-# pragma warning(disable: 4100)
-#endif
-#include "include/cef_app.h"
-#include "include/cef_browser.h"
-#include "include/cef_client.h"
-#if defined(_MSC_VER)
-# pragma warning(pop)
-#endif
+#include "cef_base.h"
+#include "cef_app_handler.h"
 
 namespace doogie {
 
@@ -22,10 +14,13 @@ class Cef {
   int EarlyExitCode();
   void Tick();
 
+  CefRefPtr<CefAppHandler> AppHandler();
+
  private:
   cef_main_args_t MainArgs(int argc, char* argv[]);
 
   int early_exit_code_;
+  CefRefPtr<CefAppHandler> app_handler_;
 };
 
 }  // namespace doogie

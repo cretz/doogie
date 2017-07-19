@@ -94,13 +94,14 @@ void PageTree::CloseAllPages() {
   QTreeWidgetItemIterator it(this);
   QList<QPersistentModelIndex> to_close;
   while (*it) {
-    to_close.append(indexFromItem(*it));
+    // Prepend to do children first
+    to_close.prepend(indexFromItem(*it));
     it++;
   }
   // Now try to close each one
   for (const auto &index : to_close) {
     auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
-    if (tree_item) DestroyItem(tree_item, false);
+    if (tree_item) CloseItem(tree_item);
   }
 }
 
@@ -187,10 +188,16 @@ bool PageTree::dropMimeData(QTreeWidgetItem* parent,
 void PageTree::keyPressEvent(QKeyEvent* event) {
   if (event->key() == Qt::Key_Delete) {
     if (!event->isAutoRepeat()) {
-      // Close all selected items
+      // Close all selected items. We use the iterator instead of
+      // selectedIndexes so we are ordered
       QList<QPersistentModelIndex> to_close;
-      for (const auto &item : selectedIndexes()) {
-        to_close.append(item);
+      QTreeWidgetItemIterator it(this);
+      while (*it) {
+        if ((*it)->isSelected()) {
+          // Prepend to do children first
+          to_close.prepend(indexFromItem(*it));
+        }
+        it++;
       }
       for (const auto &index : to_close) {
         auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
@@ -304,14 +311,14 @@ void PageTree::mouseReleaseEvent(QMouseEvent* event) {
       while (*it) {
         auto tree_item = static_cast<PageTreeItem*>(*it);
         if (tree_item->CloseButton()->isChecked()) {
-          to_close.append(indexFromItem(tree_item));
+          // Prepend to close children first
+          to_close.prepend(indexFromItem(tree_item));
         }
         ++it;
       }
       // Now try to close each one
       for (const auto &index : to_close) {
-        auto tree_item = static_cast<PageTreeItem*>(itemFromIndex(index));
-        if (tree_item) CloseItem(tree_item);
+        CloseItem(static_cast<PageTreeItem*>(itemFromIndex(index)));
       }
     }
   }
@@ -366,34 +373,17 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
 }
 
 void PageTree::CloseItem(PageTreeItem* item) {
-  // If we have children and we are expanded, we do not delete them,
-  //  we move em up
-  if (item->isExpanded()) {
-    if (item->parent()) {
-      item->parent()->insertChildren(item->parent()->indexOfChild(item),
-                                     item->takeChildren());
-    } else {
-      insertTopLevelItems(indexOfTopLevelItem(item), item->takeChildren());
+  // Eagerly skip this if the item ain't a thing anymore
+  if (!item) return;
+  // We only close children if we're not expanded.
+  if (!item->isExpanded()) {
+    // Close backwards up the list
+    for (int i = item->childCount() - 1; i >= 0; i--) {
+      CloseItem(static_cast<PageTreeItem*>(item->child(i)));
     }
   }
-  DestroyItem(item, !item->isExpanded());
-}
-
-void PageTree::DestroyItem(PageTreeItem* item, bool include_children) {
-  // We just call this recursively if include_children is true
-  if (include_children) {
-    // We have to take persistent indices before destroying the children
-    QList<QPersistentModelIndex> children;
-    for (int i = 0; i < item->childCount(); i++) {
-      children.append(indexFromItem(item->child(i)));
-    }
-    for (const auto& child : children) {
-      DestroyItem(static_cast<PageTreeItem*>(itemFromIndex(child)), true);
-    }
-  }
-  browser_stack_->removeWidget(item->Browser());
-  delete item->Browser();
-  delete item;
+  // Now we can close myself
+  item->Browser()->TryClose();
 }
 
 }  // namespace doogie

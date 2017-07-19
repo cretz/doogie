@@ -100,6 +100,21 @@ BrowserWidget::BrowserWidget(Cef* cef,
           this, &BrowserWidget::DevToolsClosed);
   connect(cef_widg_, &CefWidget::FindResult,
           this, &BrowserWidget::FindResult);
+  connect(cef_widg_, &CefWidget::Closed,
+          this, &BrowserWidget::deleteLater);
+  connect(cef_widg_, &CefWidget::ShowBeforeUnloadDialog,
+          [this](const QString& message_text,
+                 bool is_reload,
+                 CefRefPtr<CefJSDialogCallback> callback) {
+    emit AboutToShowBeforeUnloadDialog();
+    auto result = QMessageBox::question(this,
+                                        "Leave/Reload Page?",
+                                        message_text);
+    if (result == QMessageBox::No) {
+      emit CloseCancelled();
+    }
+    callback->Continue(result == QMessageBox::Yes, "");
+  });
 
   auto layout = new QGridLayout;
   layout->addWidget(top_widg, 0, 0);
@@ -174,6 +189,10 @@ BrowserWidget::BrowserWidget(Cef* cef,
 
 void BrowserWidget::LoadUrl(const QString &url) {
   cef_widg_->LoadUrl(url);
+}
+
+void BrowserWidget::TryClose() {
+  cef_widg_->TryClose();
 }
 
 void BrowserWidget::FocusUrlEdit() {

@@ -44,7 +44,6 @@ class PageTree : public QTreeWidget {
                   PageTreeItem* parent,
                   bool make_current);
   void CloseItem(PageTreeItem* item);
-  void DestroyItem(PageTreeItem* item, bool include_children);
 
   BrowserStack* browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;
@@ -58,6 +57,7 @@ class PageTree : public QTreeWidget {
   void ItemClose(PageTreeItem* item);
   void ItemClosePress(PageTreeItem* item);
   void ItemCloseRelease(PageTreeItem* item);
+  void ItemDestroyed(PageTreeItem* item);
 };
 
 }  // namespace doogie

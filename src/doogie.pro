@@ -14,6 +14,7 @@ SOURCES += \
     browser_stack.cc \
     browser_widget.cc \
     cef.cc \
+    cef_app_handler.cc \
     cef_base_widget.cc \
     cef_handler.cc \
     cef_widget.cc \
@@ -30,6 +31,8 @@ HEADERS  += \
     browser_stack.h \
     browser_widget.h \
     cef.h \
+    cef_app_handler.h \
+    cef_base.h \
     cef_base_widget.h \
     cef_handler.h \
     cef_widget.h \

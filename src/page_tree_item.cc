@@ -17,10 +17,26 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
                    [this]() { ApplyFavicon(); });
   browser->connect(browser, &BrowserWidget::FaviconChanged,
                    [this]() { ApplyFavicon(); });
+  browser->connect(browser, &BrowserWidget::destroyed, [this]() {
+    // Move all the children up
+    if (parent()) {
+      parent()->insertChildren(parent()->indexOfChild(this), takeChildren());
+    } else {
+      treeWidget()->insertTopLevelItems(
+            treeWidget()->indexOfTopLevelItem(this), takeChildren());
+    }
+    delete this;
+  });
+  browser->connect(browser, &BrowserWidget::AboutToShowBeforeUnloadDialog,
+                   [this]() {
+    treeWidget()->setCurrentItem(this);
+  });
+  browser->connect(browser, &BrowserWidget::CloseCancelled, [this]() {
+    close_button_->setChecked(false);
+  });
 }
 
 PageTreeItem::~PageTreeItem() {
-  // TODO(cretz): do I need to delete the widgets?
   if (loading_icon_frame_conn_) {
     treeWidget()->disconnect(loading_icon_frame_conn_);
   }

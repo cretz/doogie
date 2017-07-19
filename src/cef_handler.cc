@@ -63,6 +63,16 @@ bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser> browser,
   return false;
 }
 
+bool CefHandler::OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
+                                      const CefString& message_text,
+                                      bool is_reload,
+                                      CefRefPtr<CefJSDialogCallback> callback) {
+  emit ShowBeforeUnloadDialog(QString::fromStdString(message_text.ToString()),
+                              is_reload,
+                              callback);
+  return true;
+}
+
 bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
                             const CefKeyEvent& event,
                             CefEventHandle os_event) {
@@ -93,6 +103,13 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
                            CefRefPtr<CefFrame> frame,
                            int http_status_code) {
   emit LoadEnd(frame, http_status_code);
+}
+
+bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+                                CefRefPtr<CefFrame> frame,
+                                CefRefPtr<CefRequest> request,
+                                bool is_redirect) {
+  return false;
 }
 
 bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,

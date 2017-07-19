@@ -17,6 +17,8 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
           this, &CefWidget::TitleChanged);
   connect(handler_, &CefHandler::StatusChanged,
           this, &CefWidget::StatusChanged);
+  connect(handler_, &CefHandler::Closed,
+          this, &CefWidget::Closed);
   connect(handler_, &CefHandler::FaviconUrlChanged,
           [this](const QString& url) {
     static const auto favicon_sig =
@@ -43,6 +45,8 @@ CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
           int active_match_ordinal, bool) {
     FindResult(count, active_match_ordinal);
   });
+  connect(handler_, &CefHandler::ShowBeforeUnloadDialog,
+          this, &CefWidget::ShowBeforeUnloadDialog);
 
   InitBrowser(url);
 }
@@ -69,6 +73,12 @@ QString CefWidget::CurrentUrl() {
           browser_->GetMainFrame()->GetURL().ToString());
   }
   return "";
+}
+
+void CefWidget::TryClose() {
+  if (browser_) {
+    browser_->GetHost()->CloseBrowser(false);
+  }
 }
 
 void CefWidget::Go(int num) {

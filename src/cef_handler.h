@@ -14,6 +14,7 @@ class CefHandler :
     public CefDisplayHandler,
     public CefFindHandler,
     public CefFocusHandler,
+    public CefJSDialogHandler,
     public CefKeyboardHandler,
     public CefLifeSpanHandler,
     public CefLoadHandler,
@@ -36,6 +37,10 @@ class CefHandler :
   }
 
   CefRefPtr<CefFocusHandler> GetFocusHandler() override {
+    return this;
+  }
+
+  CefRefPtr<CefJSDialogHandler> GetJSDialogHandler() override {
     return this;
   }
 
@@ -93,6 +98,12 @@ class CefHandler :
 
   bool OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) override;
 
+  // JS dialog handler overrides...
+  bool OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
+                            const CefString& message_text,
+                            bool is_reload,
+                            CefRefPtr<CefJSDialogCallback> callback) override;
+
   // Key handler overrides...
   bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
                   const CefKeyEvent& event,
@@ -113,6 +124,10 @@ class CefHandler :
                  int httpStatusCode) override;
 
   // Request handler overrides...
+  bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
+                      CefRefPtr<CefFrame> frame,
+                      CefRefPtr<CefRequest> request,
+                      bool is_redirect) override;
   bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                         CefRefPtr<CefFrame> frame,
                         const CefString& target_url,
@@ -136,6 +151,9 @@ class CefHandler :
                   int active_match_ordinal,
                   bool final_update);
   void FocusObtained();
+  void ShowBeforeUnloadDialog(const QString& message_text,
+                              bool is_reload,
+                              CefRefPtr<CefJSDialogCallback> callback);
   void KeyEvent(const CefKeyEvent& event, CefEventHandle os_event);
   void Closed();
   void AfterCreated(CefRefPtr<CefBrowser> browser);

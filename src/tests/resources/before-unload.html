@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Before Unload</title>
+</head>
+<body>
+  We're gonna prevent unload here...
+  <script>
+    window.onbeforeunload = () => 'This is ignored anyways'
+  </script>
+</body>
+</html>

@@ -28,6 +28,7 @@ class CefWidget : public CefBaseWidget {
   QPointer<QWidget> OverrideWidget();\
   void LoadUrl(const QString& url);
   QString CurrentUrl();
+  void TryClose();
 
   // Basically just calls history.go
   void Go(int num);
@@ -49,6 +50,7 @@ class CefWidget : public CefBaseWidget {
   void SetZoomLevel(double level);
 
  signals:
+  void Closed();
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
                       CefRefPtr<CefMenuModel> model);
   void ContextMenuCommand(CefRefPtr<CefContextMenuParams> params,
@@ -67,6 +69,9 @@ class CefWidget : public CefBaseWidget {
   void DevToolsLoadComplete();
   void DevToolsClosed();
   void FindResult(int count, int index);
+  void ShowBeforeUnloadDialog(const QString& message_text,
+                              bool is_reload,
+                              CefRefPtr<CefJSDialogCallback> callback);
 
  protected:
   void focusInEvent(QFocusEvent* event) override;

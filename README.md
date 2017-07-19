@@ -65,6 +65,17 @@ Once complete, the package(s) will in `release/package` (e.g. doogie.zip in Wind
 
 ### Testing
 
+The tests are integration tests and are not yet integrated in `build.go`. The tests are written in node.js. Make sure
+you have the latest LTS release of node installed and navigate to `src/tests`. To setup the test infrastructure, run:
+
+    npm install
+
+To run the tests, make sure a debug instance of Doogie is running then run
+
+    npm test
+
+### Development
+
 To do a lint check of the code, have the
 [Chromium depot_tools](https://chromium.googlesource.com/chromium/tools/depot_tools.git) cloned somewhere and set the
 `DEPOT_TOOLS_DIR` env var to the dir. Then run:

@@ -42,6 +42,7 @@ class BrowserWidget : public QWidget {
                          QWidget* parent = nullptr);
 
   void LoadUrl(const QString& url);
+  void TryClose();
   void FocusUrlEdit();
   void FocusBrowser();
   QIcon CurrentFavicon();
@@ -76,6 +77,8 @@ class BrowserWidget : public QWidget {
   void DevToolsClosed();
   void FindResult(int count, int index);
   void ShowDevToolsRequest(const QPoint& inspect_at);
+  void AboutToShowBeforeUnloadDialog();
+  void CloseCancelled();
 
  protected:
   void moveEvent(QMoveEvent* event) override;
