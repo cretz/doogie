@@ -10,7 +10,7 @@ describe('Doogie', function () {
 
   it('opens hello world', function () {
     return harn.openResource('hello-world.html').then(() =>
-      harn.repeatedlyTry(10, () => harn.treeItem().then(item =>
+      harn.repeatedlyTry(() => harn.treeItem().then(item =>
         assert.equal('Hello, World!', item.text)
       ))
     )

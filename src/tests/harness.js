@@ -4,11 +4,14 @@ const CDP = require('chrome-remote-interface')
 const util = require('util')
 const robot = require('robotjs')
 const assert = require('assert')
+const http = require('http')
+const fs = require('fs')
+const url = require('url')
 
 exports.Harness = class Harness {
   constructor () {
-    this.ws = new WebSocket('ws://127.0.0.1:1983')
     this.repeatInterval = 100
+    this.repeatAttempts = 50
     const self = this
     this.closeAllOnSuccess = function () {
       if (this.currentTest.state === 'failed') {
@@ -21,6 +24,42 @@ exports.Harness = class Harness {
 
   get resourceDir () {
     return path.join(__dirname, 'resources')
+  }
+
+  startResourceServer () {
+    if (this.resourceServer) return Promise.reject(new Error('Already running'))
+    return new Promise((resolve, reject) => {
+      const resServe = http.createServer((req, res) => {
+        const reqUrl = url.parse(req.url)
+        res.writeHead(200)
+        const stream = fs.createReadStream(
+          path.join(this.resourceDir, path.normalize(reqUrl.pathname)))
+        stream.once('error', e => {
+          res.writeHead(500)
+          res.end('Err: ' + this.inspect(e))
+        })
+        stream.pipe(res)
+      })
+      resServe.once('close', () => { this.resourceServer = null })
+      resServe.listen(1993, err => {
+        if (err) return reject(err)
+        this.resourceServer = resServe
+        resolve()
+      })
+    })
+  }
+
+  stopResourceServer () {
+    if (!this.resourceServer) return Promise.reject(new Error('Not running'))
+    return new Promise((resolve, reject) =>
+      this.resourceServer.close(err => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve()
+        }
+      })
+    )
   }
 
   inspect (obj, opts) {
@@ -46,17 +85,22 @@ exports.Harness = class Harness {
     robot.mouseClick(button)
   }
 
-  connect () {
+  connectWebSocket () {
+    if (this.ws) return Promise.reject(new Error('Already connected'))
     return new Promise((resolve, reject) => {
+      this.ws = new WebSocket('ws://127.0.0.1:1983')
       this.ws.once('error', reject)
       this.ws.once('open', resolve)
+      this.ws.once('close', () => { this.ws = null })
     })
   }
 
-  close () {
+  closeWebSocket () {
+    if (!this.ws) return Promise.reject(new Error('Not running'))
     return new Promise((resolve, reject) => {
       this.ws.once('error', reject)
       this.ws.once('close', resolve)
+      this.ws.close()
     })
   }
 
@@ -80,11 +124,15 @@ exports.Harness = class Harness {
     return p
   }
 
-  repeatedlyTry (attempts, func) {
+  repeatedlyTry (func) {
+    return this.repeatedlyTryAttempts(this.repeatAttempts, func)
+  }
+
+  repeatedlyTryAttempts (attempts, func) {
     return func().catch(e => {
       if (attempts === 1) return Promise.reject(e)
       return new Promise(resolve => {
-        setTimeout(() => resolve(this.repeatedlyTry(attempts - 1, func)), this.repeatInterval)
+        setTimeout(() => resolve(this.repeatedlyTryAttempts(attempts - 1, func)), this.repeatInterval)
       })
     })
   }
@@ -109,7 +157,7 @@ exports.Harness = class Harness {
   closeAllPages () {
     return this.activate()
       .then(() => robot.keyTap('f4', ['control', 'shift']))
-      .then(() => this.repeatedlyTry(10, () => this.fetchData().then(data =>
+      .then(() => this.repeatedlyTry(() => this.fetchData().then(data =>
         assert.equal(0, data.pageTree.items.length)
       )))
   }
@@ -118,7 +166,7 @@ exports.Harness = class Harness {
     return this.activate()
       // Open blank page
       .then(() => robot.keyTap('t', 'control'))
-      .then(() => this.repeatedlyTry(10, () => this.fetchData().then(data => {
+      .then(() => this.repeatedlyTry(() => this.fetchData().then(data => {
         assert.equal(1, data.pageTree.items.length)
         assert.equal(data.pageTree.items[0].text, '(New Window)')
       })))
@@ -128,13 +176,13 @@ exports.Harness = class Harness {
         robot.keyTap('enter')
       })
       // Make sure loading is complete
-      .then(() => this.repeatedlyTry(10, () => this.treeItem().then(item =>
+      .then(() => this.repeatedlyTry(() => this.treeItem().then(item =>
         assert(!item.browser.loading)
       )))
   }
 
   openResource (resFile) {
-    return this.openPage(path.join(this.resourceDir, resFile))
+    return this.openPage(`http://127.0.0.1:1993/${resFile}`)
   }
 
   treeItem (index = 0) {
@@ -187,10 +235,26 @@ exports.Harness = class Harness {
 exports.harness = new exports.Harness()
 exports.harn = exports.harness
 
-before(function () {
-  return exports.harn.connect().then(() => exports.harn.closeAllPages())
-})
+// Only run this stuff if in mocha
+if (global.before) {
+  before(function () {
+    return Promise.all([
+      exports.harn.connectWebSocket().then(() => exports.harn.closeAllPages()),
+      exports.harn.startResourceServer()
+    ])
+  })
 
-after(function () {
-  return exports.harn.closeCdp()
-})
+  after(function () {
+    return Promise.all([
+      exports.harn.closeCdp(),
+      exports.harn.closeWebSocket()
+      // Too slow...
+      // exports.harn.stopResourceServer()
+    ])
+  })
+}
+
+// If this was started via script to do something, do it
+if (process.argv.length >= 3 && process.argv[2] === '--start-resource-server') {
+  exports.harn.startResourceServer()
+}

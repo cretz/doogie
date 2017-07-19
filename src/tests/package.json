@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "Tests for Doogie",
   "scripts": {
-    "test": "standard && mocha --timeout 10000 -b *.js"
+    "test": "standard && mocha --timeout 10000 -b *.js",
+    "resource-server": "node harness.js --start-resource-server"
   },
   "author": "",
   "license": "MIT",

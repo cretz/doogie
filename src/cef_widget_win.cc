@@ -5,6 +5,9 @@ namespace doogie {
 
 void CefWidget::InitBrowser(const QString& url) {
   CefBrowserSettings settings;
+#ifdef QT_DEBUG
+  settings.web_security = STATE_DISABLED;
+#endif
   browser_ = CefBrowserHost::CreateBrowserSync(window_info_,
                                                handler_,
                                                CefString(url.toStdString()),
