@@ -37,7 +37,11 @@ QIcon Util::CachedIconLighterDisabled(const QString& resName) {
 }
 
 QJsonObject Util::DebugWidgetGeom(QWidget* widg) {
-  auto topLeft = widg->mapToGlobal(QPoint(0, 0));
+  return Util::DebugWidgetGeom(widg, widg->rect());
+}
+
+QJsonObject Util::DebugWidgetGeom(QWidget* widg, const QRect& rect) {
+  auto topLeft = widg->mapToGlobal(rect.topLeft());
   return {
     {"x", topLeft.x() },
     {"y", topLeft.y() },

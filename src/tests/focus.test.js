@@ -8,16 +8,16 @@ describe('Browser focus', function () {
     return harn.openResource('advanced-page.html')
       // Make sure only browser is focused
       .then(() => harn.repeatedlyTry(() => harn.treeItem().then(item =>
-        assert(item.browser.main.focus && !item.browser.urlEdit.focus)
+        assert(item.value.browser.main.focus && !item.value.browser.urlEdit.focus)
       )))
       // Click the URL edit bar to switch focus
       .then(() => harn.treeItem().then(item => {
-        harn.moveMouse(item.browser.urlEdit.rect.x + 5, item.browser.urlEdit.rect.y + 5)
+        harn.moveMouse(item.value.browser.urlEdit.rect.x + 5, item.value.browser.urlEdit.rect.y + 5)
         harn.clickMouse()
       }))
       // Make sure only the URL edit is focused
       .then(() => harn.repeatedlyTry(() => harn.treeItem().then(item =>
-        assert(!item.browser.main.focus && item.browser.urlEdit.focus)
+        assert(!item.value.browser.main.focus && item.value.browser.urlEdit.focus)
       )))
       // Now click in the textarea
       .then(() => harn.elementRect('textarea').then(rect => {
@@ -26,7 +26,7 @@ describe('Browser focus', function () {
       }))
       // Now make sure only the browser is focused
       .then(() => harn.repeatedlyTry(() => harn.treeItem().then(item =>
-        assert(item.browser.main.focus && !item.browser.urlEdit.focus)
+        assert(item.value.browser.main.focus && !item.value.browser.urlEdit.focus)
       )))
   })
 })

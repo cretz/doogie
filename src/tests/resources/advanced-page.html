@@ -13,5 +13,16 @@
   <hr />
   Frame:<br />
   <iframe src="hello-world.html">No frame</iframe>
+  <script>
+    // Extract certain URL params to do certain things
+    const url = new URL(window.location.href)
+    for (const key of url.searchParams.keys()) {
+      switch (key) {
+        case 'title':
+          document.title = url.searchParams.get(key)
+          break
+      }
+    }
+  </script>
 </body>
 </html>

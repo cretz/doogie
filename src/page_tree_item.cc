@@ -89,9 +89,16 @@ QJsonObject PageTreeItem::DebugDump() {
   }
   return {
     { "current", treeWidget()->currentItem() == this },
+    { "expanded", isExpanded() },
     { "text", text(0) },
+    { "rect", Util::DebugWidgetGeom(treeWidget(),
+                                    treeWidget()->visualItemRect(this)) },
     { "browser", (browser_) ? browser_->DebugDump() : QJsonValue() },
-    { "children", children }
+    { "closeButton", QJsonObject({
+      { "checked", close_button_->isChecked() },
+      { "rect", Util::DebugWidgetGeom(close_button_) }
+    })},
+    { "items", children }
   };
 }
 

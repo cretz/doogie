@@ -12,6 +12,7 @@ class Util {
   static QIcon CachedIconLighterDisabled(const QString& resName);
 
   static QJsonObject DebugWidgetGeom(QWidget* widg);
+  static QJsonObject DebugWidgetGeom(QWidget* widg, const QRect& rect);
 };
 
 }  // namespace doogie

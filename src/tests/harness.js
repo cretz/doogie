@@ -7,6 +7,7 @@ const assert = require('assert')
 const http = require('http')
 const fs = require('fs')
 const url = require('url')
+const jp = require('jsonpath')
 
 exports.Harness = class Harness {
   constructor () {
@@ -124,12 +125,39 @@ exports.Harness = class Harness {
     return p
   }
 
+  dataQuery (expr, data = undefined) {
+    const pData = data ? Promise.resolve(data) : this.fetchData()
+    return pData.then(newData => jp.query(newData, expr))
+  }
+
+  dataSingleQuery (expr, data = undefined) {
+    return this.dataQuery(expr, data).then(ret => ret.length > 0 ? ret[0] : null)
+  }
+
+  dataPaths (expr, data = undefined) {
+    const pData = data ? Promise.resolve(data) : this.fetchData()
+    return pData.then(newData => jp.paths(newData, expr))
+  }
+
+  dataPath (expr, data = undefined) {
+    return this.dataPaths(expr, data).then(ret => ret.length > 0 ? ret[0] : null)
+  }
+
+  dataNodes (expr, data = undefined) {
+    const pData = data ? Promise.resolve(data) : this.fetchData()
+    return pData.then(newData => jp.nodes(newData, expr))
+  }
+
+  dataNode (expr, data = undefined) {
+    return this.dataNodes(expr, data).then(ret => ret.length > 0 ? ret[0] : null)
+  }
+
   repeatedlyTry (func) {
     return this.repeatedlyTryAttempts(this.repeatAttempts, func)
   }
 
   repeatedlyTryAttempts (attempts, func) {
-    return func().catch(e => {
+    return Promise.resolve(func()).catch(e => {
       if (attempts === 1) return Promise.reject(e)
       return new Promise(resolve => {
         setTimeout(() => resolve(this.repeatedlyTryAttempts(attempts - 1, func)), this.repeatInterval)
@@ -162,31 +190,41 @@ exports.Harness = class Harness {
       )))
   }
 
-  openPage (url) {
+  openPage (url, asChild = false) {
+    const keyMods = asChild ? ['control', 'shift'] : 'control'
     return this.activate()
-      // Open blank page
-      .then(() => robot.keyTap('t', 'control'))
-      .then(() => this.repeatedlyTry(() => this.fetchData().then(data => {
-        assert.equal(1, data.pageTree.items.length)
-        assert.equal(data.pageTree.items[0].text, '(New Window)')
-      })))
-      // Load a URL
-      .then(() => {
-        robot.typeString(url)
-        robot.keyTap('enter')
+      // Get current now
+      .then(() => this.currentTreeItem()).then(curr => {
+        // Open blank page
+        robot.keyTap('t', keyMods)
+        return this.repeatedlyTry(() => this.currentTreeItem().then(newCurr => {
+          if (curr) assert.notEqual(newCurr.path, curr.path)
+          assert.equal(newCurr.value.text, '(New Window)')
+        }))
+        // Load a URL
+        .then(() => {
+          robot.typeString(url)
+          robot.keyTap('enter')
+        })
+        // Make sure loading is complete
+        .then(() => this.repeatedlyTry(() => this.currentTreeItem().then(newCurr => {
+          assert(!newCurr.value.browser.loading)
+          assert.notEqual(newCurr.value.text, '(New Window)')
+        })))
       })
-      // Make sure loading is complete
-      .then(() => this.repeatedlyTry(() => this.treeItem().then(item =>
-        assert(!item.browser.loading)
-      )))
   }
 
-  openResource (resFile) {
-    return this.openPage(`http://127.0.0.1:1993/${resFile}`)
+  openResource (resFile, asChild = false) {
+    return this.openPage(`http://127.0.0.1:1993/${resFile}`, asChild)
   }
 
-  treeItem (index = 0) {
-    return this.fetchData().then(data => data.pageTree.items[index])
+  // Result is in '.value'
+  treeItem (cond = '0') {
+    return this.dataNode(`$.pageTree..items[${cond}]`)
+  }
+
+  currentTreeItem () {
+    return this.treeItem('?(@.current==true)')
   }
 
   getCdp () {
@@ -223,8 +261,8 @@ exports.Harness = class Harness {
   elementRect (selector) {
     return this.elementBox(selector).then(elemBox =>
       this.treeItem().then(item => ({
-        x: item.browser.main.rect.x + elemBox.model.content[0],
-        y: item.browser.main.rect.y + elemBox.model.content[1],
+        x: item.value.browser.main.rect.x + elemBox.model.content[0],
+        y: item.value.browser.main.rect.y + elemBox.model.content[1],
         w: elemBox.model.width,
         h: elemBox.model.height
       }))
@@ -232,25 +270,44 @@ exports.Harness = class Harness {
   }
 }
 
-exports.harness = new exports.Harness()
-exports.harn = exports.harness
+const harness = new exports.Harness()
+const harn = harness
+exports.harness = harness
+exports.harn = harness
 
 // Only run this stuff if in mocha
 if (global.before) {
   before(function () {
     return Promise.all([
-      exports.harn.connectWebSocket().then(() => exports.harn.closeAllPages()),
-      exports.harn.startResourceServer()
+      harn.connectWebSocket().then(() => harn.closeAllPages()),
+      harn.startResourceServer()
     ])
   })
 
   after(function () {
     return Promise.all([
-      exports.harn.closeCdp(),
-      exports.harn.closeWebSocket()
+      harn.closeCdp(),
+      harn.closeWebSocket()
       // Too slow...
-      // exports.harn.stopResourceServer()
+      // harn.stopResourceServer()
     ])
+  })
+
+  // We also need some tests for ourselves
+  describe('Harness', function () {
+    it('Should eval JSON path properly', function () {
+      const json = {
+        items: [
+          { current: false },
+          {
+            current: false,
+            items: [{ current: true, name: 'Test' }]
+          }
+        ]
+      }
+      return harn.dataNode('$..items[?(@.current==true)]', json)
+        .then(res => assert.equal(res.value.name, 'Test'))
+    })
   })
 }
 

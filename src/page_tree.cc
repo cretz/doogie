@@ -16,7 +16,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   setDropIndicatorShown(true);
   setAutoExpandDelay(500);
   setIndentation(10);
-  setAnimated(true);
+  setAnimated(false);
   header()->setStretchLastSection(false);
   header()->setSectionResizeMode(0, QHeaderView::Stretch);
   header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -30,8 +30,8 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
       old_font.setBold(false);
       previous->setFont(0, old_font);
     }
-    // Just ignore it if it's the last top level item
-    if (current) {
+    // Sometimes current isn't set or isn't in the tree anymore
+    if (current && indexFromItem(current).isValid()) {
       auto page_item = static_cast<PageTreeItem*>(current);
       browser_stack_->setCurrentWidget(page_item->Browser());
       auto new_font = page_item->font(0);
@@ -354,7 +354,7 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   }
   // Whether to set it as the current active
   if (make_current) {
-    setCurrentItem(browser_item, 0, QItemSelectionModel::NoUpdate);
+    setCurrentItem(browser_item, 0, QItemSelectionModel::Current);
   }
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,

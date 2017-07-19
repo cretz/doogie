@@ -10,6 +10,7 @@
   "license": "MIT",
   "devDependencies": {
     "chrome-remote-interface": "^0.24.2",
+    "jsonpath": "^0.2.12",
     "mocha": "^3.4.2",
     "robotjs": "^0.4.7",
     "standard": "^10.0.2",

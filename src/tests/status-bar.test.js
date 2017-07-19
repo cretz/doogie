@@ -10,19 +10,19 @@ describe('Status bar', function () {
         harn.moveMouse(rect.x + 5, rect.y + 5)
       }))
       .then(() => harn.repeatedlyTry(() => harn.treeItem().then(item => {
-        assert(item.browser.statusBar.visible)
-        assert.equal(item.browser.statusBar.visibleText, 'http://example.com/')
+        assert(item.value.browser.statusBar.visible)
+        assert.equal(item.value.browser.statusBar.visibleText, 'http://example.com/')
       })))
   })
 
   it('adds ellipsis on long URL', function () {
     return harn.openResource('big-link-block.html')
       .then(() => harn.treeItem().then(item =>
-        harn.moveMouse(item.browser.main.rect.x + 100, item.browser.main.rect.y + 100)
+        harn.moveMouse(item.value.browser.main.rect.x + 100, item.value.browser.main.rect.y + 100)
       ))
       .then(() => harn.repeatedlyTry(() => harn.treeItem().then(item => {
-        assert(item.browser.statusBar.visible)
-        assert(item.browser.statusBar.visibleText.endsWith('…'))
+        assert(item.value.browser.statusBar.visible)
+        assert(item.value.browser.statusBar.visibleText.endsWith('…'))
       })))
   })
 })
