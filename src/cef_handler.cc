@@ -2,7 +2,9 @@
 
 namespace doogie {
 
-CefHandler::CefHandler() {}
+CefHandler::CefHandler() {
+  qRegisterMetaType<WindowOpenType>("WindowOpenType");
+}
 
 void CefHandler::OnBeforeContextMenu(CefRefPtr<CefBrowser> browser,
                                      CefRefPtr<CefFrame> frame,
@@ -81,6 +83,26 @@ bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
   return true;
 }
 
+bool CefHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
+                               CefRefPtr<CefFrame> frame,
+                               const CefString& target_url,
+                               const CefString& target_frame_name,
+                               CefLifeSpanHandler::WindowOpenDisposition target_disposition,
+                               bool user_gesture,
+                               const CefPopupFeatures& popupFeatures,
+                               CefWindowInfo& windowInfo,
+                               CefRefPtr<CefClient>& client,
+                               CefBrowserSettings& settings,
+                               bool* no_javascript_access) {
+  if (popup_as_page_open_) {
+    emit PageOpen(static_cast<WindowOpenType>(target_disposition),
+                  QString::fromStdString(target_url.ToString()),
+                  user_gesture);
+    return true;
+  }
+  return false;
+}
+
 bool CefHandler::DoClose(CefRefPtr<CefBrowser> browser) {
   emit Closed();
   // Per the docs, we want to return tru here to prevent CEF from
@@ -117,7 +139,7 @@ bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
                                   const CefString& target_url,
                                   CefRequestHandler::WindowOpenDisposition target_disposition,  // NOLINT(whitespace/line_length)
                                   bool user_gesture) {
-  emit PageOpen(target_disposition,
+  emit PageOpen(static_cast<WindowOpenType>(target_disposition),
                QString::fromStdString(target_url.ToString()),
                user_gesture);
   return true;

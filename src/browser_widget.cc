@@ -89,10 +89,10 @@ BrowserWidget::BrowserWidget(Cef* cef,
     emit LoadingStateChanged();
   });
   connect(cef_widg_, &CefWidget::PageOpen,
-          [this](CefRequestHandler::WindowOpenDisposition type,
+          [this](CefHandler::WindowOpenType type,
                  const QString& url,
                  bool user_gesture) {
-    emit PageOpen(static_cast<WindowOpenType>(type), url, user_gesture);
+    emit PageOpen(type, url, user_gesture);
   });
   connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
           this, &BrowserWidget::DevToolsLoadComplete);
@@ -258,6 +258,10 @@ void BrowserWidget::ShowFind() {
   UpdateStatusBarLocation();
 }
 
+void BrowserWidget::ExecJs(const QString &js) {
+  cef_widg_->ExecJs(js);
+}
+
 void BrowserWidget::ShowDevTools(CefBaseWidget* widg,
                                  const QPoint& inspect_at) {
   cef_widg_->ShowDevTools(widg, inspect_at);
@@ -373,20 +377,20 @@ void BrowserWidget::HandleContextMenuCommand(
     case ContextMenuOpenLinkChildPage: {
       auto url = QString::fromStdString(params->GetLinkUrl().ToString());
       if (event_flags & EVENTFLAG_CONTROL_DOWN) {
-        emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+        emit PageOpen(CefHandler::OpenTypeNewBackgroundTab, url, true);
       } else {
-        emit PageOpen(OpenTypeNewForegroundTab, url, true);
+        emit PageOpen(CefHandler::OpenTypeNewForegroundTab, url, true);
       }
       break;
     }
     case ContextMenuOpenLinkChildPageBackground: {
-      emit PageOpen(OpenTypeNewBackgroundTab,
+      emit PageOpen(CefHandler::OpenTypeNewBackgroundTab,
                     QString::fromStdString(params->GetLinkUrl().ToString()),
                     true);
       break;
     }
     case ContextMenuOpenLinkTopLevelPage: {
-      emit PageOpen(OpenTypeNewWindow,
+      emit PageOpen(CefHandler::OpenTypeNewWindow,
                     QString::fromStdString(params->GetLinkUrl().ToString()),
                     true);
       break;
@@ -405,9 +409,9 @@ void BrowserWidget::HandleContextMenuCommand(
       auto url = QString("view-source:") +
           QString::fromStdString(params->GetPageUrl().ToString());
       if (event_flags & EVENTFLAG_CONTROL_DOWN) {
-        emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+        emit PageOpen(CefHandler::OpenTypeNewBackgroundTab, url, true);
       } else {
-        emit PageOpen(OpenTypeNewForegroundTab, url, true);
+        emit PageOpen(CefHandler::OpenTypeNewForegroundTab, url, true);
       }
       break;
     }
@@ -415,9 +419,9 @@ void BrowserWidget::HandleContextMenuCommand(
     auto url = QString("view-source:") +
         QString::fromStdString(params->GetFrameUrl().ToString());
     if (event_flags & EVENTFLAG_CONTROL_DOWN) {
-      emit PageOpen(OpenTypeNewBackgroundTab, url, true);
+      emit PageOpen(CefHandler::OpenTypeNewBackgroundTab, url, true);
     } else {
-      emit PageOpen(OpenTypeNewForegroundTab, url, true);
+      emit PageOpen(CefHandler::OpenTypeNewForegroundTab, url, true);
     }
     break;
   }

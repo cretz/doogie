@@ -358,13 +358,18 @@ void PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   }
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,
-          [this, browser_item](BrowserWidget::WindowOpenType type,
+          [this, browser_item](CefHandler::WindowOpenType type,
                                const QString& url,
                                bool user_gesture) {
     PageTreeItem* parent = nullptr;
+    // TODO: better UI and should I block all non-user page changes?
+    if (!user_gesture) {
+      qDebug() << "Popup blocked for: " << url;
+      return;
+    }
     bool make_current = user_gesture &&
-        type != BrowserWidget::OpenTypeNewBackgroundTab;
-    if (type != BrowserWidget::OpenTypeNewWindow) {
+        type != CefHandler::OpenTypeNewBackgroundTab;
+    if (type != CefHandler::OpenTypeNewWindow) {
       parent = browser_item;
     }
     AddBrowser(browser_stack_->NewBrowser(url), parent, make_current);

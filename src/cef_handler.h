@@ -22,6 +22,21 @@ class CefHandler :
   Q_OBJECT
 
  public:
+  // Matches CEF's numbering, don't change
+  enum WindowOpenType {
+    OpenTypeUnknown,
+    OpenTypeCurrentTab,
+    OpenTypeSingletonTab,
+    OpenTypeNewForegroundTab,
+    OpenTypeNewBackgroundTab,
+    OpenTypeNewPopup,
+    OpenTypeNewWindow,
+    OpenTypeSaveToDisk,
+    OpenTypeOffTheRecord,
+    OpenTypeIgnoreAction
+  };
+  Q_ENUM(WindowOpenType)
+
   CefHandler();
 
   CefRefPtr<CefContextMenuHandler> GetContextMenuHandler() override {
@@ -110,6 +125,18 @@ class CefHandler :
                   CefEventHandle os_event) override;
 
   // Life span handler overrides...
+  bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
+                     CefRefPtr<CefFrame> frame,
+                     const CefString& target_url,
+                     const CefString& target_frame_name,
+                     CefLifeSpanHandler::WindowOpenDisposition target_disposition,
+                     bool user_gesture,
+                     const CefPopupFeatures& popupFeatures,
+                     CefWindowInfo& windowInfo,
+                     CefRefPtr<CefClient>& client,
+                     CefBrowserSettings& settings,
+                     bool* no_javascript_access) override;
+
   bool DoClose(CefRefPtr<CefBrowser> browser) override;
 
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
@@ -162,14 +189,14 @@ class CefHandler :
                         bool can_go_forward);
   void LoadEnd(CefRefPtr<CefFrame> frame,
                int httpStatusCode);
-  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
-                const QString& url,
-                bool user_gesture);
+  void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
 
  private:
+  bool popup_as_page_open_ = true;
+
   IMPLEMENT_REFCOUNTING(CefHandler)
 };
 
-}  // namespace doogie
+}  // namespace doogie)
 
 #endif  // DOOGIE_CEF_HANDLER_H_

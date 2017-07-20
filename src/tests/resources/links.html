@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Links</title>
+</head>
+<body>
+  <a id="link-normal" href="hello-world.html">Normal</a>
+  <hr />
+  <a id="link-target-blank" href="hello-world.html" target="_blank">Target Blank</a>
+  <hr />
+  <a id="link-window-open" href="#" onclick="window.open('hello-world.html'); return false;">Window Open</a>
+  <hr />
+  A popup will be attempted if ?popup is in the URL
+  <script>
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('popup')) window.open('hello-world.html')
+  </script>
+  <hr />
+  A self-change will be attempted if ?change-self is in the URL
+  <script>
+    if (url.searchParams.has('change-self')) window.location.href = 'hello-world.html'
+  </script>
+  <hr />
+  A recursive self-change will be attempted if ?change-self-recursive is in the URL
+  <script>
+    if (url.searchParams.has('change-self-recursive')) window.location.href = 'links.html?change-self-recursive'
+  </script>
+</body>
+</html>

@@ -128,6 +128,13 @@ void CefWidget::CancelFind(bool clear_selection) {
   }
 }
 
+void CefWidget::ExecJs(const QString &js) {
+  if (browser_) {
+    browser_->GetMainFrame()->ExecuteJavaScript(
+          CefString(js.toStdString()), "<doogie>", 0);
+  }
+}
+
 void CefWidget::ShowDevTools(CefBaseWidget* widg,
                              const QPoint& inspect_at) {
   if (browser_) {

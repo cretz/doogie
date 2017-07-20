@@ -86,6 +86,26 @@ exports.Harness = class Harness {
     robot.mouseClick(button)
   }
 
+  // If key is an array, key is first, mods are the rest
+  withKeyDown (keyAndMods, func) {
+    let key = keyAndMods
+    let mods = null
+    if (Array.isArray(keyAndMods)) [key, ...mods] = keyAndMods
+    if (mods) {
+      robot.keyToggle(key, 'down', mods)
+    } else {
+      robot.keyToggle(key, 'down')
+    }
+    return Promise.resolve(func()).then(ret => {
+      if (mods) {
+        robot.keyToggle(key, 'up', mods)
+      } else {
+        robot.keyToggle(key, 'up')
+      }
+      return ret
+    })
+  }
+
   connectWebSocket () {
     if (this.ws) return Promise.reject(new Error('Already connected'))
     return new Promise((resolve, reject) => {

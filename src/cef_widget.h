@@ -42,6 +42,8 @@ class CefWidget : public CefBaseWidget {
             bool continued);
   void CancelFind(bool clear_selection);
 
+  void ExecJs(const QString& js);
+
   void ShowDevTools(CefBaseWidget* widg, const QPoint& inspect_at);
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
@@ -63,7 +65,7 @@ class CefWidget : public CefBaseWidget {
   void LoadStateChanged(bool is_loading,
                         bool can_go_back,
                         bool can_go_forward);
-  void PageOpen(CefRequestHandler::WindowOpenDisposition type,
+  void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,
                 bool user_gesture);
   void DevToolsLoadComplete();

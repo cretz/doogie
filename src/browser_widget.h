@@ -11,21 +11,6 @@ class BrowserWidget : public QWidget {
   Q_OBJECT
 
  public:
-  // Matches CEF's numbering, don't change
-  enum WindowOpenType {
-    OpenTypeUnknown,
-    OpenTypeCurrentTab,
-    OpenTypeSingletonTab,
-    OpenTypeNewForegroundTab,
-    OpenTypeNewBackgroundTab,
-    OpenTypeNewPopup,
-    OpenTypeNewWindow,
-    OpenTypeSaveToDisk,
-    OpenTypeOffTheRecord,
-    OpenTypeIgnoreAction
-  };
-  Q_ENUM(WindowOpenType)
-
   enum ContextMenuCommand {
     ContextMenuOpenLinkChildPage = MENU_ID_USER_FIRST,
     ContextMenuOpenLinkChildPageBackground,
@@ -58,6 +43,7 @@ class BrowserWidget : public QWidget {
   void Forward();
   void Print();
   void ShowFind();
+  void ExecJs(const QString& js);
 
   void ShowDevTools(CefBaseWidget* widg, const QPoint& inspect_at);
   void ExecDevToolsJs(const QString& js);
@@ -72,7 +58,9 @@ class BrowserWidget : public QWidget {
   void TitleChanged();
   void FaviconChanged();
   void LoadingStateChanged();
-  void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
+  void PageOpen(CefHandler::WindowOpenType type,
+                const QString& url,
+                bool user_gesture);
   void DevToolsLoadComplete();
   void DevToolsClosed();
   void FindResult(int count, int index);
