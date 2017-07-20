@@ -19,6 +19,9 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
           [this, widg](const QPoint& inspect_at) {
     emit ShowDevToolsRequest(widg, inspect_at);
   });
+  connect(widg, &BrowserWidget::CloseCancelled, [this, widg]() {
+    emit BrowserCloseCancelled(widg);
+  });
   // We load the URL separately so we can have the loading icon and what not
   if (!url.isEmpty()) widg->LoadUrl(url);
   addWidget(widg);

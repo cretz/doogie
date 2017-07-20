@@ -18,11 +18,15 @@ class PageTreeDock : public QDockWidget {
   void NewChildPage(const QString& url);
   void CloseCurrentPage();
   void CloseAllPages();
+  bool HasOpenPages();
 
   QJsonObject DebugDump();
 
  private:
   PageTree* tree_;
+
+ signals:
+  void TreeEmpty();
 };
 
 }  // namespace doogie

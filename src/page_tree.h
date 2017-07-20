@@ -58,6 +58,7 @@ class PageTree : public QTreeWidget {
   void ItemClosePress(PageTreeItem* item);
   void ItemCloseRelease(PageTreeItem* item);
   void ItemDestroyed(PageTreeItem* item);
+  void TreeEmpty();
 };
 
 }  // namespace doogie

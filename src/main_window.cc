@@ -4,8 +4,11 @@
 
 namespace doogie {
 
+MainWindow* MainWindow::instance_ = nullptr;
+
 MainWindow::MainWindow(Cef* cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
+  instance_ = this;
   // TODO(cretz): how to determine best interval
   // TODO(cretz): is the timer stopped for us?
   if (startTimer(10) == 0) {
@@ -24,15 +27,34 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
     ShowDevTools(browser, inspect_at, true);
   });
   setCentralWidget(browser_stack);
+  // If we're trying to close and one was cancelled, we're no
+  //  longer trying to close
+  connect(browser_stack, &BrowserStack::BrowserCloseCancelled,
+          [this](BrowserWidget*) {
+    attempting_to_close_ = false;
+  });
 
   page_tree_dock_ = new PageTreeDock(browser_stack, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
+  // If we're attempting to close and the stack becomes empty,
+  //  try the close again
+  connect(page_tree_dock_, &PageTreeDock::TreeEmpty, [this]() {
+    if (attempting_to_close_) {
+      attempting_to_close_ = false;
+      this->close();
+    }
+  });
 
   dev_tools_dock_ = new DevToolsDock(cef, browser_stack, this);
   dev_tools_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, dev_tools_dock_);
 
-  resizeDocks({dev_tools_dock_}, {300}, Qt::Vertical);
+  logging_dock_ = new LoggingDock(this);
+  logging_dock_->setVisible(false);
+  addDockWidget(Qt::BottomDockWidgetArea, logging_dock_);
+  qInstallMessageHandler(MainWindow::LogQtMessage);
+
+  resizeDocks({dev_tools_dock_, logging_dock_}, {300, 300}, Qt::Vertical);
 
   // We choose for verticle windows to occupy the corners
   setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
@@ -118,9 +140,11 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
     auto curr_browser = browser_stack->CurrentBrowser();
     if (curr_browser) curr_browser->FocusBrowser();
   })->setShortcut(Qt::ALT + Qt::Key_3);
+  win_menu->addAction(logging_dock_->toggleViewAction());
 }
 
 MainWindow::~MainWindow() {
+  instance_ = nullptr;
 }
 
 QJsonObject MainWindow::DebugDump() {
@@ -129,6 +153,17 @@ QJsonObject MainWindow::DebugDump() {
     { "rect", Util::DebugWidgetGeom(this) },
     { "pageTree", page_tree_dock_->DebugDump() }
   };
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+  // We only let close go through if there are no open pages
+  if (page_tree_dock_->HasOpenPages()) {
+    attempting_to_close_ = true;
+    page_tree_dock_->CloseAllPages();
+    event->ignore();
+    return;
+  }
+  QMainWindow::closeEvent(event);
 }
 
 void MainWindow::dropEvent(QDropEvent* event) {
@@ -171,6 +206,14 @@ void MainWindow::ShowDevTools(BrowserWidget *browser,
       dev_tools_dock_->close();
     }
   }
+}
+
+void MainWindow::LogQtMessage(QtMsgType type,
+                              const QMessageLogContext& ctx,
+                              const QString& str) {
+  // We accept the lack of thread safety here
+  auto inst = MainWindow::instance_;
+  if (inst) inst->logging_dock_->LogQtMessage(type, ctx, str);
 }
 
 }  // namespace doogie

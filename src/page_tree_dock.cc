@@ -10,6 +10,7 @@ PageTreeDock::PageTreeDock(BrowserStack* browser_stack, QWidget* parent)
 
   // Create tree
   tree_ = new PageTree(browser_stack, this);
+  connect(tree_, &PageTree::TreeEmpty, this, &PageTreeDock::TreeEmpty);
   setWidget(tree_);
 }
 
@@ -31,6 +32,10 @@ void PageTreeDock::CloseCurrentPage() {
 
 void PageTreeDock::CloseAllPages() {
   tree_->CloseAllPages();
+}
+
+bool PageTreeDock::HasOpenPages() {
+  return tree_->topLevelItemCount() > 0;
 }
 
 QJsonObject PageTreeDock::DebugDump() {

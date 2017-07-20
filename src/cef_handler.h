@@ -190,6 +190,7 @@ class CefHandler :
   void LoadEnd(CefRefPtr<CefFrame> frame,
                int httpStatusCode);
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
+  void BrowserLog(const QString& str);
 
  private:
   bool popup_as_page_open_ = true;

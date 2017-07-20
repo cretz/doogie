@@ -21,6 +21,12 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   header()->setSectionResizeMode(0, QHeaderView::Stretch);
   header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
 
+  // Emit empty on row removal
+  connect(model(), &QAbstractItemModel::rowsRemoved,
+          [this](const QModelIndex&, int, int) {
+    if (topLevelItemCount() == 0) emit TreeEmpty();
+  });
+
   // Each time one is selected, we need to make sure to show that on the stack
   connect(this, &QTreeWidget::currentItemChanged,
           [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
