@@ -16,6 +16,13 @@ class PageTreeItem : public QTreeWidgetItem {
 
   QJsonObject DebugDump();
 
+  bool SelfOrAnyChildCollapsed();
+  bool SelfOrAnyChildExpanded();
+  void ExpandSelfAndChildren();
+  void CollapseSelfAndChildren();
+  QList<PageTreeItem*> SelfSelectedOrChildrenSelected();
+  bool SelectedOrHasSelectedParent();
+
  private:
   void ApplyFavicon();
 

@@ -22,6 +22,7 @@ class PageTree : public QTreeWidget {
 
  protected:
   Qt::DropActions supportedDropActions() const override;
+  void contextMenuEvent(QContextMenuEvent* event) override;
   void dragEnterEvent(QDragEnterEvent* event) override;
   void dragMoveEvent(QDragMoveEvent* event) override;
   void dropEvent(QDropEvent* event) override;
@@ -38,12 +39,20 @@ class PageTree : public QTreeWidget {
   void rowsInserted(const QModelIndex& parent,
                     int start,
                     int end) override;
+  QItemSelectionModel::SelectionFlags selectionCommand(
+      const QModelIndex& index, const QEvent* event) const override;
 
  private:
-  void AddBrowser(QPointer<BrowserWidget> browser,
-                  PageTreeItem* parent,
-                  bool make_current);
+  PageTreeItem* AddBrowser(QPointer<BrowserWidget> browser,
+                           PageTreeItem* parent,
+                           bool make_current);
   void CloseItem(PageTreeItem* item);
+  void DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent);
+  QList<PageTreeItem*> Items();
+  QList<PageTreeItem*> ItemsInReverse();
+  QList<PageTreeItem*> SelectedItems();
+  QList<PageTreeItem*> SelectedItemsInReverse();
+  QList<PageTreeItem*> SelectedItemsOnlyHighestLevel();
 
   BrowserStack* browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;

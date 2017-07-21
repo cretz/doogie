@@ -5,7 +5,7 @@
 namespace doogie {
 
 PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
-    : browser_(browser) {
+    : QTreeWidgetItem(QTreeWidgetItem::UserType + 1), browser_(browser) {
   setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled |
            Qt::ItemIsDropEnabled | Qt::ItemIsEnabled);
   // Connect title and favicon change
@@ -100,6 +100,55 @@ QJsonObject PageTreeItem::DebugDump() {
     })},
     { "items", children }
   };
+}
+
+bool PageTreeItem::SelfOrAnyChildCollapsed() {
+  for (int i = 0; i < childCount(); i++) {
+    if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildCollapsed()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool PageTreeItem::SelfOrAnyChildExpanded() {
+  for (int i = 0; i < childCount(); i++) {
+    if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildExpanded()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void PageTreeItem::ExpandSelfAndChildren() {
+  setExpanded(true);
+  for (int i = 0; i < childCount(); i++) {
+    static_cast<PageTreeItem*>(child(i))->ExpandSelfAndChildren();
+  }
+}
+
+void PageTreeItem::CollapseSelfAndChildren() {
+  setExpanded(false);
+  for (int i = 0; i < childCount(); i++) {
+    static_cast<PageTreeItem*>(child(i))->CollapseSelfAndChildren();
+  }
+}
+
+QList<PageTreeItem*> PageTreeItem::SelfSelectedOrChildrenSelected() {
+  if (isSelected()) return { this };
+  QList<PageTreeItem*> ret;
+  for (int i = 0; i < childCount(); i++) {
+    ret.append(static_cast<PageTreeItem*>(child(i))->
+        SelfSelectedOrChildrenSelected());
+  }
+  return ret;
+}
+
+bool PageTreeItem::SelectedOrHasSelectedParent() {
+  if (isSelected()) return true;
+  auto my_parent = static_cast<PageTreeItem*>(parent());
+  if (!my_parent) return false;
+  return my_parent->SelectedOrHasSelectedParent();
 }
 
 void PageTreeItem::ApplyFavicon() {
