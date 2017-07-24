@@ -7,6 +7,7 @@
 #include "page_tree_dock.h"
 #include "dev_tools_dock.h"
 #include "logging_dock.h"
+#include "browser_stack.h"
 
 namespace doogie {
 
@@ -27,6 +28,7 @@ class MainWindow : public QMainWindow {
   void timerEvent(QTimerEvent* event) override;
 
  private:
+  void SetupActions();
   void ShowDevTools(BrowserWidget* browser,
                     const QPoint& inspect_at,
                     bool force_open);
@@ -35,6 +37,7 @@ class MainWindow : public QMainWindow {
                            const QString& str);
 
   Cef* cef_;
+  BrowserStack* browser_stack_;
   PageTreeDock* page_tree_dock_;
   DevToolsDock* dev_tools_dock_;
   LoggingDock* logging_dock_;

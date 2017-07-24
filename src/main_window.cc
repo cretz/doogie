@@ -1,6 +1,7 @@
 #include "main_window.h"
 #include "browser_stack.h"
 #include "util.h"
+#include "action_manager.h"
 
 namespace doogie {
 
@@ -9,6 +10,8 @@ MainWindow* MainWindow::instance_ = nullptr;
 MainWindow::MainWindow(Cef* cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
   instance_ = this;
+  new ActionManager(this);
+
   // TODO(cretz): how to determine best interval
   // TODO(cretz): is the timer stopped for us?
   if (startTimer(10) == 0) {
@@ -21,20 +24,20 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   resize(1024, 768);
   setAcceptDrops(true);
 
-  auto browser_stack = new BrowserStack(cef, this);
-  connect(browser_stack, &BrowserStack::ShowDevToolsRequest,
+  browser_stack_ = new BrowserStack(cef, this);
+  connect(browser_stack_, &BrowserStack::ShowDevToolsRequest,
           [this](BrowserWidget* browser, const QPoint& inspect_at) {
     ShowDevTools(browser, inspect_at, true);
   });
-  setCentralWidget(browser_stack);
+  setCentralWidget(browser_stack_);
   // If we're trying to close and one was cancelled, we're no
   //  longer trying to close
-  connect(browser_stack, &BrowserStack::BrowserCloseCancelled,
+  connect(browser_stack_, &BrowserStack::BrowserCloseCancelled,
           [this](BrowserWidget*) {
     attempting_to_close_ = false;
   });
 
-  page_tree_dock_ = new PageTreeDock(browser_stack, this);
+  page_tree_dock_ = new PageTreeDock(browser_stack_, this);
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
   // If we're attempting to close and the stack becomes empty,
   //  try the close again
@@ -45,7 +48,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
     }
   });
 
-  dev_tools_dock_ = new DevToolsDock(cef, browser_stack, this);
+  dev_tools_dock_ = new DevToolsDock(cef, browser_stack_, this);
   dev_tools_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, dev_tools_dock_);
 
@@ -62,85 +65,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
   setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
-  // Setup the menu options...
-  // TODO(cretz): configurable hotkeys and better organization
-  auto pages_menu = menuBar()->addMenu("&Pages");
-  pages_menu->addAction("New Top-Level Page", [this]() {
-    page_tree_dock_->NewTopLevelPage("");
-  })->setShortcut(Qt::CTRL + Qt::Key_T);
-  pages_menu->addAction("New Child Page", [this]() {
-    page_tree_dock_->NewChildPage("");
-  })->setShortcut(Qt::CTRL + Qt::SHIFT + Qt::Key_T);
-  pages_menu->addAction("Close Page", [this]() {
-    page_tree_dock_->CloseCurrentPage();
-  })->setShortcuts({Qt::CTRL + Qt::Key_F4, Qt::CTRL + Qt::Key_W});
-  pages_menu->addAction("Close All Pages", [this]() {
-    page_tree_dock_->CloseAllPages();
-  })->setShortcuts({Qt::CTRL + Qt::SHIFT + Qt::Key_F4,
-                    Qt::CTRL + Qt::SHIFT + Qt::Key_W});
-  pages_menu->addAction("Toggle Dev Tools", [this, browser_stack]() {
-    ShowDevTools(browser_stack->CurrentBrowser(), QPoint(), false);
-  })->setShortcuts({Qt::Key_F12, Qt::CTRL + Qt::Key_F12});
-
-  auto page_menu = menuBar()->addMenu("&Page");
-  page_menu->addAction("Refresh", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->Refresh();
-  })->setShortcuts({Qt::Key_F5, Qt::CTRL + Qt::Key_F5, Qt::CTRL + Qt::Key_R});
-  page_menu->addAction("Stop", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->Stop();
-  })->setShortcut(Qt::Key_Escape);
-  page_menu->addAction("Back", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->Back();
-  })->setShortcuts({Qt::CTRL + Qt::Key_PageUp,
-                    Qt::CTRL + Qt::SHIFT + Qt::Key_PageDown,
-                    Qt::Key_Backspace});
-  page_menu->addAction("Forward", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->Forward();
-  })->setShortcuts({Qt::CTRL + Qt::Key_PageDown,
-                    Qt::CTRL + Qt::SHIFT + Qt::Key_PageUp,
-                    Qt::SHIFT + Qt::Key_Backspace});
-  page_menu->addAction("Print", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->Print();
-  })->setShortcut(Qt::CTRL + Qt::Key_P);
-  page_menu->addAction("Zoom In", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) {
-      curr_browser->SetZoomLevel(curr_browser->GetZoomLevel() + 0.1);
-    }
-  })->setShortcuts({Qt::CTRL + Qt::Key_Plus, Qt::CTRL + Qt::Key_Equal});
-  page_menu->addAction("Zoom Out", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) {
-      curr_browser->SetZoomLevel(curr_browser->GetZoomLevel() - 0.1);
-    }
-  })->setShortcut(Qt::CTRL + Qt::Key_Minus);
-  page_menu->addAction("Reset Zoom", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->SetZoomLevel(0.0);
-  })->setShortcut(Qt::CTRL + Qt::Key_0);
-  page_menu->addAction("Find", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->ShowFind();
-  })->setShortcut(Qt::CTRL + Qt::Key_F);
-
-  auto win_menu = menuBar()->addMenu("&Window");
-  win_menu->addAction("Focus Page Tree", [this]() {
-    page_tree_dock_->FocusPageTree();
-  })->setShortcut(Qt::ALT + Qt::Key_1);
-  win_menu->addAction("Focus Address Bar", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->FocusUrlEdit();
-  })->setShortcuts({Qt::ALT + Qt::Key_2, Qt::ALT + Qt::Key_D});
-  win_menu->addAction("Focus Browser", [this, browser_stack]() {
-    auto curr_browser = browser_stack->CurrentBrowser();
-    if (curr_browser) curr_browser->FocusBrowser();
-  })->setShortcut(Qt::ALT + Qt::Key_3);
-  win_menu->addAction(logging_dock_->toggleViewAction());
+  SetupActions();
 }
 
 MainWindow::~MainWindow() {
@@ -159,7 +84,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
   // We only let close go through if there are no open pages
   if (page_tree_dock_->HasOpenPages()) {
     attempting_to_close_ = true;
-    page_tree_dock_->CloseAllPages();
+    ActionManager::Action(ActionManager::CloseAllPages)->trigger();
     event->ignore();
     return;
   }
@@ -168,7 +93,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 void MainWindow::dropEvent(QDropEvent* event) {
   for (const auto& url : event->mimeData()->urls()) {
-    page_tree_dock_->NewTopLevelPage(url.url());
+    page_tree_dock_->NewPage(url.url(), true, false);
   }
 }
 
@@ -185,6 +110,76 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 
 void MainWindow::timerEvent(QTimerEvent*) {
   cef_->Tick();
+}
+
+void MainWindow::SetupActions() {
+  // Actions
+  connect(ActionManager::Action(ActionManager::ToggleDevTools),
+          &QAction::triggered, [this]() {
+    ShowDevTools(browser_stack_->CurrentBrowser(), QPoint(), false);
+  });
+  auto logs_action = ActionManager::Action(ActionManager::LogsWindow);
+  connect(logs_action, &QAction::triggered, [this]() {
+    logging_dock_->setVisible(!logging_dock_->isVisible());
+  });
+  logs_action->setCheckable(true);
+  connect(logging_dock_, &QDockWidget::visibilityChanged,
+          [this, logs_action](bool visible) {
+    logs_action->setChecked(visible);
+  });
+
+  // Shortcut keys
+  // TODO: make this configurable
+  auto shortcuts = [](ActionManager::Type type, const QString& shortcuts) {
+    auto action = ActionManager::Action(type);
+    action->setShortcuts(QKeySequence::listFromString(shortcuts));
+  };
+  shortcuts(ActionManager::NewTopLevelPage, "Ctrl+T");
+  shortcuts(ActionManager::NewChildForegroundPage, "Ctrl+Shift+T");
+  shortcuts(ActionManager::ClosePage, "Ctrl+F4; Ctrl+W");
+  shortcuts(ActionManager::CloseAllPages, "Ctrl+Shift+F4; Ctrl+Shift+W");
+  shortcuts(ActionManager::ToggleDevTools, "F12; Ctrl+F12");
+  shortcuts(ActionManager::Reload, "F5,Ctrl+F5; Ctrl+R");
+  shortcuts(ActionManager::Stop, "Esc");
+  shortcuts(ActionManager::Back,
+            "Ctrl+Page Up; Ctrl+Shift+Page Down; Backspace");
+  shortcuts(ActionManager::Forward,
+            "Ctrl+Page Down; Ctrl+Shift+Page Up; Shift+Backspace");
+  shortcuts(ActionManager::Print, "Ctrl+P");
+  shortcuts(ActionManager::ZoomIn, "Ctrl++; Ctrl+=");
+  shortcuts(ActionManager::ZoomOut, "Ctrl+-");
+  shortcuts(ActionManager::ResetZoom, "Ctrl+0");
+  shortcuts(ActionManager::FindInPage, "Ctrl+F");
+  shortcuts(ActionManager::FocusPageTree, "Alt+1");
+  shortcuts(ActionManager::FocusAddressBar, "Alt+2; Ctrl+D");
+  shortcuts(ActionManager::FocusBrowser, "Alt+3");
+
+  // Setup menu
+  auto menu_action = [](QMenu* menu, ActionManager::Type type) {
+    menu->addAction(ActionManager::Action(type));
+  };
+
+  auto menu = menuBar()->addMenu("P&ages");
+  menu_action(menu, ActionManager::NewTopLevelPage);
+  menu_action(menu, ActionManager::NewChildForegroundPage);
+  menu_action(menu, ActionManager::ClosePage);
+  menu_action(menu, ActionManager::CloseAllPages);
+  menu_action(menu, ActionManager::ToggleDevTools);
+  menu = menuBar()->addMenu("&Page");
+  menu_action(menu, ActionManager::Reload);
+  menu_action(menu, ActionManager::Stop);
+  menu_action(menu, ActionManager::Back);
+  menu_action(menu, ActionManager::Forward);
+  menu_action(menu, ActionManager::Print);
+  menu_action(menu, ActionManager::ZoomIn);
+  menu_action(menu, ActionManager::ZoomOut);
+  menu_action(menu, ActionManager::ResetZoom);
+  menu_action(menu, ActionManager::FindInPage);
+  menu = menuBar()->addMenu("&Window");
+  menu_action(menu, ActionManager::FocusPageTree);
+  menu_action(menu, ActionManager::FocusAddressBar);
+  menu_action(menu, ActionManager::FocusBrowser);
+  menu_action(menu, ActionManager::LogsWindow);
 }
 
 void MainWindow::ShowDevTools(BrowserWidget *browser,

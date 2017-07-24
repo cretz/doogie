@@ -13,11 +13,11 @@ class PageTree : public QTreeWidget {
 
  public:
   explicit PageTree(BrowserStack* browser_stack, QWidget* parent = nullptr);
-  void NewPage(const QString& url, bool top_level);
-  void CloseCurrentPage();
-  void CloseAllPages();
   QMovie* LoadingIconMovie();
-
+  PageTreeItem* CurrentItem();
+  PageTreeItem* NewPage(const QString &url,
+                        PageTreeItem* parent,
+                        bool make_current);
   QJsonObject DebugDump();
 
  protected:
@@ -43,16 +43,17 @@ class PageTree : public QTreeWidget {
       const QModelIndex& index, const QEvent* event) const override;
 
  private:
+  void SetupActions();
   PageTreeItem* AddBrowser(QPointer<BrowserWidget> browser,
                            PageTreeItem* parent,
                            bool make_current);
   void CloseItem(PageTreeItem* item);
-  void DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent);
+  void CloseItemsInReverseOrder(QList<PageTreeItem*> items);
+  void DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent = nullptr);
   QList<PageTreeItem*> Items();
-  QList<PageTreeItem*> ItemsInReverse();
   QList<PageTreeItem*> SelectedItems();
-  QList<PageTreeItem*> SelectedItemsInReverse();
   QList<PageTreeItem*> SelectedItemsOnlyHighestLevel();
+  QList<PageTreeItem*> SameHostPages(PageTreeItem* to_comp);
 
   BrowserStack* browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;

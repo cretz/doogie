@@ -151,6 +151,17 @@ bool PageTreeItem::SelectedOrHasSelectedParent() {
   return my_parent->SelectedOrHasSelectedParent();
 }
 
+QList<PageTreeItem*> PageTreeItem::Siblings() {
+  auto my_parent = parent();
+  if (!my_parent) my_parent = treeWidget()->invisibleRootItem();
+  QList<PageTreeItem*> ret;
+  ret.reserve(my_parent->childCount() - 1);
+  for (int i = 0; i < my_parent->childCount(); i++) {
+    ret.append(static_cast<PageTreeItem*>(my_parent->child(i)));
+  }
+  return ret;
+}
+
 void PageTreeItem::ApplyFavicon() {
   auto tree = static_cast<PageTree*>(treeWidget());
   if (loading_icon_frame_conn_) tree->disconnect(loading_icon_frame_conn_);

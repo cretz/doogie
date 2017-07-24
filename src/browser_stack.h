@@ -21,6 +21,8 @@ class BrowserStack : public QStackedWidget {
   void BrowserCloseCancelled(BrowserWidget* browser);
 
  private:
+  void SetupActions();
+
   Cef* cef_;
 };
 

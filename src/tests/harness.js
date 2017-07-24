@@ -215,11 +215,11 @@ exports.Harness = class Harness {
     return this.activate()
       // Get current now
       .then(() => this.currentTreeItem()).then(curr => {
-        // Open blank page
         robot.keyTap('t', keyMods)
         return this.repeatedlyTry(() => this.currentTreeItem().then(newCurr => {
           if (curr) assert.notEqual(newCurr.path, curr.path)
           assert.equal(newCurr.value.text, '(New Window)')
+          assert(newCurr.value.browser.urlEdit.focus)
         }))
         // Load a URL
         .then(() => {

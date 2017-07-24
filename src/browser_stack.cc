@@ -1,4 +1,5 @@
 #include "browser_stack.h"
+#include "action_manager.h"
 
 namespace doogie {
 
@@ -8,6 +9,7 @@ BrowserStack::BrowserStack(Cef* cef, QWidget* parent)
     emit BrowserChanged(CurrentBrowser());
     emit CurrentBrowserOrLoadingStateChanged();
   });
+  SetupActions();
 }
 
 QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
@@ -30,6 +32,19 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
 
 BrowserWidget* BrowserStack::CurrentBrowser() {
   return static_cast<BrowserWidget*>(currentWidget());
+}
+
+void BrowserStack::SetupActions() {
+  connect(ActionManager::Action(ActionManager::FocusAddressBar),
+          &QAction::triggered, [this]() {
+    auto browser = CurrentBrowser();
+    if (browser) browser->FocusUrlEdit();
+  });
+  connect(ActionManager::Action(ActionManager::FocusBrowser),
+          &QAction::triggered, [this]() {
+    auto browser = CurrentBrowser();
+    if (browser) browser->FocusBrowser();
+  });
 }
 
 }  // namespace doogie

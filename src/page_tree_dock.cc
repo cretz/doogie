@@ -11,27 +11,16 @@ PageTreeDock::PageTreeDock(BrowserStack* browser_stack, QWidget* parent)
   // Create tree
   tree_ = new PageTree(browser_stack, this);
   connect(tree_, &PageTree::TreeEmpty, this, &PageTreeDock::TreeEmpty);
+  setFocusProxy(tree_);
   setWidget(tree_);
 }
 
-void PageTreeDock::FocusPageTree() {
-  tree_->setFocus();
-}
-
-void PageTreeDock::NewTopLevelPage(const QString& url) {
-  tree_->NewPage(url, true);
-}
-
-void PageTreeDock::NewChildPage(const QString& url) {
-  tree_->NewPage(url, false);
-}
-
-void PageTreeDock::CloseCurrentPage() {
-  tree_->CloseCurrentPage();
-}
-
-void PageTreeDock::CloseAllPages() {
-  tree_->CloseAllPages();
+void PageTreeDock::NewPage(const QString &url,
+                           bool top_level,
+                           bool make_current) {
+  tree_->NewPage(url,
+                 (top_level) ? nullptr : tree_->CurrentItem(),
+                 make_current);
 }
 
 bool PageTreeDock::HasOpenPages() {

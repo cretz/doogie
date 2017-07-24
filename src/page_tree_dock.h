@@ -13,11 +13,7 @@ class PageTreeDock : public QDockWidget {
   explicit PageTreeDock(BrowserStack* browser_stack,
                         QWidget* parent = nullptr);
 
-  void FocusPageTree();
-  void NewTopLevelPage(const QString& url);
-  void NewChildPage(const QString& url);
-  void CloseCurrentPage();
-  void CloseAllPages();
+  void NewPage(const QString &url, bool top_level, bool make_current);
   bool HasOpenPages();
 
   QJsonObject DebugDump();

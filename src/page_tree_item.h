@@ -14,6 +14,8 @@ class PageTreeItem : public QTreeWidgetItem {
   QToolButton* CloseButton();
   void AfterAdded();
 
+  PageTreeItem* Parent() { return static_cast<PageTreeItem*>(parent()); }
+
   QJsonObject DebugDump();
 
   bool SelfOrAnyChildCollapsed();
@@ -22,6 +24,8 @@ class PageTreeItem : public QTreeWidgetItem {
   void CollapseSelfAndChildren();
   QList<PageTreeItem*> SelfSelectedOrChildrenSelected();
   bool SelectedOrHasSelectedParent();
+
+  QList<PageTreeItem*> Siblings();
 
  private:
   void ApplyFavicon();

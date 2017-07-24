@@ -11,6 +11,7 @@ debug:CONFIG += console
 # Keep all sources and headers in alphabetical order
 
 SOURCES += \
+    action_manager.cc \
     browser_stack.cc \
     browser_widget.cc \
     cef.cc \
@@ -28,7 +29,8 @@ SOURCES += \
     page_tree_item.cc \
     util.cc
 
-HEADERS  += \
+HEADERS += \
+    action_manager.h \
     browser_stack.h \
     browser_widget.h \
     cef.h \
