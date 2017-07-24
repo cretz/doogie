@@ -12,7 +12,8 @@ class ActionManager : public QObject {
 
  public:
   enum Type {
-    NewTopLevelPage = 0,
+    NewWindow = 0,
+    NewTopLevelPage,
 
     NewChildForegroundPage,
     NewChildBackgroundPage,
@@ -59,6 +60,7 @@ class ActionManager : public QObject {
   Q_ENUM(Type)
 
   static ActionManager* Instance();
+  static void CreateInstance(QApplication* app);
   static QAction* Action(int type);
   static void registerAction(int type, QAction* action);
   static void registerAction(int type, const QString& text);
@@ -69,8 +71,6 @@ class ActionManager : public QObject {
 
   QHash<int, QAction*> actions_;
   static ActionManager* instance_;
-
-  friend class MainWindow;
 };
 
 }  // namespace doogie

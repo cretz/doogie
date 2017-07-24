@@ -9,8 +9,7 @@ MainWindow* MainWindow::instance_ = nullptr;
 
 MainWindow::MainWindow(Cef* cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
-  instance_ = this;
-  new ActionManager(this);
+  if (instance_ == nullptr) instance_ = this;
 
   // TODO(cretz): how to determine best interval
   // TODO(cretz): is the timer stopped for us?
@@ -38,6 +37,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   });
 
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
+  page_tree_dock_->setObjectName("page_tree_dock");
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
   // If we're attempting to close and the stack becomes empty,
   //  try the close again
@@ -49,10 +49,12 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   });
 
   dev_tools_dock_ = new DevToolsDock(cef, browser_stack_, this);
+  dev_tools_dock_->setObjectName("dev_tools_dock");
   dev_tools_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, dev_tools_dock_);
 
   logging_dock_ = new LoggingDock(this);
+  logging_dock_->setObjectName("logging_dock");
   logging_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, logging_dock_);
   qInstallMessageHandler(MainWindow::LogQtMessage);
@@ -66,6 +68,11 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
   SetupActions();
+
+  // Restore the window state
+  QSettings settings;
+  restoreGeometry(settings.value("mainWin/geom").toByteArray());
+  restoreState(settings.value("mainWin/state").toByteArray(), kStateVersion);
 }
 
 MainWindow::~MainWindow() {
@@ -88,6 +95,10 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     event->ignore();
     return;
   }
+  // Save the state of the windows
+  QSettings settings;
+  settings.setValue("mainWin/geom", saveGeometry());
+  settings.setValue("mainWin/state", saveState(kStateVersion));
   QMainWindow::closeEvent(event);
 }
 
@@ -134,12 +145,13 @@ void MainWindow::SetupActions() {
     auto action = ActionManager::Action(type);
     action->setShortcuts(QKeySequence::listFromString(shortcuts));
   };
+  shortcuts(ActionManager::NewWindow, "Ctrl+N");
   shortcuts(ActionManager::NewTopLevelPage, "Ctrl+T");
   shortcuts(ActionManager::NewChildForegroundPage, "Ctrl+Shift+T");
   shortcuts(ActionManager::ClosePage, "Ctrl+F4; Ctrl+W");
   shortcuts(ActionManager::CloseAllPages, "Ctrl+Shift+F4; Ctrl+Shift+W");
   shortcuts(ActionManager::ToggleDevTools, "F12; Ctrl+F12");
-  shortcuts(ActionManager::Reload, "F5,Ctrl+F5; Ctrl+R");
+  shortcuts(ActionManager::Reload, "F5; Ctrl+F5; Ctrl+R");
   shortcuts(ActionManager::Stop, "Esc");
   shortcuts(ActionManager::Back,
             "Ctrl+Page Up; Ctrl+Shift+Page Down; Backspace");

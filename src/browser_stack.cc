@@ -45,6 +45,26 @@ void BrowserStack::SetupActions() {
     auto browser = CurrentBrowser();
     if (browser) browser->FocusBrowser();
   });
+
+  // Let's disable/enable a bunch of actions on change
+  connect(this, &BrowserStack::CurrentBrowserOrLoadingStateChanged, [this]() {
+    auto current = CurrentBrowser();
+    auto enabled = [](ActionManager::Type type, bool value) {
+      ActionManager::Action(type)->setEnabled(value);
+    };
+    enabled(ActionManager::NewChildForegroundPage, current);
+    enabled(ActionManager::NewChildBackgroundPage, current);
+    enabled(ActionManager::Reload, current && !current->Loading());
+    enabled(ActionManager::Stop, current && current->Loading());
+    enabled(ActionManager::Back, current && current->CanGoBack());
+    enabled(ActionManager::Forward, current && current->CanGoForward());
+    enabled(ActionManager::Print, current);
+    enabled(ActionManager::ZoomIn, current);
+    enabled(ActionManager::ZoomOut, current);
+    enabled(ActionManager::ResetZoom, current);
+    enabled(ActionManager::FindInPage, current);
+  });
+  emit CurrentBrowserOrLoadingStateChanged();
 }
 
 }  // namespace doogie

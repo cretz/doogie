@@ -1,6 +1,7 @@
 #include <QApplication>
 #include "main_window.h"
 #include "cef.h"
+#include "action_manager.h"
 
 #ifdef QT_DEBUG
 #include "debug_meta_server.h"
@@ -11,6 +12,9 @@ int main(int argc, char* argv[]) {
   if (cef.EarlyExitCode() >= 0) return cef.EarlyExitCode();
 
   QApplication app(argc, argv);
+  QCoreApplication::setOrganizationName("cretz");
+  QCoreApplication::setApplicationName("Doogie");
+  doogie::ActionManager::CreateInstance(&app);
 
   doogie::MainWindow win(&cef);
   win.show();

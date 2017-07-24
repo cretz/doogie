@@ -43,6 +43,7 @@ class MainWindow : public QMainWindow {
   LoggingDock* logging_dock_;
   bool attempting_to_close_ = false;
   static MainWindow* instance_;
+  static const int kStateVersion = 1;
 };
 
 }  // namespace doogie

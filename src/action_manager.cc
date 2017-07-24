@@ -8,6 +8,10 @@ ActionManager* ActionManager::Instance() {
   return instance_;
 }
 
+void ActionManager::CreateInstance(QApplication* app) {
+  new ActionManager(app);
+}
+
 QAction* ActionManager::Action(int type) {
   return instance_->actions_[type];
 }
@@ -27,6 +31,7 @@ ActionManager::ActionManager(QObject *parent) : QObject(parent) {
 }
 
 void ActionManager::CreateActions() {
+  registerAction(NewWindow, "New Window");
   registerAction(NewTopLevelPage, "New Top-Level Page");
   registerAction(NewChildForegroundPage, "New Child Foreground Page");
   registerAction(NewChildBackgroundPage, "New Child Background Page");
