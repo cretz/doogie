@@ -11,15 +11,16 @@ const jp = require('jsonpath')
 
 exports.Harness = class Harness {
   constructor () {
-    this.repeatInterval = 100
-    this.repeatAttempts = 50
+    this.repeatInterval = 50
+    this.repeatAttempts = 70
     const self = this
     this.closeAllOnSuccess = function () {
       if (this.currentTest.state === 'failed') {
         console.log('Not closing all pages on eager test failure')
         return Promise.resolve()
       }
-      return self.closeAllPages()
+      // Also press escape to get rid of any menu items open
+      return self.closeAllPages().then(() => robot.keyTap('escape'))
     }
   }
 

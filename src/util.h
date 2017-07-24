@@ -13,6 +13,7 @@ class Util {
 
   static QJsonObject DebugWidgetGeom(QWidget* widg);
   static QJsonObject DebugWidgetGeom(QWidget* widg, const QRect& rect);
+  static QJsonObject DebugRect(const QPoint& topLeft, const QSize& size);
 };
 
 }  // namespace doogie

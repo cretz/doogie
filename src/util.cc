@@ -41,12 +41,15 @@ QJsonObject Util::DebugWidgetGeom(QWidget* widg) {
 }
 
 QJsonObject Util::DebugWidgetGeom(QWidget* widg, const QRect& rect) {
-  auto topLeft = widg->mapToGlobal(rect.topLeft());
+  return Util::DebugRect(widg->mapToGlobal(rect.topLeft()), rect.size());
+}
+
+QJsonObject Util::DebugRect(const QPoint& topLeft, const QSize& size) {
   return {
     {"x", topLeft.x() },
     {"y", topLeft.y() },
-    {"w", widg->width() },
-    {"h", widg->height() }
+    {"w", size.width() },
+    {"h", size.height() }
   };
 }
 

@@ -80,10 +80,39 @@ MainWindow::~MainWindow() {
 }
 
 QJsonObject MainWindow::DebugDump() {
+  QJsonObject menus;
+  auto common_height = 0;
+  for (const auto& menu : menuBar()->findChildren<QMenu*>()) {
+    if (!menu->title().isEmpty()) {
+      auto menu_rect = menuBar()->actionGeometry(menu->menuAction());
+      QJsonObject items;
+      for (const auto& action : menu->actions()) {
+        if (!action->text().isEmpty()) {
+          auto action_rect = menu->actionGeometry(action);
+          action_rect.moveTop(action_rect.top() + menu_rect.height());
+          common_height = action_rect.height();
+          items[action->text()] = QJsonObject({
+            { "enabled", action->isEnabled() },
+            { "rect", Util::DebugWidgetGeom(this, action_rect) }
+          });
+        }
+      }
+      menus[menu->title()] = QJsonObject({
+        { "visible", menu->isVisible() },
+        { "rect", Util::DebugWidgetGeom(
+          menuBar(), menu_rect) },
+        { "items", items }
+      });
+    }
+  };
   return {
     { "windowTitle", this->windowTitle() },
     { "rect", Util::DebugWidgetGeom(this) },
-    { "pageTree", page_tree_dock_->DebugDump() }
+    { "pageTree", page_tree_dock_->DebugDump() },
+    { "menu", QJsonObject({
+      { "itemHeight", common_height },
+      { "items", menus }
+    })}
   };
 }
 
