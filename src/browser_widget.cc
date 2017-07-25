@@ -219,8 +219,18 @@ void BrowserWidget::SetSuspended(bool suspend) {
     // and we will make it lighter to look disabled
     auto screen = QGuiApplication::primaryScreen();
     suspended_screenshot_ = QPixmap(screen->size());
-    Util::LighterDisabled(screen->grabWindow(cef_widg_->winId()),
-                          &suspended_screenshot_);
+    // Only do this if this is visible
+    if (cef_widg_->isVisible()) {
+      Util::LighterDisabled(screen->grabWindow(cef_widg_->winId()),
+                            &suspended_screenshot_);
+    }
+    QPainter painter;
+    painter.begin(&suspended_screenshot_);
+    auto font = painter.font();
+    font.setPointSize(40);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.drawText(rect(), Qt::AlignCenter, "Suspended");
     cef_widg_->TryClose();
   } else {
     emit SuspensionChanged();
