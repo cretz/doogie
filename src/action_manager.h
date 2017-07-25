@@ -26,6 +26,8 @@ class ActionManager : public QObject {
     ZoomOut,
     ResetZoom,
     FindInPage,
+    SuspendPage,
+    UnsuspendPage,
     ExpandTree,
     CollapseTree,
     DuplicateTree,
@@ -36,6 +38,8 @@ class ActionManager : public QObject {
     CloseOtherTrees,
 
     ReloadSelectedPages,
+    SuspendSelectedPages,
+    UnsuspendSelectedPages,
     ExpandSelectedTrees,
     CollapseSelectedTrees,
     DuplicateSelectedTrees,
@@ -45,6 +49,8 @@ class ActionManager : public QObject {
     CloseNonSelectedTrees,
 
     ReloadAllPages,
+    SuspendAllPages,
+    UnsuspendAllPages,
     ExpandAllTrees,
     CollapseAllTrees,
     CloseAllPages,

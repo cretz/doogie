@@ -77,7 +77,7 @@ QString CefWidget::CurrentUrl() {
 
 void CefWidget::TryClose() {
   if (browser_) {
-    browser_->GetHost()->CloseBrowser(false);
+    browser_->GetHost()->CloseBrowser(true);
   }
 }
 

@@ -34,6 +34,22 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
   browser->connect(browser, &BrowserWidget::CloseCancelled, [this]() {
     close_button_->setChecked(false);
   });
+  browser->connect(browser, &BrowserWidget::SuspensionChanged, [this]() {
+    auto palette = QGuiApplication::palette();
+    if (browser_->Suspended()) {
+      setForeground(0, palette.brush(QPalette::Disabled, QPalette::Text));
+      auto existing_icon = icon(0);
+      auto sizes = existing_icon.availableSizes();
+      if (!sizes.isEmpty()) {
+        setIcon(0, QIcon(existing_icon.pixmap(sizes[0], QIcon::Disabled)));
+      } else {
+        setIcon(0, QIcon());
+      }
+    } else {
+      setForeground(0, palette.brush(QPalette::Active, QPalette::Text));
+      // Icon change should happen on load
+    }
+  });
 }
 
 PageTreeItem::~PageTreeItem() {

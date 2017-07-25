@@ -52,6 +52,9 @@ class BrowserWidget : public QWidget {
   double GetZoomLevel();
   void SetZoomLevel(double level);
 
+  bool Suspended();
+  void SetSuspended(bool suspend);
+
   QJsonObject DebugDump();
 
  signals:
@@ -67,12 +70,15 @@ class BrowserWidget : public QWidget {
   void ShowDevToolsRequest(const QPoint& inspect_at);
   void AboutToShowBeforeUnloadDialog();
   void CloseCancelled();
+  void SuspensionChanged();
 
  protected:
   void moveEvent(QMoveEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
 
  private:
+  void RecreateCefWidget(const QString& url);
+  void ShowAsSuspendedScreenshot();
   void UpdateStatusBarLocation();
   void RebuildNavMenu();
   void BuildContextMenu(CefRefPtr<CefContextMenuParams> params,
@@ -82,20 +88,23 @@ class BrowserWidget : public QWidget {
                                 CefContextMenuHandler::EventFlags event_flags);
 
   Cef* cef_;
-  QToolButton* back_button_;
-  QToolButton* forward_button_;
-  QMenu* nav_menu_;
-  QLineEdit* url_edit_;
-  QToolButton* refresh_button_;
-  QToolButton* stop_button_;
-  CefWidget* cef_widg_;
-  FindWidget* find_widg_;
-  QLabel* status_bar_;
+  QToolButton* back_button_ = nullptr;
+  QToolButton* forward_button_ = nullptr;
+  QMenu* nav_menu_ = nullptr;
+  QLineEdit* url_edit_ = nullptr;
+  QToolButton* refresh_button_ = nullptr;
+  QToolButton* stop_button_ = nullptr;
+  CefWidget* cef_widg_ = nullptr;
+  FindWidget* find_widg_ = nullptr;
+  QLabel* status_bar_ = nullptr;
   QIcon current_favicon_;
   QString current_title_;
   bool loading_ = false;
   bool can_go_back_ = false;
   bool can_go_forward_ = false;
+  bool suspended_ = false;
+  QString suspended_url_;
+  QPixmap suspended_screenshot_;
 };
 
 }  // namespace doogie

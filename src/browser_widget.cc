@@ -63,58 +63,7 @@ BrowserWidget::BrowserWidget(Cef* cef,
   auto top_widg = new QWidget;
   top_widg->setLayout(top_layout);
 
-  cef_widg_ = new CefWidget(cef, url, this);
-  connect(cef_widg_, &CefWidget::PreContextMenu,
-          this, &BrowserWidget::BuildContextMenu);
-  connect(cef_widg_, &CefWidget::ContextMenuCommand,
-          this, &BrowserWidget::HandleContextMenuCommand);
-  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString& title) {
-    current_title_ = title;
-    emit TitleChanged();
-  });
-  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon& icon) {
-    current_favicon_ = icon;
-    emit FaviconChanged();
-  });
-  connect(cef_widg_, &CefWidget::LoadStateChanged,
-          [this](bool is_loading, bool can_go_back, bool can_go_forward) {
-    loading_ = is_loading;
-    can_go_back_ = can_go_back;
-    can_go_forward_ = can_go_forward;
-    refresh_button_->setEnabled(true);
-    refresh_button_->setVisible(!is_loading);
-    stop_button_->setVisible(is_loading);
-    back_button_->setDisabled(!can_go_back);
-    forward_button_->setDisabled(!can_go_forward);
-    emit LoadingStateChanged();
-  });
-  connect(cef_widg_, &CefWidget::PageOpen,
-          [this](CefHandler::WindowOpenType type,
-                 const QString& url,
-                 bool user_gesture) {
-    emit PageOpen(type, url, user_gesture);
-  });
-  connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
-          this, &BrowserWidget::DevToolsLoadComplete);
-  connect(cef_widg_, &CefWidget::DevToolsClosed,
-          this, &BrowserWidget::DevToolsClosed);
-  connect(cef_widg_, &CefWidget::FindResult,
-          this, &BrowserWidget::FindResult);
-  connect(cef_widg_, &CefWidget::Closed,
-          this, &BrowserWidget::deleteLater);
-  connect(cef_widg_, &CefWidget::ShowBeforeUnloadDialog,
-          [this](const QString& message_text,
-                 bool is_reload,
-                 CefRefPtr<CefJSDialogCallback> callback) {
-    emit AboutToShowBeforeUnloadDialog();
-    auto result = QMessageBox::question(this,
-                                        "Leave/Reload Page?",
-                                        message_text);
-    if (result == QMessageBox::No) {
-      emit CloseCancelled();
-    }
-    callback->Continue(result == QMessageBox::Yes, "");
-  });
+  RecreateCefWidget(url);
 
   auto layout = new QGridLayout;
   layout->addWidget(top_widg, 0, 0);
@@ -129,10 +78,6 @@ BrowserWidget::BrowserWidget(Cef* cef,
   if (override_widg) {
     layout->addWidget(override_widg, 1, 0);
   }
-
-  connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString& url) {
-    url_edit_->setText(url);
-  });
 
   find_widg_ = new FindWidget(this);
   layout->addWidget(find_widg_);
@@ -157,34 +102,9 @@ BrowserWidget::BrowserWidget(Cef* cef,
   status_bar_->hide();
   status_bar_->resize(300, status_bar_->height());
   this->UpdateStatusBarLocation();
-  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {
-    if (status.isEmpty()) {
-      status_bar_->hide();
-    } else {
-      int change_count = status_bar_->property("change_count").toInt();
-      status_bar_->setProperty("change_count", ++change_count);
-      status_bar_->setProperty("full_text", status);
-      status_bar_->resize(300, status_bar_->height());
-      // Add ellipsis
-      status_bar_->setText(status_bar_->fontMetrics().elidedText(
-          status, Qt::ElideRight, status_bar_->width()));
-      UpdateStatusBarLocation();
-      status_bar_->show();
-      // Show the full message after they stay there a couple of seconds
-      QTimer::singleShot(2000, Qt::CoarseTimer, status_bar_,
-                         [this, change_count]() {
-        if (status_bar_->isVisible() &&
-            status_bar_->property("change_count").toInt() == change_count) {
-          status_bar_->resize(width(), status_bar_->height());
-          // Add ellipsis
-          status_bar_->setText(status_bar_->fontMetrics().elidedText(
-              status_bar_->property("full_text").toString(),
-              Qt::ElideRight, status_bar_->width()));
-          UpdateStatusBarLocation();
-        }
-      });
-    }
-  });
+
+  connect(this, &BrowserWidget::SuspensionChanged,
+          this, &BrowserWidget::ShowAsSuspendedScreenshot);
 }
 
 void BrowserWidget::LoadUrl(const QString &url) {
@@ -192,6 +112,8 @@ void BrowserWidget::LoadUrl(const QString &url) {
 }
 
 void BrowserWidget::TryClose() {
+  // Set not suspended so this can die
+  suspended_ = false;
   cef_widg_->TryClose();
 }
 
@@ -283,6 +205,30 @@ void BrowserWidget::SetZoomLevel(double level) {
   cef_widg_->SetZoomLevel(level);
 }
 
+bool BrowserWidget::Suspended() {
+  return suspended_;
+}
+
+void BrowserWidget::SetSuspended(bool suspend) {
+  if (suspended_ == suspend) return;
+  suspended_ = suspend;
+  if (suspended_) {
+    // Close directly, don't call this->TryClose
+    suspended_url_ = CurrentUrl();
+    // We will make fake pixels for the rest of the screen
+    // and we will make it lighter to look disabled
+    auto screen = QGuiApplication::primaryScreen();
+    suspended_screenshot_ = QPixmap(screen->size());
+    Util::LighterDisabled(screen->grabWindow(cef_widg_->winId()),
+                          &suspended_screenshot_);
+    cef_widg_->TryClose();
+  } else {
+    emit SuspensionChanged();
+    cef_widg_->LoadUrl(suspended_url_);
+    cef_widg_->setFocus();
+  }
+}
+
 QJsonObject BrowserWidget::DebugDump() {
   return {
     { "loading", loading_ },
@@ -310,6 +256,123 @@ void BrowserWidget::moveEvent(QMoveEvent*) {
 
 void BrowserWidget::resizeEvent(QResizeEvent*) {
   this->UpdateStatusBarLocation();
+}
+
+void BrowserWidget::RecreateCefWidget(const QString& url) {
+  // Delete the other one if it's there
+  QWidget* widg_to_replace = cef_widg_;
+  if (cef_widg_) {
+    auto override_widg = cef_widg_->OverrideWidget();
+    if (override_widg) widg_to_replace = override_widg;
+    cef_widg_->disconnect();
+    cef_widg_->deleteLater();
+  }
+  cef_widg_ = new CefWidget(cef_, url, this);
+  connect(cef_widg_, &CefWidget::PreContextMenu,
+          this, &BrowserWidget::BuildContextMenu);
+  connect(cef_widg_, &CefWidget::ContextMenuCommand,
+          this, &BrowserWidget::HandleContextMenuCommand);
+  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString& title) {
+    current_title_ = title;
+    emit TitleChanged();
+  });
+  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon& icon) {
+    current_favicon_ = icon;
+    emit FaviconChanged();
+  });
+  connect(cef_widg_, &CefWidget::LoadStateChanged,
+          [this](bool is_loading, bool can_go_back, bool can_go_forward) {
+    loading_ = is_loading;
+    can_go_back_ = can_go_back;
+    can_go_forward_ = can_go_forward;
+    refresh_button_->setEnabled(true);
+    refresh_button_->setVisible(!is_loading);
+    stop_button_->setVisible(is_loading);
+    back_button_->setDisabled(!can_go_back);
+    forward_button_->setDisabled(!can_go_forward);
+    // It's no longer suspended
+    if (suspended_) {
+      suspended_ = false;
+      emit SuspensionChanged();
+    }
+    emit LoadingStateChanged();
+  });
+  connect(cef_widg_, &CefWidget::PageOpen,
+          [this](CefHandler::WindowOpenType type,
+                 const QString& url,
+                 bool user_gesture) {
+    emit PageOpen(type, url, user_gesture);
+  });
+  connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
+          this, &BrowserWidget::DevToolsLoadComplete);
+  connect(cef_widg_, &CefWidget::DevToolsClosed,
+          this, &BrowserWidget::DevToolsClosed);
+  connect(cef_widg_, &CefWidget::FindResult,
+          this, &BrowserWidget::FindResult);
+  connect(cef_widg_, &CefWidget::Closed, [this]() {
+    // Only delete this if we're not suspended, otherwise replace
+    if (suspended_) {
+      RecreateCefWidget("");
+      emit SuspensionChanged();
+    } else {
+      deleteLater();
+    }
+  });
+  connect(cef_widg_, &CefWidget::ShowBeforeUnloadDialog,
+          [this](const QString& message_text,
+                 bool is_reload,
+                 CefRefPtr<CefJSDialogCallback> callback) {
+    emit AboutToShowBeforeUnloadDialog();
+    auto result = QMessageBox::question(this,
+                                        "Leave/Reload Page?",
+                                        message_text);
+    if (result == QMessageBox::No) {
+      // Can't be suspended if close cancelled
+      suspended_ = false;
+      emit CloseCancelled();
+    }
+    callback->Continue(result == QMessageBox::Yes, "");
+  });
+  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {
+    if (status.isEmpty()) {
+      status_bar_->hide();
+    } else {
+      int change_count = status_bar_->property("change_count").toInt();
+      status_bar_->setProperty("change_count", ++change_count);
+      status_bar_->setProperty("full_text", status);
+      status_bar_->resize(300, status_bar_->height());
+      // Add ellipsis
+      status_bar_->setText(status_bar_->fontMetrics().elidedText(
+          status, Qt::ElideRight, status_bar_->width()));
+      UpdateStatusBarLocation();
+      status_bar_->show();
+      // Show the full message after they stay there a couple of seconds
+      QTimer::singleShot(2000, Qt::CoarseTimer, status_bar_,
+                         [this, change_count]() {
+        if (status_bar_->isVisible() &&
+            status_bar_->property("change_count").toInt() == change_count) {
+          status_bar_->resize(width(), status_bar_->height());
+          // Add ellipsis
+          status_bar_->setText(status_bar_->fontMetrics().elidedText(
+              status_bar_->property("full_text").toString(),
+              Qt::ElideRight, status_bar_->width()));
+          UpdateStatusBarLocation();
+        }
+      });
+    }
+  });
+  connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString& url) {
+    url_edit_->setText(url);
+  });
+
+  if (widg_to_replace) {
+    auto override_widg = cef_widg_->OverrideWidget();
+    if (override_widg) {
+      layout()->replaceWidget(widg_to_replace, override_widg);
+    } else {
+      layout()->replaceWidget(widg_to_replace, cef_widg_);
+    }
+  }
 }
 
 void BrowserWidget::UpdateStatusBarLocation() {
@@ -345,6 +408,32 @@ void BrowserWidget::RebuildNavMenu() {
       new_font.setBold(true);
       action->setFont(new_font);
     }
+  }
+}
+
+void BrowserWidget::ShowAsSuspendedScreenshot() {
+  auto grid_layout = qobject_cast<QGridLayout*>(layout());
+  if (Suspended()) {
+    // Remove the cef widg and add screenshot
+    grid_layout->removeWidget(cef_widg_);
+    cef_widg_->hide();
+    auto widg = new QWidget();
+    widg->setAutoFillBackground(true);
+    auto pal = widg->palette();
+    pal.setBrush(QPalette::Window, QBrush(suspended_screenshot_));
+    widg->setPalette(pal);
+    grid_layout->addWidget(widg, 1, 0);
+  } else {
+    suspended_screenshot_ = QPixmap();
+    // Remove the screenshot and add back the cef widg
+    auto item = grid_layout->itemAtPosition(1, 0);
+    grid_layout->removeItem(item);
+    if (item->widget()) {
+      delete item->widget();
+    }
+    delete item;
+    cef_widg_->show();
+    grid_layout->addWidget(cef_widg_, 1, 0);
   }
 }
 

@@ -22,18 +22,22 @@ QIcon Util::CachedIconLighterDisabled(const QString& resName) {
   auto pixmap_disabled = QPixmapCache::find(disabled_key);
   if (!pixmap_disabled) {
     pixmap_disabled = new QPixmap(pixmap->size());
-    pixmap_disabled->fill(Qt::transparent);
-    QPainter painter;
-    painter.begin(pixmap_disabled);
-    painter.setOpacity(0.2);
-    painter.drawPixmap(0, 0, *pixmap);
-    painter.end();
+    Util::LighterDisabled(*pixmap, pixmap_disabled);
     QPixmapCache::insert(disabled_key, *pixmap_disabled);
   }
   QIcon ret;
   ret.addPixmap(*pixmap);
   ret.addPixmap(*pixmap_disabled, QIcon::Disabled);
   return ret;
+}
+
+void Util::LighterDisabled(const QPixmap& source, QPixmap* dest) {
+  dest->fill(Qt::transparent);
+  QPainter painter;
+  painter.begin(dest);
+  painter.setOpacity(0.2);
+  painter.drawPixmap(0, 0, source);
+  painter.end();
 }
 
 QJsonObject Util::DebugWidgetGeom(QWidget* widg) {

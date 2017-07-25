@@ -44,6 +44,8 @@ void ActionManager::CreateActions() {
   registerAction(ZoomOut, "Zoom Out");
   registerAction(ResetZoom, "Reset Zoom");
   registerAction(FindInPage, "Find in Page");
+  registerAction(SuspendPage, "Suspend Current Page");
+  registerAction(UnsuspendPage, "Unsuspend Current Page");
   registerAction(ExpandTree, "Expand Current Tree");
   registerAction(CollapseTree, "Collapse Current Tree");
   registerAction(DuplicateTree, "Duplicate Current Tree");
@@ -53,7 +55,9 @@ void ActionManager::CreateActions() {
   registerAction(CloseSameHostPages, "Close Current Same-Host Pages");
   registerAction(CloseOtherTrees, "Close Non-Current Trees");
 
-  registerAction(ReloadSelectedPages, "Reload Selected Pages");
+  registerAction(ReloadSelectedPages, "Reload Selected Pages");  
+  registerAction(SuspendSelectedPages, "Suspend Selected Pages");
+  registerAction(UnsuspendSelectedPages, "Unsuspend Selected Pages");
   registerAction(ExpandSelectedTrees, "Expand Selected Trees");
   registerAction(CollapseSelectedTrees, "Collapse Selected Trees");
   registerAction(DuplicateSelectedTrees, "Duplicate Selected Trees");
@@ -63,6 +67,8 @@ void ActionManager::CreateActions() {
   registerAction(CloseNonSelectedTrees, "Close Non-Selected Trees");
 
   registerAction(ReloadAllPages, "Reload All Pages");
+  registerAction(SuspendAllPages, "Suspend All Pages");
+  registerAction(UnsuspendAllPages, "Unsuspend All Pages");
   registerAction(ExpandAllTrees, "Expand All Trees");
   registerAction(CollapseAllTrees, "Collapse All Trees");
   registerAction(CloseAllPages, "Close All Pages");

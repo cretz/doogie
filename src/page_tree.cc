@@ -132,11 +132,18 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
       NewPage("", affected, false);
     });
     menu.addAction("New Foreground Child Page", [this, affected]() {
-      NewPage("", affected, false);
+      auto page = NewPage("", affected, false);
+      page->Browser()->FocusUrlEdit();
     });
     menu.addAction("Reload " + type + " Page", [this, affected]() {
       affected->Browser()->Refresh();
     });
+    menu.addAction("Suspend " + type + " Page", [this, affected]() {
+      affected->Browser()->SetSuspended(true);
+    })->setEnabled(!affected->Browser()->Suspended());
+    menu.addAction("Unsuspend " + type + " Page", [this, affected]() {
+      affected->Browser()->SetSuspended(false);
+    })->setEnabled(affected->Browser()->Suspended());
     menu.addAction("Expand " + type + " Tree", [this, affected]() {
       affected->ExpandSelfAndChildren();
     })->setEnabled(affected->SelfOrAnyChildCollapsed());
@@ -179,6 +186,10 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
     menu.addAction(ActionManager::Action(
         ActionManager::ReloadSelectedPages));
     menu.addAction(ActionManager::Action(
+        ActionManager::SuspendSelectedPages));
+    menu.addAction(ActionManager::Action(
+        ActionManager::UnsuspendSelectedPages));
+    menu.addAction(ActionManager::Action(
         ActionManager::ExpandSelectedTrees));
     menu.addAction(ActionManager::Action(
         ActionManager::CollapseSelectedTrees));
@@ -198,6 +209,10 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
     menu.addSection("All Pages");
     menu.addAction(ActionManager::Action(
         ActionManager::ReloadAllPages));
+    menu.addAction(ActionManager::Action(
+        ActionManager::SuspendAllPages));
+    menu.addAction(ActionManager::Action(
+        ActionManager::UnsuspendAllPages));
     menu.addAction(ActionManager::Action(
         ActionManager::ExpandAllTrees));
     menu.addAction(ActionManager::Action(
@@ -301,7 +316,8 @@ void PageTree::mouseDoubleClickEvent(QMouseEvent *event) {
     if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
       parent = CurrentItem();
     }
-    NewPage("", parent, true);
+    auto page = NewPage("", parent, true);
+    page->Browser()->FocusUrlEdit();
   }
 }
 
@@ -427,6 +443,12 @@ void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::Reload),
           &QAction::triggered,
           [this]() { CurrentItem()->Browser()->Refresh(); });
+  connect(ActionManager::Action(ActionManager::SuspendPage),
+          &QAction::triggered,
+          [this]() { CurrentItem()->Browser()->SetSuspended(true); });
+  connect(ActionManager::Action(ActionManager::UnsuspendPage),
+          &QAction::triggered,
+          [this]() { CurrentItem()->Browser()->SetSuspended(false); });
   connect(ActionManager::Action(ActionManager::Stop),
           &QAction::triggered,
           [this]() { CurrentItem()->Browser()->Stop(); });
@@ -492,6 +514,18 @@ void PageTree::SetupActions() {
           &QAction::triggered, [this]() {
     for (const auto& item : SelectedItems()) {
       item->Browser()->Refresh();
+    }
+  });
+  connect(ActionManager::Action(ActionManager::SuspendSelectedPages),
+          &QAction::triggered, [this]() {
+    for (const auto& item : SelectedItems()) {
+      item->Browser()->SetSuspended(true);
+    }
+  });
+  connect(ActionManager::Action(ActionManager::UnsuspendSelectedPages),
+          &QAction::triggered, [this]() {
+    for (const auto& item : SelectedItems()) {
+      item->Browser()->SetSuspended(false);
     }
   });
   connect(ActionManager::Action(ActionManager::ExpandSelectedTrees),
@@ -560,6 +594,18 @@ void PageTree::SetupActions() {
           &QAction::triggered, [this]() {
     for (const auto& item : Items()) {
       item->Browser()->Refresh();
+    }
+  });
+  connect(ActionManager::Action(ActionManager::SuspendAllPages),
+          &QAction::triggered, [this]() {
+    for (const auto& item : Items()) {
+      item->Browser()->SetSuspended(true);
+    }
+  });
+  connect(ActionManager::Action(ActionManager::UnsuspendAllPages),
+          &QAction::triggered, [this]() {
+    for (const auto& item : Items()) {
+      item->Browser()->SetSuspended(false);
     }
   });
   connect(ActionManager::Action(ActionManager::ExpandAllTrees),
