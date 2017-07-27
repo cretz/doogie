@@ -1,13 +1,13 @@
 #include "cef_widget.h"
 #include <Windows.h>
+#include "profile.h"
+#include "bubble.h"
 
 namespace doogie {
 
 void CefWidget::InitBrowser(const QString& url) {
-  CefBrowserSettings settings;
-#ifdef QT_DEBUG
-  settings.web_security = STATE_DISABLED;
-#endif
+  auto settings = Profile::Current()->
+      DefaultBubble()->CreateCefBrowserSettings();
   browser_ = CefBrowserHost::CreateBrowserSync(window_info_,
                                                handler_,
                                                CefString(url.toStdString()),

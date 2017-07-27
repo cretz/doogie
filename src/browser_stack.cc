@@ -63,6 +63,7 @@ void BrowserStack::SetupActions() {
     enabled(ActionManager::ZoomOut, current);
     enabled(ActionManager::ResetZoom, current);
     enabled(ActionManager::FindInPage, current);
+    enabled(ActionManager::ClosePage, current);
   });
   emit CurrentBrowserOrLoadingStateChanged();
 }

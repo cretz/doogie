@@ -14,6 +14,7 @@ SOURCES += \
     action_manager.cc \
     browser_stack.cc \
     browser_widget.cc \
+    bubble.cc \
     cef.cc \
     cef_app_handler.cc \
     cef_base_widget.cc \
@@ -27,12 +28,14 @@ SOURCES += \
     page_tree.cc \
     page_tree_dock.cc \
     page_tree_item.cc \
+    profile.cc \
     util.cc
 
 HEADERS += \
     action_manager.h \
     browser_stack.h \
     browser_widget.h \
+    bubble.h \
     cef.h \
     cef_app_handler.h \
     cef_base.h \
@@ -46,6 +49,7 @@ HEADERS += \
     page_tree.h \
     page_tree_dock.h \
     page_tree_item.h \
+    profile.h \
     util.h
 
 RESOURCES += \
