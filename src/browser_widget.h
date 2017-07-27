@@ -68,7 +68,7 @@ class BrowserWidget : public QWidget {
   void DevToolsClosed();
   void FindResult(int count, int index);
   void ShowDevToolsRequest(const QPoint& inspect_at);
-  void AboutToShowBeforeUnloadDialog();
+  void AboutToShowJSDialog();
   void CloseCancelled();
   void SuspensionChanged();
 

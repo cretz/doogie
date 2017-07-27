@@ -10,6 +10,12 @@
   <hr />
   <a id="link-window-open" href="#" onclick="window.open('hello-world.html'); return false;">Window Open</a>
   <hr />
+  <a id="link-alert" href="#" onclick="alert('JS Alert!'); return false;">Alert</a>
+  <hr />
+  <a id="link-confirm" href="#" onclick="document.getElementById('link-confirm').innerHTML = 'Confirm: ' + (confirm('JS Confirm!') ? 'OK' : 'Cancel'); return false;">Confirm: Unclicked</a>
+  <hr />
+  <a id="link-prompt" href="#" onclick="document.getElementById('link-prompt').innerHTML = 'Prompt: ' + prompt('JS Prompt!', 'Default Text'); return false;">Prompt: Unclicked</a>
+  <hr />
   A popup will be attempted if ?popup is in the URL
   <script>
     const url = new URL(window.location.href)

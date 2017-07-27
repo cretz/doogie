@@ -51,6 +51,8 @@ class CefWidget : public CefBaseWidget {
   double GetZoomLevel();
   void SetZoomLevel(double level);
 
+  void SetJsDialogCallback(CefHandler::JsDialogCallback callback);
+
  signals:
   void Closed();
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,

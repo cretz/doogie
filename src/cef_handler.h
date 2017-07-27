@@ -91,10 +91,8 @@ class CefHandler :
   void OnAddressChange(CefRefPtr<CefBrowser> browser,
                        CefRefPtr<CefFrame> frame,
                        const CefString& url) override;
-
   void OnTitleChange(CefRefPtr<CefBrowser> browser,
                      const CefString& title) override;
-
   void OnStatusMessage(CefRefPtr<CefBrowser> browser,
                        const CefString& value) override;
   void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
@@ -110,10 +108,23 @@ class CefHandler :
 
   // Focus handler overrides...
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
-
   bool OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) override;
 
   // JS dialog handler overrides...
+  typedef std::function<void(const QString&,
+                             JSDialogType,
+                             const QString&,
+                             const QString&,
+                             CefRefPtr<CefJSDialogCallback>,
+                             bool&)> JsDialogCallback;
+  bool OnJSDialog(CefRefPtr<CefBrowser> browser,
+                  const CefString& origin_url,
+                  JSDialogType dialog_type,
+                  const CefString& message_text,
+                  const CefString& default_prompt_text,
+                  CefRefPtr<CefJSDialogCallback> callback,
+                  bool& suppress_message) override;
+  void SetJsDialogCallback(JsDialogCallback callback);
   bool OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
                             const CefString& message_text,
                             bool is_reload,
@@ -136,9 +147,7 @@ class CefHandler :
                      CefRefPtr<CefClient>& client,
                      CefBrowserSettings& settings,
                      bool* no_javascript_access) override;
-
   bool DoClose(CefRefPtr<CefBrowser> browser) override;
-
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
 
   // Load handler overrides...
@@ -194,6 +203,7 @@ class CefHandler :
 
  private:
   bool popup_as_page_open_ = true;
+  JsDialogCallback js_dialog_callback_;
 
   IMPLEMENT_REFCOUNTING(CefHandler)
 };

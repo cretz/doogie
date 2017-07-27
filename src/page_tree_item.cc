@@ -11,7 +11,10 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
   // Connect title and favicon change
   setText(0, "(New Window)");
   browser->connect(browser, &BrowserWidget::TitleChanged, [this]() {
-    if (browser_) setText(0, browser_->CurrentTitle());
+    if (browser_) {
+      setText(0, browser_->CurrentTitle());
+      setToolTip(0, browser_->CurrentTitle());
+    }
   });
   browser->connect(browser, &BrowserWidget::LoadingStateChanged,
                    [this]() { ApplyFavicon(); });
@@ -27,7 +30,7 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     }
     delete this;
   });
-  browser->connect(browser, &BrowserWidget::AboutToShowBeforeUnloadDialog,
+  browser->connect(browser, &BrowserWidget::AboutToShowJSDialog,
                    [this]() {
     treeWidget()->setCurrentItem(this);
   });

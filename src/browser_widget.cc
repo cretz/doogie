@@ -328,11 +328,45 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       deleteLater();
     }
   });
+  cef_widg_->SetJsDialogCallback(
+        [this](const QString& origin_url,
+               CefJSDialogHandler::JSDialogType dialog_type,
+               const QString& message_text,
+               const QString& default_prompt_text,
+               CefRefPtr<CefJSDialogCallback> callback,
+               bool& suppress_message) {
+    emit AboutToShowJSDialog();
+    switch (dialog_type) {
+      case JSDIALOGTYPE_ALERT:
+        QMessageBox::information(this, "[JavaScript Alert]", message_text);
+        callback->Continue(true, "");
+        break;
+      case JSDIALOGTYPE_CONFIRM: {
+        auto result = QMessageBox::question(
+              this, "[JavaScript Confirm]", message_text,
+              QMessageBox::Ok | QMessageBox::Cancel);
+        callback->Continue(result == QMessageBox::Ok, "");
+        break;
+      }
+      case JSDIALOGTYPE_PROMPT: {
+        auto result = QInputDialog::getText(
+              this, "[JavaScript Prompt]", message_text,
+              QLineEdit::Normal, default_prompt_text);
+        if (result.isNull()) {
+          callback->Continue(false, "");
+        } else {
+          callback->Continue(true, CefString(result.toStdString()));
+        }
+      }
+      default:
+        callback->Continue(false, "");
+    }
+  });
   connect(cef_widg_, &CefWidget::ShowBeforeUnloadDialog,
           [this](const QString& message_text,
                  bool is_reload,
                  CefRefPtr<CefJSDialogCallback> callback) {
-    emit AboutToShowBeforeUnloadDialog();
+    emit AboutToShowJSDialog();
     auto result = QMessageBox::question(this,
                                         "Leave/Reload Page?",
                                         message_text);

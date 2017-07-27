@@ -65,6 +65,30 @@ bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser> browser,
   return false;
 }
 
+bool CefHandler::OnJSDialog(CefRefPtr<CefBrowser> browser,
+                            const CefString& origin_url,
+                            JSDialogType dialog_type,
+                            const CefString& message_text,
+                            const CefString& default_prompt_text,
+                            CefRefPtr<CefJSDialogCallback> callback,
+                            bool& suppress_message) {
+  if (js_dialog_callback_) {
+    js_dialog_callback_(QString::fromStdString(origin_url.ToString()),
+                        dialog_type,
+                        QString::fromStdString(message_text.ToString()),
+                        QString::fromStdString(default_prompt_text.ToString()),
+                        callback,
+                        suppress_message);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void CefHandler::SetJsDialogCallback(JsDialogCallback callback) {
+  js_dialog_callback_ = callback;
+}
+
 bool CefHandler::OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
                                       const CefString& message_text,
                                       bool is_reload,

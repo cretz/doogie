@@ -192,6 +192,10 @@ void CefWidget::SetZoomLevel(double level) {
   }
 }
 
+void CefWidget::SetJsDialogCallback(CefHandler::JsDialogCallback callback) {
+  handler_->SetJsDialogCallback(callback);
+}
+
 std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
   CefRefPtr<CefWidget::NavEntryVisitor> visitor =
       new CefWidget::NavEntryVisitor;
