@@ -14,6 +14,8 @@ class ActionManager : public QObject {
   enum Type {
     NewWindow = 0,
     NewTopLevelPage,
+    ProfileSettings,
+    ChangeProfile,
 
     NewChildForegroundPage,
     NewChildBackgroundPage,

@@ -2,6 +2,7 @@
 #include "browser_stack.h"
 #include "util.h"
 #include "action_manager.h"
+#include "profile.h"
 
 namespace doogie {
 
@@ -70,9 +71,10 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   SetupActions();
 
   // Restore the window state
-  QSettings settings;
+  QSettings settings("cretz", "doogie");
   restoreGeometry(settings.value("mainWin/geom").toByteArray());
-  restoreState(settings.value("mainWin/state").toByteArray(), kStateVersion);
+  restoreState(settings.value("mainWin/state").toByteArray(),
+               kStateVersion);
 }
 
 MainWindow::~MainWindow() {
@@ -154,6 +156,18 @@ void MainWindow::timerEvent(QTimerEvent*) {
 
 void MainWindow::SetupActions() {
   // Actions
+  connect(ActionManager::Action(ActionManager::ProfileSettings),
+          &QAction::triggered, [this]() {
+    qDebug() << "Profile settings";
+  });
+  ActionManager::Action(ActionManager::ProfileSettings)->
+      setText(QString("Profile Settings for '") +
+              Profile::Current()->FriendlyPath() + "'");
+  connect(ActionManager::Action(ActionManager::ChangeProfile),
+          &QAction::triggered, [this]() {
+    bool wants_restart;
+    Profile::Current()->ShowChangeProfileDialog(wants_restart);
+  });
   connect(ActionManager::Action(ActionManager::ToggleDevTools),
           &QAction::triggered, [this]() {
     ShowDevTools(browser_stack_->CurrentBrowser(), QPoint(), false);
@@ -217,6 +231,9 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::ResetZoom);
   menu_action(menu, ActionManager::FindInPage);
   menu = menuBar()->addMenu("&Window");
+  auto profile_menu = menu->addMenu("Profile");
+  menu_action(profile_menu, ActionManager::ProfileSettings);
+  menu_action(profile_menu, ActionManager::ChangeProfile);
   menu_action(menu, ActionManager::FocusPageTree);
   menu_action(menu, ActionManager::FocusAddressBar);
   menu_action(menu, ActionManager::FocusBrowser);

@@ -1,8 +1,11 @@
 #include "profile.h"
 #include "bubble.h"
+#include "util.h"
 
 namespace doogie {
 
+const QString Profile::kAppDataPath = QDir::toNativeSeparators(
+      QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 Profile* Profile::current_ = nullptr;
 
 Profile* Profile::Current() {
@@ -78,7 +81,7 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     allow_in_mem_fallback = false;
   } else {
     // We'll use the last loaded profile if we know of it
-    QSettings settings;
+    QSettings settings("cretz", "doogie");
     profile_path = settings.value("profile/lastLoaded").toString();
     // Make sure it's there
     if (!profile_path.isEmpty() &&
@@ -89,13 +92,11 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     }
     // Put at app_data/profiles/default by default
     if (profile_path.isEmpty()) {
-      auto data_path = QStandardPaths::writableLocation(
-            QStandardPaths::AppDataLocation);
-      if (data_path.isEmpty()) {
+      if (kAppDataPath.isEmpty()) {
         qCritical() << "No app data path, only putting in memory";
       } else {
         profile_path = QDir::cleanPath(
-              data_path + QDir::separator() +
+              kAppDataPath + QDir::separator() +
               "Doogie" + QDir::separator() +
               "profiles" + QDir::separator() +
               "default");
@@ -118,6 +119,10 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     success = CreateProfile("");
   }
   return success;
+}
+
+QString Profile::FriendlyPath() {
+  return FriendlyPath(path_);
 }
 
 CefSettings Profile::CreateCefSettings() {
@@ -242,8 +247,43 @@ bool Profile::SavePrefs() {
   return true;
 }
 
+QString Profile::ShowChangeProfileDialog(bool& wants_restart) {
+  auto layout = new QGridLayout;
+  layout->addWidget(new QLabel("Profile:"), 0, 0);
+  auto selector = new QComboBox;
+  selector->setEditable(true);
+  QSettings settings("cretz", "doogie");
+  // TODO: the rest of this
+  auto lastTen = settings.value("profile/lastTen").toStringList();
+  for (const auto& path : lastTen) {
+    selector->addItem(FriendlyPath(path), path);
+  }
+  selector->addItem("<open folder...>");
+  // We disable the first item, because that's us
+  auto model = qobject_cast<QStandardItemModel*>(selector->model());
+  model->item(0)->setEnabled(false);
+  layout->addWidget(selector, 0, 1);
+  layout->setColumnStretch(1, 1);
+  auto buttons = new QHBoxLayout;
+  auto restart = new QPushButton("Restart Doogie With Profile");
+  auto launch = new QPushButton("Launch New Doogie With Profile");
+  auto cancel = new QPushButton("Cancel");
+  buttons->addWidget(restart);
+  buttons->addWidget(launch);
+  buttons->addWidget(cancel);
+  layout->addLayout(buttons, 1, 0, 1, 2, Qt::AlignRight);
+
+  QDialog dialog;
+  dialog.setWindowTitle("Change Profile");
+  dialog.setLayout(layout);
+  auto result = dialog.exec();
+  qDebug() << "Result: " << result;
+
+  return "";
+}
+
 Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)
-    : QObject(parent), path_(path), prefs_(prefs) {
+    : QObject(parent), path_(QDir::toNativeSeparators(path)), prefs_(prefs) {
   for (const auto& item : prefs["bubbles"].toArray()) {
     bubbles_.append(new Bubble(item.toObject(), this));
   }
@@ -257,12 +297,32 @@ void Profile::SetCurrent(Profile* profile) {
   if (current_) {
     delete current_;
   }
-  qDebug() << "Setting current profile to " << profile->path_;
   current_ = profile;
-  QSettings settings;
   if (!profile->path_.isEmpty()) {
+    QSettings settings("cretz", "doogie");
     settings.setValue("profile/lastLoaded", profile->path_);
+    auto prev = settings.value("profile/lastTen").toStringList();
+    prev.removeAll(profile->path_);
+    prev.prepend(profile->path_);
+    settings.setValue("profile/lastTen", prev);
   }
+}
+
+QString Profile::FriendlyPath(const QString& path) {
+  // Ug, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+  //  returns different values whether app is started or not, so we made
+  //  it a const
+  // Basically just chop off the app data path if it's there
+  auto ret = path;
+  if (!kAppDataPath.isEmpty()) {
+    auto data_path = kAppDataPath + QDir::separator() +
+        "Doogie" + QDir::separator() +
+        "profiles" + QDir::separator();
+    if (ret.startsWith(data_path, Qt::CaseInsensitive)) {
+      ret = ret.mid(data_path.length());
+    }
+  }
+  return ret;
 }
 
 }  // namespace doogie

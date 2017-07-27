@@ -21,6 +21,8 @@ class Profile : public QObject {
   // False on failure
   static bool LoadProfileFromCommandLine(int argc, char* argv[]);
 
+  QString FriendlyPath();
+
   CefSettings CreateCefSettings();
   CefBrowserSettings CreateBrowserSettings();
 
@@ -30,13 +32,17 @@ class Profile : public QObject {
   Bubble* BubbleByName(const QString& name);
   bool SavePrefs();
 
+  QString ShowChangeProfileDialog(bool& wants_restart);
+
  private:
   explicit Profile(const QString& path,
                    QJsonObject prefs,
                    QObject* parent = nullptr);
   static void SetCurrent(Profile* profile);
+  static QString FriendlyPath(const QString& path);
 
   static Profile* current_;
+  static const QString kAppDataPath;
   QString path_;
   QJsonObject prefs_;
   QList<Bubble*> bubbles_;

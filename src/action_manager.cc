@@ -33,6 +33,8 @@ ActionManager::ActionManager(QObject *parent) : QObject(parent) {
 void ActionManager::CreateActions() {
   registerAction(NewWindow, "New Window");
   registerAction(NewTopLevelPage, "New Top-Level Page");
+  registerAction(ProfileSettings, "Profile Settings");
+  registerAction(ChangeProfile, "Change Profile");
   registerAction(NewChildForegroundPage, "New Child Foreground Page");
   registerAction(NewChildBackgroundPage, "New Child Background Page");
   registerAction(Reload, "Reload");
