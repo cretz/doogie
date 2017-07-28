@@ -15,13 +15,16 @@ class Profile : public QObject {
   static Profile* Current();
   // False on failure. As a special case, an empty
   // or null string creates an in-mem-only profile
-  static bool CreateProfile(const QString& path);
+  static bool CreateProfile(const QString& path, bool set_current = true);
   // False on failure
-  static bool LoadProfile(const QString& path);
+  static bool LoadProfile(const QString& path, bool set_current = true);
   // False on failure
   static bool LoadProfileFromCommandLine(int argc, char* argv[]);
+  // False on failure
+  static bool LaunchWithProfile(const QString& profile_path);
 
-  QString FriendlyPath();
+  QString FriendlyName();
+  bool CanChangeSettings();
 
   CefSettings CreateCefSettings();
   CefBrowserSettings CreateBrowserSettings();
@@ -32,6 +35,7 @@ class Profile : public QObject {
   Bubble* BubbleByName(const QString& name);
   bool SavePrefs();
 
+  // Result is null on cancel, but empty string is still success
   QString ShowChangeProfileDialog(bool& wants_restart);
 
  private:
@@ -39,10 +43,11 @@ class Profile : public QObject {
                    QJsonObject prefs,
                    QObject* parent = nullptr);
   static void SetCurrent(Profile* profile);
-  static QString FriendlyPath(const QString& path);
+  static QString FriendlyName(const QString& path);
 
   static Profile* current_;
   static const QString kAppDataPath;
+  static const QString kInMemoryPath;
   QString path_;
   QJsonObject prefs_;
   QList<Bubble*> bubbles_;

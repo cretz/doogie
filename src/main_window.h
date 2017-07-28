@@ -42,6 +42,7 @@ class MainWindow : public QMainWindow {
   DevToolsDock* dev_tools_dock_;
   LoggingDock* logging_dock_;
   bool attempting_to_close_ = false;
+  QString launch_with_profile_on_close;
   static MainWindow* instance_;
   static const int kStateVersion = 1;
 };

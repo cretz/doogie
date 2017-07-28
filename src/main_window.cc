@@ -35,6 +35,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   connect(browser_stack_, &BrowserStack::BrowserCloseCancelled,
           [this](BrowserWidget*) {
     attempting_to_close_ = false;
+    launch_with_profile_on_close = "";
   });
 
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
@@ -130,6 +131,13 @@ void MainWindow::closeEvent(QCloseEvent* event) {
   QSettings settings;
   settings.setValue("mainWin/geom", saveGeometry());
   settings.setValue("mainWin/state", saveState(kStateVersion));
+  if (!launch_with_profile_on_close.isEmpty()) {
+    if (!Profile::LaunchWithProfile(launch_with_profile_on_close)) {
+      launch_with_profile_on_close = "";
+      event->ignore();
+      return;
+    }
+  }
   QMainWindow::closeEvent(event);
 }
 
@@ -160,13 +168,23 @@ void MainWindow::SetupActions() {
           &QAction::triggered, [this]() {
     qDebug() << "Profile settings";
   });
-  ActionManager::Action(ActionManager::ProfileSettings)->
-      setText(QString("Profile Settings for '") +
-              Profile::Current()->FriendlyPath() + "'");
+  auto profile_settings =
+      ActionManager::Action(ActionManager::ProfileSettings);
+  profile_settings->setText(QString("Profile Settings for '") +
+              Profile::Current()->FriendlyName() + "'");
+  profile_settings->setEnabled(Profile::Current()->CanChangeSettings());
   connect(ActionManager::Action(ActionManager::ChangeProfile),
           &QAction::triggered, [this]() {
     bool wants_restart;
-    Profile::Current()->ShowChangeProfileDialog(wants_restart);
+    auto path = Profile::Current()->ShowChangeProfileDialog(wants_restart);
+    if (!path.isEmpty()) {
+      if (wants_restart) {
+        launch_with_profile_on_close = path;
+        this->close();
+      } else {
+        Profile::LaunchWithProfile(path);
+      }
+    }
   });
   connect(ActionManager::Action(ActionManager::ToggleDevTools),
           &QAction::triggered, [this]() {
@@ -240,7 +258,7 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::LogsWindow);
 }
 
-void MainWindow::ShowDevTools(BrowserWidget *browser,
+void MainWindow::ShowDevTools(BrowserWidget* browser,
                               const QPoint& inspect_at,
                               bool force_open) {
   // Here's how it works:

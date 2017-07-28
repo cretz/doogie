@@ -6,16 +6,17 @@ namespace doogie {
 
 const QString Profile::kAppDataPath = QDir::toNativeSeparators(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+const QString Profile::kInMemoryPath = "<in-mem>";
 Profile* Profile::current_ = nullptr;
 
 Profile* Profile::Current() {
   return current_;
 }
 
-bool Profile::CreateProfile(const QString& path) {
-  // If the path is empty, it is a special case of mem-only
-  if (path.isEmpty()) {
-    SetCurrent(new Profile(path, QJsonObject()));
+bool Profile::CreateProfile(const QString& path, bool set_current) {
+  // If the path is in-mem (or empty), it is a special case of mem-only
+  if (path.isEmpty() || path == kInMemoryPath) {
+    if (set_current) SetCurrent(new Profile(path, QJsonObject()));
     return true;
   }
   // Make sure settings.doogie.json isn't already there
@@ -26,16 +27,16 @@ bool Profile::CreateProfile(const QString& path) {
   if (!QDir().mkpath(path)) {
     return false;
   }
-  auto profile = new Profile(path, QJsonObject());
+  auto profile = new Profile(QDir::toNativeSeparators(path), QJsonObject());
   // Try to save
   if (!profile->SavePrefs()) {
     return false;
   }
-  SetCurrent(profile);
+  if (set_current) SetCurrent(profile);
   return true;
 }
 
-bool Profile::LoadProfile(const QString& path) {
+bool Profile::LoadProfile(const QString& path, bool set_current) {
   if (!QDir(path).exists("settings.doogie.json")) {
     return false;
   }
@@ -50,12 +51,12 @@ bool Profile::LoadProfile(const QString& path) {
     return false;
   }
   // Create and try to save
-  auto profile = new Profile(path, json.object());
+  auto profile = new Profile(QDir::toNativeSeparators(path), json.object());
   // Try to save
   if (!profile->SavePrefs()) {
     return false;
   }
-  SetCurrent(profile);
+  if (set_current) SetCurrent(profile);
   return true;
 }
 
@@ -65,41 +66,48 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
 
   // The profile can be specified via command line parameter --doogie-profile
   QCommandLineParser parser;
+  parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
   // TODO: For now am I ok that there is no unicode?
-  parser.addOption(QCommandLineOption("doogie-no-profile"));
-  parser.addOption(QCommandLineOption("doogie-profile"));
+  QCommandLineOption noProfileOption("doogie-no-profile");
+  parser.addOption(noProfileOption);
+  QCommandLineOption profileOption("doogie-profile");
+  profileOption.setValueName("profilePath");
+  parser.addOption(profileOption);
   QStringList args;
   args.reserve(argc);
   for (int i = 0; i < argc; i++) {
     args.append(QString::fromLocal8Bit(argv[i]));
   }
   parser.process(args);
-  if (parser.isSet("doogie-no-profile")) {
-    // Do nothing
-  } else if (parser.isSet("doogie-profile")) {
-    profile_path = QDir::cleanPath(parser.value("doogie-profile"));
+  if (parser.isSet(noProfileOption)) {
+    profile_path = kInMemoryPath;
+  } else if (parser.isSet(profileOption)) {
+    profile_path = QDir::cleanPath(parser.value(profileOption));
     allow_in_mem_fallback = false;
   } else {
     // We'll use the last loaded profile if we know of it
     QSettings settings("cretz", "doogie");
     profile_path = settings.value("profile/lastLoaded").toString();
-    // Make sure it's there
-    if (!profile_path.isEmpty() &&
-        !QDir(profile_path).exists("settings.doogie.json")) {
-      qInfo() << "Last profile path " << profile_path <<
-                 " no longer exists with settings, falling back to default";
-      profile_path = "";
-    }
-    // Put at app_data/profiles/default by default
-    if (profile_path.isEmpty()) {
-      if (kAppDataPath.isEmpty()) {
-        qCritical() << "No app data path, only putting in memory";
-      } else {
-        profile_path = QDir::cleanPath(
-              kAppDataPath + QDir::separator() +
-              "Doogie" + QDir::separator() +
-              "profiles" + QDir::separator() +
-              "default");
+    // If in-memory was last, it's ok
+    if (profile_path != kInMemoryPath) {
+      // Make sure it's there
+      if (!profile_path.isEmpty() &&
+          !QDir(profile_path).exists("settings.doogie.json")) {
+        qInfo() << "Last profile path " << profile_path <<
+                   " no longer exists with settings, falling back to default";
+        profile_path = "";
+      }
+      // Put at app_data/profiles/default by default
+      if (profile_path.isEmpty()) {
+        if (kAppDataPath.isEmpty()) {
+          qCritical() << "No app data path, only putting in memory";
+        } else {
+          profile_path = QDir::cleanPath(
+                kAppDataPath + QDir::separator() +
+                "Doogie" + QDir::separator() +
+                "profiles" + QDir::separator() +
+                "default");
+        }
       }
     }
   }
@@ -107,22 +115,61 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
   // Try to load if the settings.doogie.json exists, otherwise
   // create
   bool success = false;
-  if (!profile_path.isEmpty()) {
-    QDir dir(profile_path);
-    if (dir.exists("settings.doogie.json")) {
+  qDebug() << "Loading profile: " << profile_path;
+  if (!profile_path.isEmpty() && profile_path != kInMemoryPath) {
+    if (QDir(profile_path).exists("settings.doogie.json")) {
       success = LoadProfile(profile_path);
     } else {
       success = CreateProfile(profile_path);
     }
+    if (!success) {
+      qCritical() << "Failed to create/load profile: " << profile_path;
+    }
   }
-  if (!success && allow_in_mem_fallback) {
-    success = CreateProfile("");
+  if (!success && (allow_in_mem_fallback || profile_path == kInMemoryPath)) {
+    success = CreateProfile(kInMemoryPath);
   }
   return success;
 }
 
-QString Profile::FriendlyPath() {
-  return FriendlyPath(path_);
+bool Profile::LaunchWithProfile(const QString& profile_path) {
+  // Build args with existing profile stuff removed
+  auto args = QCoreApplication::arguments();
+  auto prog = args.takeFirst();
+  args.removeAll("-doogie-no-profile");
+  args.removeAll("--doogie-no-profile");
+  auto prev_arg_index = args.indexOf("--doogie-profile");
+  if (prev_arg_index != -1) {
+    args.removeAt(prev_arg_index);
+    if (prev_arg_index < args.size()) args.removeAt(prev_arg_index);
+  }
+  prev_arg_index = args.indexOf("-doogie-profile");
+  if (prev_arg_index != -1) {
+    args.removeAt(prev_arg_index);
+    if (prev_arg_index < args.size()) args.removeAt(prev_arg_index);
+  }
+  if (profile_path == kInMemoryPath) {
+    args.append("--doogie-no-profile");
+  } else {
+    args.append("--doogie-profile");
+    args.append(profile_path);
+  }
+  qDebug() << "Starting " << prog << args.join(' ');
+  auto success = QProcess::startDetached(prog, args);
+  if (!success) {
+    QMessageBox::critical(nullptr, "Launch failed",
+                          QString("Unable to launch Doogie with profile at ") +
+                          profile_path);
+  }
+  return success;
+}
+
+QString Profile::FriendlyName() {
+  return FriendlyName(path_);
+}
+
+bool Profile::CanChangeSettings() {
+  return path_ != kInMemoryPath;
 }
 
 CefSettings Profile::CreateCefSettings() {
@@ -134,7 +181,9 @@ CefSettings Profile::CreateCefSettings() {
 #endif
 
   QString cache_path;
-  if (!prefs_.contains("cachePath")) {
+  if (path_ == kInMemoryPath) {
+    // Do nothing to cache path, leave it alone
+  } else if (!prefs_.contains("cachePath")) {
     // Default is path/cache
     cache_path = QDir(path_).filePath("cache");
   } else {
@@ -162,7 +211,9 @@ CefSettings Profile::CreateCefSettings() {
 
   // Default user data path to our own
   QString user_data_path;
-  if (!prefs_.contains("userDataPath")) {
+  if (path_ == kInMemoryPath) {
+    // Do nothing to user data path, leave it alone
+  } else if (!prefs_.contains("userDataPath")) {
     // Default is path/cache
     user_data_path = QDir(path_).filePath("user_data");
   } else {
@@ -228,6 +279,8 @@ Bubble* Profile::BubbleByName(const QString& name) {
 }
 
 bool Profile::SavePrefs() {
+  // In memory saves nothing...
+  if (!CanChangeSettings()) return true;
   // Put all bubbles back
   QJsonArray arr;
   for (const auto& bubble : bubbles_) {
@@ -249,41 +302,105 @@ bool Profile::SavePrefs() {
 
 QString Profile::ShowChangeProfileDialog(bool& wants_restart) {
   auto layout = new QGridLayout;
-  layout->addWidget(new QLabel("Profile:"), 0, 0);
+  layout->addWidget(new QLabel("Current Profile:"), 0, 0);
+  layout->addWidget(new QLabel(FriendlyName()), 0, 1);
+  layout->addWidget(new QLabel("New/Existing Profile:"), 1, 0);
   auto selector = new QComboBox;
   selector->setEditable(true);
+  selector->setInsertPolicy(QComboBox::NoInsert);
   QSettings settings("cretz", "doogie");
-  // TODO: the rest of this
-  auto lastTen = settings.value("profile/lastTen").toStringList();
-  for (const auto& path : lastTen) {
-    selector->addItem(FriendlyPath(path), path);
+  // All but the current
+  auto last_ten = settings.value("profile/lastTen").toStringList();
+  auto found_in_mem = false;
+  for (int i = 0; i < last_ten.size(); i++) {
+    auto path = last_ten[i];
+    if (path != path_) {
+      if (path == kInMemoryPath) found_in_mem = true;
+      selector->addItem(FriendlyName(path), path);
+    }
   }
-  selector->addItem("<open folder...>");
-  // We disable the first item, because that's us
-  auto model = qobject_cast<QStandardItemModel*>(selector->model());
-  model->item(0)->setEnabled(false);
-  layout->addWidget(selector, 0, 1);
+  if (!found_in_mem && path_ != kInMemoryPath) {
+    selector->addItem(FriendlyName(kInMemoryPath), kInMemoryPath);
+  }
+  selector->addItem("<choose profile folder...>");
+  selector->lineEdit()->setPlaceholderText("Get or Create Profile...");
+  selector->setCurrentIndex(-1);
+  layout->addWidget(selector, 1, 1);
   layout->setColumnStretch(1, 1);
   auto buttons = new QHBoxLayout;
-  auto restart = new QPushButton("Restart Doogie With Profile");
   auto launch = new QPushButton("Launch New Doogie With Profile");
+  launch->setEnabled(false);
+  launch->setDefault(true);
+  auto restart = new QPushButton("Restart Doogie With Profile");
+  restart->setEnabled(false);
   auto cancel = new QPushButton("Cancel");
-  buttons->addWidget(restart);
   buttons->addWidget(launch);
+  buttons->addWidget(restart);
   buttons->addWidget(cancel);
-  layout->addLayout(buttons, 1, 0, 1, 2, Qt::AlignRight);
+  layout->addLayout(buttons, 2, 0, 1, 2, Qt::AlignRight);
 
   QDialog dialog;
   dialog.setWindowTitle("Change Profile");
   dialog.setLayout(layout);
+  connect(selector, static_cast<void(QComboBox::*)(int)>(
+            &QComboBox::currentIndexChanged), [this, selector](int index) {
+    // If they clicked the last index, we pop open a file dialog
+    if (index == selector->count() - 1) {
+      auto open_dir = QDir(path_);
+      open_dir.cdUp();
+      auto path = QFileDialog::getExistingDirectory(
+            nullptr, "Choose Profile Directory", open_dir.path());
+      if (!path.isEmpty()) {
+        selector->setCurrentText(FriendlyName(QDir::toNativeSeparators(path)));
+      } else {
+        selector->clearEditText();
+        selector->setCurrentIndex(-1);
+      }
+    }
+  });
+  connect(selector, &QComboBox::editTextChanged,
+          [this, restart, launch](const QString& text) {
+    restart->setEnabled(!text.isEmpty());
+    launch->setEnabled(!text.isEmpty());
+  });
+  connect(launch, &QPushButton::clicked,
+          [this, &dialog]() { dialog.done(QDialog::Accepted + 1); });
+  connect(restart, &QPushButton::clicked, &dialog, &QDialog::accept);
+  connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
   auto result = dialog.exec();
-  qDebug() << "Result: " << result;
-
-  return "";
+  if (result == QDialog::Rejected) {
+    return QString();
+  }
+  wants_restart = result == QDialog::Accepted;
+  QString path;
+  if (selector->currentData().isValid()) {
+    path = selector->currentData().toString();
+  } else {
+    path = selector->currentText();
+  }
+  if (path != kInMemoryPath) {
+    auto base_path = QDir(kAppDataPath).filePath("Doogie/profiles");
+    path = QDir::toNativeSeparators(QDir(base_path).filePath(path));
+    // Let's try to create the dir if it doesn't exist
+    if (!QDir(path).exists("settings.doogie.json")) {
+      if (!CreateProfile(path, false)) {
+        QMessageBox::critical(
+              nullptr, "Create Profile",
+              QString("Unable to create profile at dir: ") + path);
+        return QString();
+      }
+    } else if (!LoadProfile(path, false)) {
+      QMessageBox::critical(
+            nullptr, "Load Profile",
+            QString("Unable to load profile in dir: ") + path);
+      return QString();
+    }
+  }
+  return path;
 }
 
 Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)
-    : QObject(parent), path_(QDir::toNativeSeparators(path)), prefs_(prefs) {
+    : QObject(parent), path_(path), prefs_(prefs) {
   for (const auto& item : prefs["bubbles"].toArray()) {
     bubbles_.append(new Bubble(item.toObject(), this));
   }
@@ -298,17 +415,16 @@ void Profile::SetCurrent(Profile* profile) {
     delete current_;
   }
   current_ = profile;
-  if (!profile->path_.isEmpty()) {
-    QSettings settings("cretz", "doogie");
-    settings.setValue("profile/lastLoaded", profile->path_);
-    auto prev = settings.value("profile/lastTen").toStringList();
-    prev.removeAll(profile->path_);
-    prev.prepend(profile->path_);
-    settings.setValue("profile/lastTen", prev);
-  }
+  QSettings settings("cretz", "doogie");
+  settings.setValue("profile/lastLoaded", profile->path_);
+  auto prev = settings.value("profile/lastTen").toStringList();
+  prev.removeAll(profile->path_);
+  prev.prepend(profile->path_);
+  settings.setValue("profile/lastTen", prev);
 }
 
-QString Profile::FriendlyPath(const QString& path) {
+QString Profile::FriendlyName(const QString& path) {
+  if (path == kInMemoryPath) return "In-Memory Profile";
   // Ug, QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
   //  returns different values whether app is started or not, so we made
   //  it a const
