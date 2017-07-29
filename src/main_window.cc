@@ -72,7 +72,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   SetupActions();
 
   // Restore the window state
-  QSettings settings("cretz", "doogie");
+  QSettings settings;
   restoreGeometry(settings.value("mainWin/geom").toByteArray());
   restoreState(settings.value("mainWin/state").toByteArray(),
                kStateVersion);
@@ -164,12 +164,16 @@ void MainWindow::timerEvent(QTimerEvent*) {
 
 void MainWindow::SetupActions() {
   // Actions
-  connect(ActionManager::Action(ActionManager::ProfileSettings),
-          &QAction::triggered, [this]() {
-    qDebug() << "Profile settings";
-  });
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
+  connect(profile_settings, &QAction::triggered, [this]() {
+    bool wants_restart;
+    auto path = Profile::Current()->ShowProfileSettingsDialog(wants_restart);
+    if (!path.isEmpty() && wants_restart) {
+      launch_with_profile_on_close = path;
+      this->close();
+    }
+  });
   profile_settings->setText(QString("Profile Settings for '") +
               Profile::Current()->FriendlyName() + "'");
   profile_settings->setEnabled(Profile::Current()->CanChangeSettings());

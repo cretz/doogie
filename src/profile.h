@@ -38,6 +38,9 @@ class Profile : public QObject {
   // Result is null on cancel, but empty string is still success
   QString ShowChangeProfileDialog(bool& wants_restart);
 
+  // Result is non-empty on success
+  QString ShowProfileSettingsDialog(bool& wants_restart);
+
  private:
   explicit Profile(const QString& path,
                    QJsonObject prefs,

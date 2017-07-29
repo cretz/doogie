@@ -86,7 +86,7 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     allow_in_mem_fallback = false;
   } else {
     // We'll use the last loaded profile if we know of it
-    QSettings settings("cretz", "doogie");
+    QSettings settings("cretz", "Doogie");
     profile_path = settings.value("profile/lastLoaded").toString();
     // If in-memory was last, it's ok
     if (profile_path != kInMemoryPath) {
@@ -180,14 +180,16 @@ CefSettings Profile::CreateCefSettings() {
   settings.remote_debugging_port = 1989;
 #endif
 
+  auto cef = prefs_.value("cef").toObject();
+
   QString cache_path;
   if (path_ == kInMemoryPath) {
     // Do nothing to cache path, leave it alone
-  } else if (!prefs_.contains("cachePath")) {
+  } else if (!cef.contains("cachePath")) {
     // Default is path/cache
     cache_path = QDir(path_).filePath("cache");
   } else {
-    cache_path = prefs_["cachePath"].toString("");
+    cache_path = cef.value("cachePath").toString("");
     if (!cache_path.isEmpty()) {
       // Qualify it with the dir (but can still be absolute)
       cache_path = QDir::cleanPath(QDir(path_).filePath(cache_path));
@@ -195,29 +197,29 @@ CefSettings Profile::CreateCefSettings() {
   }
   CefString(&settings.cache_path) = cache_path.toStdString();
 
-  if (prefs_["enableNetSecurityExpiration"].toBool()) {
+  if (cef.value("enableNetSecurityExpiration").toBool()) {
     settings.enable_net_security_expiration = 1;
   }
 
   // We default persist_user_preferences to true
-  if (prefs_["persistUserPreferences"].toBool(true)) {
+  if (cef.value("persistUserPreferences").toBool(true)) {
     settings.persist_user_preferences = 1;
   }
 
-  if (prefs_.contains("userAgent")) {
+  if (cef.contains("userAgent")) {
     CefString(&settings.user_agent) =
-        prefs_["userAgent"].toString().toStdString();
+        prefs_.value("userAgent").toString().toStdString();
   }
 
   // Default user data path to our own
   QString user_data_path;
   if (path_ == kInMemoryPath) {
     // Do nothing to user data path, leave it alone
-  } else if (!prefs_.contains("userDataPath")) {
+  } else if (!cef.contains("userDataPath")) {
     // Default is path/cache
     user_data_path = QDir(path_).filePath("user_data");
   } else {
-    user_data_path = prefs_["userDataPath"].toString("");
+    user_data_path = cef.value("userDataPath").toString("");
     if (!user_data_path.isEmpty()) {
       // Qualify it with the dir (but can still be absolute)
       user_data_path = QDir::cleanPath(QDir(path_).filePath(user_data_path));
@@ -231,11 +233,11 @@ CefSettings Profile::CreateCefSettings() {
 CefBrowserSettings Profile::CreateBrowserSettings() {
   CefBrowserSettings settings;
 
-  auto browser = prefs_["browser"].toObject();
+  auto browser = prefs_.value("browser").toObject();
 
   auto state = [&browser](cef_state_t& state, const QString& field) {
     if (browser.contains(field)) {
-      state = browser[field].toBool() ? STATE_ENABLED : STATE_DISABLED;
+      state = browser.value(field).toBool() ? STATE_ENABLED : STATE_DISABLED;
     }
   };
 
@@ -246,7 +248,7 @@ CefBrowserSettings Profile::CreateBrowserSettings() {
   state(settings.image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
   state(settings.javascript, "javascript");
   state(settings.javascript_access_clipboard, "javascriptAccessClipboard");
-  state(settings.javascript_dom_paste, "javvascriptDomPaste");
+  state(settings.javascript_dom_paste, "javascriptDomPaste");
   state(settings.javascript_open_windows, "javascriptOpenWindows");
   state(settings.local_storage, "localStorage");
   state(settings.plugins, "plugins");
@@ -308,7 +310,7 @@ QString Profile::ShowChangeProfileDialog(bool& wants_restart) {
   auto selector = new QComboBox;
   selector->setEditable(true);
   selector->setInsertPolicy(QComboBox::NoInsert);
-  QSettings settings("cretz", "doogie");
+  QSettings settings("cretz", "Doogie");
   // All but the current
   auto last_ten = settings.value("profile/lastTen").toStringList();
   auto found_in_mem = false;
@@ -399,6 +401,338 @@ QString Profile::ShowChangeProfileDialog(bool& wants_restart) {
   return path;
 }
 
+QString Profile::ShowProfileSettingsDialog(bool& wants_restart) {
+  // Pages:
+  // * Browser Settings (any changes require restart)
+  // * Bubbles
+  // * Keyboard Shortcuts
+
+  // Page: Browser Settings
+  auto cef = prefs_.value("cef").toObject();
+
+  auto browser_layout = new QGridLayout;
+  browser_layout->setVerticalSpacing(3);
+  auto warn_restart =
+      new QLabel("NOTE: Changing browser settings requires a restart");
+  warn_restart->setStyleSheet("color: red; font-weight: bold");
+  browser_layout->addWidget(warn_restart, 0, 0, 1, 2);
+  auto create_setting = [browser_layout](
+      const QString& name, const QString& desc, QWidget* widg) {
+    auto name_label = new QLabel(name);
+    name_label->setStyleSheet("font-weight: bold;");
+    auto row = browser_layout->rowCount();
+    browser_layout->addWidget(name_label, row, 0);
+    auto desc_label = new QLabel(desc);
+    desc_label->setWordWrap(true);
+    browser_layout->addWidget(widg, row, 1);
+    browser_layout->addWidget(desc_label, row + 1, 0, 1, 2);
+  };
+  auto create_bool_setting = [create_setting](
+      const QString& name,
+      const QString& desc,
+      bool curr,
+      bool default_val) -> QComboBox* {
+    auto widg = new QComboBox;
+    widg->addItem(QString("Yes") + (default_val ? " (default)" : ""), true);
+    widg->addItem(QString("No") + (!default_val ? " (default)" : ""), false);
+    widg->setCurrentIndex(curr ? 0 : 1);
+    create_setting(name, desc, widg);
+    return widg;
+  };
+  auto setting_break = [browser_layout]() {
+    auto frame = new QFrame;
+    frame->setFrameShape(QFrame::HLine);
+    browser_layout->addWidget(frame, browser_layout->rowCount(), 0, 1, 2);
+  };
+
+  auto cache_path_layout = new QHBoxLayout;
+  auto cache_path_disabled = new QCheckBox("No cache");
+  cache_path_layout->addWidget(cache_path_disabled);
+  auto cache_path_edit = new QLineEdit;
+  cache_path_edit->setPlaceholderText("Default: PROFILE_DIR/cache");
+  cache_path_layout->addWidget(cache_path_edit, 1);
+  auto cache_path_open = new QToolButton();
+  cache_path_open->setText("...");
+  cache_path_layout->addWidget(cache_path_open);
+  auto cache_path_widg = new QWidget;
+  cache_path_widg->setLayout(cache_path_layout);
+  create_setting("Cache Path",
+                 "The location where cache data is stored on disk, if any. ",
+                 cache_path_widg);
+  connect(cache_path_disabled, &QCheckBox::toggled,
+          [this, cache_path_edit, cache_path_open](bool checked) {
+    cache_path_edit->setEnabled(!checked);
+    cache_path_open->setEnabled(!checked);
+  });
+  auto curr_cache_path = cef.contains("cachePath") ?
+        cef.value("cachePath").toString() : QString();
+  cache_path_disabled->setChecked(!curr_cache_path.isNull() &&
+                                  curr_cache_path.isEmpty());
+  cache_path_edit->setText(curr_cache_path);
+  setting_break();
+
+  auto enable_net_sec = create_bool_setting(
+        "Enable Net Security Expiration",
+        "Enable date-based expiration of built in network security information "
+        "(i.e. certificate transparency logs, HSTS preloading and pinning "
+        "information). Enabling this option improves network security but may "
+        "cause HTTPS load failures when using CEF binaries built more than 10 "
+        "weeks in the past. See https://www.certificate-transparency.org/ and "
+        "https://www.chromium.org/hsts for details.",
+        cef.value("enableNetSecurityExpiration").toBool(),
+        false);
+  setting_break();
+
+  auto user_prefs = create_bool_setting(
+        "Persist User Preferences",
+        "Whether to persist user preferences as a JSON file "
+        "in the cache path. Requires cache to be enabled.",
+        cef.value("persistUserPreferences").toBool(true),
+        true);
+  setting_break();
+
+  auto user_agent_edit = new QLineEdit;
+  user_agent_edit->setPlaceholderText("Browser default");
+  create_setting("User Agent",
+                 "Custom user agent override.",
+                 user_agent_edit);
+  if (cef.contains("userAgent")) {
+    user_agent_edit->setText(cef.value("userAgent").toString());
+  }
+  setting_break();
+
+  auto user_data_path_layout = new QHBoxLayout;
+  auto user_data_path_disabled = new QCheckBox("Browser default");
+  user_data_path_layout->addWidget(user_data_path_disabled);
+  auto user_data_path_edit = new QLineEdit;
+  user_data_path_edit->setPlaceholderText("Default: PROFILE_DIR/user_data");
+  user_data_path_layout->addWidget(user_data_path_edit, 1);
+  auto user_data_path_open = new QToolButton();
+  user_data_path_open->setText("...");
+  user_data_path_layout->addWidget(user_data_path_open);
+  auto user_data_path_widg = new QWidget;
+  user_data_path_widg->setLayout(user_data_path_layout);
+  create_setting("User Data Path",
+                 "The location where user data such as spell checking "
+                 "dictionary files will be stored on disk.",
+                 user_data_path_widg);
+  connect(user_data_path_disabled, &QCheckBox::toggled,
+          [this, user_data_path_edit, user_data_path_open](bool checked) {
+    user_data_path_edit->setEnabled(!checked);
+    user_data_path_open->setEnabled(!checked);
+  });
+  auto curr_user_data_path = cef.contains("userDataPath") ?
+        cef.value("userDataPath").toString() : QString();
+  user_data_path_disabled->setChecked(!curr_user_data_path.isNull() &&
+                                      curr_user_data_path.isEmpty());
+  user_data_path_edit->setText(curr_user_data_path);
+  setting_break();
+
+  auto browser = prefs_.value("browser").toObject();
+  // <name, desc, field>
+  typedef std::tuple<QString, QString, QString> setting;
+  QList<setting> settings({
+      std::make_tuple(
+          "Application Cache?",
+          "Controls whether the application cache can be used.",
+          "applicationCache"),
+      std::make_tuple(
+          "Databases?",
+          "Controls whether databases can be used.",
+          "databases"),
+      std::make_tuple(
+          "File Access From File URLs?",
+          "Controls whether file URLs will have access to other file URLs.",
+          "fileAccessFromFileUrls"),
+      std::make_tuple(
+          "Image Loading?",
+          "Controls whether image URLs will be loaded from the network.",
+          "imageLoading"),
+      std::make_tuple(
+          "Image Fit To Page?",
+          "Controls whether standalone images will be shrunk to fit the page.",
+          "imageShrinkStandaloneToFit"),
+      std::make_tuple(
+          "JavaScript?",
+          "Controls whether JavaScript can be executed.",
+          "javascript"),
+      std::make_tuple(
+          "JavaScript Clipboard Access?",
+          "Controls whether JavaScript can access the clipboard.",
+          "javascriptAccessClipboard"),
+      std::make_tuple(
+          "JavaScript DOM Paste?",
+          "Controls whether DOM pasting is supported in the editor via "
+          "execCommand(\"paste\"). Requires JavaScript clipboaard access.",
+          "javascriptDomPaste"),
+      std::make_tuple(
+          "JavaScript Open Windows?",
+          "Controls whether JavaScript can be used for opening windows.",
+          "javascriptOpenWindows"),
+      std::make_tuple(
+          "Local Storage?",
+          "Controls whether local storage can be used.",
+          "localStorage"),
+      std::make_tuple(
+          "Browser Plugins?",
+          "Controls whether any plugins will be loaded.",
+          "plugins"),
+      std::make_tuple(
+          "Remote Fonts?",
+          "Controls the loading of fonts from remote sources.",
+          "remoteFonts"),
+      std::make_tuple(
+          "Tabs to Links?",
+          "Controls whether the tab key can advance focus to links.",
+          "tabToLinks"),
+      std::make_tuple(
+          "Text Area Resize?",
+          "Controls whether text areas can be resized.",
+          "textAreaResize"),
+      std::make_tuple(
+          "Universal Access From File URLs?",
+          "Controls whether file URLs will have access to all URLs.",
+          "universalAccessFromFileUrls"),
+      std::make_tuple(
+          "Web Security?",
+          "Controls whether web security restrictions (same-origin policy) "
+          "will be enforced.",
+          "webSecurity"),
+      std::make_tuple(
+          "WebGL?",
+          "Controls whether WebGL can be used.",
+          "webgl")
+  });
+  QList<QComboBox*> setting_widgs;
+  for (int i = 0; i < settings.size(); i++) {
+    auto s = settings[i];
+    auto widg = new QComboBox;
+    widg->addItem("Browser Default", static_cast<int>(STATE_DEFAULT));
+    widg->addItem("Enabled", static_cast<int>(STATE_ENABLED));
+    widg->addItem("Disabled", static_cast<int>(STATE_DISABLED));
+    auto field = std::get<2>(s);
+    if (!browser.contains(field)) {
+      widg->setCurrentIndex(0);
+    } else {
+      widg->setCurrentIndex(browser.value(field).toBool() ? 1 : 2);
+    }
+    create_setting(std::get<0>(s), std::get<1>(s), widg);
+    setting_widgs.append(widg);
+    if (i < settings.size() - 1) setting_break();
+  }
+
+  auto tabs = new QTabWidget;
+  auto browser_widg = new QWidget;
+  browser_layout->setRowStretch(browser_layout->rowCount(), 1);
+  browser_widg->setLayout(browser_layout);
+  auto browser_widg_scroll = new QScrollArea;
+  browser_widg_scroll->setFrameShape(QFrame::NoFrame);
+  browser_widg_scroll->setStyleSheet(
+        "QScrollArea { background: transparent; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }");
+  browser_widg_scroll->setWidget(browser_widg);
+  browser_widg_scroll->setWidgetResizable(true);
+  tabs->addTab(browser_widg_scroll, "Browser Settings");
+
+  auto dialog_layout = new QGridLayout;
+  dialog_layout->addWidget(
+        new QLabel(QString("Current Profile: '") + FriendlyName() + "'"),
+        0, 0, 1, 2);
+  dialog_layout->addWidget(tabs, 1, 0, 1, 2);
+  dialog_layout->setColumnStretch(0, 1);
+  auto ok = new QPushButton("Save");
+  ok->setEnabled(false);
+  dialog_layout->addWidget(ok, 2, 0, Qt::AlignRight);
+  auto cancel = new QPushButton("Cancel");
+  dialog_layout->addWidget(cancel, 2, 1);
+
+  // Change handlers
+  auto build_cef = [=]() -> QJsonObject {
+    QJsonObject ret;
+    if (cache_path_disabled->isChecked()) {
+      ret["cachePath"] = "";
+    } else if (!cache_path_edit->text().isEmpty()) {
+      ret["cachePath"] = cache_path_edit->text();
+    }
+    if (enable_net_sec->currentData().toBool()) {
+      ret["enableNetSecurityExpiration"] = true;
+    }
+    if (!user_prefs->currentData().toBool()) {
+      ret["persistUserPreferences"] = false;
+    }
+    if (!user_agent_edit->text().isEmpty()) {
+      ret["userAgent"] = user_agent_edit->text();
+    }
+    if (user_data_path_disabled->isChecked()) {
+      ret["userDataPath"] = "";
+    } else if (!user_data_path_edit->text().isEmpty()) {
+      ret["userDataPath"] = user_data_path_edit->text();
+    }
+    return ret;
+  };
+  auto build_browser = [=]() -> QJsonObject {
+    QJsonObject ret;
+    for (int i = 0; i < settings.size(); i++) {
+      auto state = static_cast<cef_state_t>(
+            setting_widgs[i]->currentData().toInt());
+      if (state != STATE_DEFAULT) {
+        ret[std::get<2>(settings[i])] = state == STATE_ENABLED;
+      }
+    }
+    return ret;
+  };
+  auto check_changed = [=]() {
+    ok->setEnabled(build_cef() != cef || build_browser() != browser);
+    if (ok->isEnabled()) {
+      ok->setText("Save and Restart to Apply");
+    } else {
+      ok->setText("Save");
+    }
+  };
+  connect(cache_path_disabled, &QAbstractButton::toggled, check_changed);
+  connect(cache_path_edit, &QLineEdit::textChanged, check_changed);
+  connect(enable_net_sec, &QComboBox::currentTextChanged, check_changed);
+  connect(user_prefs, &QComboBox::currentTextChanged, check_changed);
+  connect(user_agent_edit, &QLineEdit::textChanged, check_changed);
+  connect(user_data_path_disabled, &QAbstractButton::toggled, check_changed);
+  connect(user_data_path_edit, &QLineEdit::textChanged, check_changed);
+  for (const auto& widg : setting_widgs) {
+    connect(widg, &QComboBox::currentTextChanged, check_changed);
+  }
+
+  QDialog dialog;
+  dialog.setWindowTitle("Profile Settings");
+  dialog.setLayout(dialog_layout);
+  connect(ok, &QPushButton::clicked, &dialog, &QDialog::accept);
+  connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+  QSettings geom_settings;
+  dialog.restoreGeometry(
+        geom_settings.value("profileSettings/geom").toByteArray());
+  auto result = dialog.exec();
+  geom_settings.setValue("profileSettings/geom", dialog.saveGeometry());
+  if (result == QDialog::Rejected) {
+    return "";
+  }
+  wants_restart = ok->text() != "Save";
+  cef = build_cef();
+  if (!cef.isEmpty()) {
+    prefs_["cef"] = cef;
+  } else {
+    prefs_.remove("cef");
+  }
+  browser = build_browser();
+  if (!browser.isEmpty()) {
+    prefs_["browser"] = browser;
+  } else {
+    prefs_.remove("browser");
+  }
+  if (!SavePrefs()) {
+    QMessageBox::critical(nullptr, "Save Profile", "Error saving profile");
+    return "";
+  }
+  return path_;
+}
+
 Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)
     : QObject(parent), path_(path), prefs_(prefs) {
   for (const auto& item : prefs["bubbles"].toArray()) {
@@ -415,7 +749,7 @@ void Profile::SetCurrent(Profile* profile) {
     delete current_;
   }
   current_ = profile;
-  QSettings settings("cretz", "doogie");
+  QSettings settings("cretz", "Doogie");
   settings.setValue("profile/lastLoaded", profile->path_);
   auto prev = settings.value("profile/lastTen").toStringList();
   prev.removeAll(profile->path_);
