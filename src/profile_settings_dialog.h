@@ -19,10 +19,15 @@ class ProfileSettingsDialog : public QDialog {
 
  private:
   QWidget* CreateSettingsTab();
-  QWidget* CreateShortcutTab();
+  QJsonObject BuildCefPrefsJson();
+  QJsonObject BuildBrowserPrefsJson();
+  void CheckSettingsChange();
+
+  QWidget* CreateShortcutsTab();
+  QJsonObject BuildShortcutsPrefsJson();
+  void CheckShortcutsChange();
 
   QJsonObject BuildPrefsJson();
-  void CheckSettingsChange();
 
   Profile* profile_;
   QCheckBox* cache_path_disabled_;
@@ -33,11 +38,13 @@ class ProfileSettingsDialog : public QDialog {
   QCheckBox* user_data_path_disabled_;
   QLineEdit* user_data_path_edit_;
   QHash<QString, QComboBox*> browser_setting_widgs_;
+  QTableWidget* shortcuts_;
   bool settings_changed_ = false;
   bool shortcuts_changed_ = false;
 
  signals:
-  void SettingsChangeUpdated();
+  void SettingsChangedUpdated();
+  void ShortcutsChangedUpdated();
 };
 
 }  // namespace doogie

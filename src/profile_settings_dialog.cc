@@ -14,7 +14,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
 
   auto tabs = new QTabWidget;
   tabs->addTab(CreateSettingsTab(), "Browser Settings");
-  tabs->addTab(CreateShortcutTab(), "Keyboard Shortcuts");
+  tabs->addTab(CreateShortcutsTab(), "Keyboard Shortcuts");
   layout->addWidget(tabs, 1, 0, 1, 2);
   layout->setColumnStretch(0, 1);
 
@@ -29,14 +29,16 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
   setSizeGripEnabled(true);
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
-  connect(this, &ProfileSettingsDialog::SettingsChangeUpdated, [this, ok]() {
+  auto apply_change = [this, ok]() {
     ok->setEnabled(settings_changed_ || shortcuts_changed_);
     if (ok->isEnabled() && NeedsRestart()) {
       ok->setText("Save and Restart to Apply");
     } else {
       ok->setText("Save");
     }
-  });
+  };
+  connect(this, &ProfileSettingsDialog::SettingsChangedUpdated, apply_change);
+  connect(this, &ProfileSettingsDialog::ShortcutsChangedUpdated, apply_change);
 
   restoreGeometry(QSettings().value("profileSettings/geom").toByteArray());
 }
@@ -54,6 +56,8 @@ void ProfileSettingsDialog::done(int r) {
       profile_->prefs_ = old;
       return;
     }
+    // Apply the actions too
+    profile_->ApplyActionShortcuts();
   }
   QDialog::done(r);
 }
@@ -235,20 +239,65 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   return widg_scroll;
 }
 
-QWidget* ProfileSettingsDialog::CreateShortcutTab() {
+QJsonObject ProfileSettingsDialog::BuildCefPrefsJson() {
+  QJsonObject ret;
+  if (cache_path_disabled_->isChecked()) {
+    ret["cachePath"] = "";
+  } else if (!cache_path_edit_->text().isEmpty()) {
+    ret["cachePath"] = cache_path_edit_->text();
+  }
+  if (enable_net_sec_->currentData().toBool()) {
+    ret["enableNetSecurityExpiration"] = true;
+  }
+  if (!user_prefs_->currentData().toBool()) {
+    ret["persistUserPreferences"] = false;
+  }
+  if (!user_agent_edit_->text().isEmpty()) {
+    ret["userAgent"] = user_agent_edit_->text();
+  }
+  if (user_data_path_disabled_->isChecked()) {
+    ret["userDataPath"] = "";
+  } else if (!user_data_path_edit_->text().isEmpty()) {
+    ret["userDataPath"] = user_data_path_edit_->text();
+  }
+  return ret;
+}
+
+QJsonObject ProfileSettingsDialog::BuildBrowserPrefsJson() {
+  QJsonObject ret;
+  for (const auto& setting : Profile::PossibleBrowserSettings()) {
+    auto state = static_cast<cef_state_t>(
+          browser_setting_widgs_[setting.name]->currentData().toInt());
+    if (state != STATE_DEFAULT) {
+      ret[setting.field] = state == STATE_ENABLED;
+    }
+  }
+  return ret;
+}
+
+void ProfileSettingsDialog::CheckSettingsChange() {
+  auto orig = settings_changed_;
+  auto orig_cef = profile_->prefs_.value("cef").toObject();
+  auto orig_browser = profile_->prefs_.value("browser").toObject();
+  settings_changed_ = BuildCefPrefsJson() != orig_cef ||
+      BuildBrowserPrefsJson() != orig_browser;
+  if (orig != settings_changed_) emit SettingsChangedUpdated();
+}
+
+QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
   auto layout = new QGridLayout;
 
-  auto table = new QTableWidget;
-  table->setColumnCount(3);
-  table->setSelectionBehavior(QAbstractItemView::SelectRows);
-  table->setSelectionMode(QAbstractItemView::SingleSelection);
-  table->setHorizontalHeaderLabels({ "Command", "Label", "Shortcuts" });
-  table->verticalHeader()->setVisible(false);
-  table->horizontalHeader()->setSectionResizeMode(
+  shortcuts_ = new QTableWidget;
+  shortcuts_->setColumnCount(3);
+  shortcuts_->setSelectionBehavior(QAbstractItemView::SelectRows);
+  shortcuts_->setSelectionMode(QAbstractItemView::SingleSelection);
+  shortcuts_->setHorizontalHeaderLabels({ "Command", "Label", "Shortcuts" });
+  shortcuts_->verticalHeader()->setVisible(false);
+  shortcuts_->horizontalHeader()->setSectionResizeMode(
         0, QHeaderView::ResizeToContents);
-  table->horizontalHeader()->setSectionResizeMode(
+  shortcuts_->horizontalHeader()->setSectionResizeMode(
         1, QHeaderView::ResizeToContents);
-  table->horizontalHeader()->setStretchLastSection(true);
+  shortcuts_->horizontalHeader()->setStretchLastSection(true);
   // <seq, <name>>
   auto known_seqs = new QHash<QString, QStringList>;
   connect(this, &QDialog::destroyed, [known_seqs]() { delete known_seqs; });
@@ -261,19 +310,19 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
   for (int i = 0; i < action_meta.keyCount(); i++) {
     auto action = ActionManager::Action(action_meta.value(i));
     if (action) {
-      auto row = table->rowCount();
-      table->setRowCount(row + 1);
-      table->setItem(row, 0, string_item(action_meta.key(i)));
-      table->setItem(row, 1, string_item(action->text()));
-      table->setItem(row, 2, string_item(
+      auto row = shortcuts_->rowCount();
+      shortcuts_->setRowCount(row + 1);
+      shortcuts_->setItem(row, 0, string_item(action_meta.key(i)));
+      shortcuts_->setItem(row, 1, string_item(action->text()));
+      shortcuts_->setItem(row, 2, string_item(
           QKeySequence::listToString(action->shortcuts())));
       for (auto seq : action->shortcuts()) {
         (*known_seqs)[seq.toString()].append(action_meta.key(i));
       }
     }
   }
-  table->setSortingEnabled(true);
-  layout->addWidget(table, 0, 0);
+  shortcuts_->setSortingEnabled(true);
+  layout->addWidget(shortcuts_, 0, 0);
 
   auto edit_group = new QGroupBox;
   edit_group->setVisible(false);
@@ -314,8 +363,10 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
   edit_group_layout->addWidget(err, 2, 0, 1, 4);
   edit_group->adjustSize();
 
-  auto add_seq_item = [this, known_seqs, table, list](
-      const QKeySequence& seq) {
+  connect(shortcuts_, &QTableWidget::itemChanged,
+          this, &ProfileSettingsDialog::CheckShortcutsChange);
+
+  auto add_seq_item = [this, known_seqs, list](const QKeySequence& seq) {
     auto item = new QWidget;
     item->setObjectName("item");
     item->setStyleSheet(
@@ -331,8 +382,8 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
     item_delete->setStyleSheet("font-weight: bold;");
     item->layout()->addWidget(item_delete);
     connect(item_delete, &QToolButton::clicked,
-            [this, table, known_seqs, seq, item, list]() {
-      auto selected = table->selectedItems();
+            [this, known_seqs, seq, item, list]() {
+      auto selected = shortcuts_->selectedItems();
       auto seqs = QKeySequence::listFromString(selected[2]->text());
       seqs.removeAll(seq);
       selected[2]->setText(QKeySequence::listToString(seqs));
@@ -344,10 +395,10 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
     list->adjustSize();
   };
 
-  connect(table, &QTableWidget::itemSelectionChanged,
-          [table, edit_group, list, seq_edit, shortcut_layout,
+  connect(shortcuts_, &QTableWidget::itemSelectionChanged,
+          [this, edit_group, list, seq_edit, shortcut_layout,
           shortcut_edit, err, add_seq_item, record]() {
-    auto selected = table->selectedItems();
+    auto selected = shortcuts_->selectedItems();
     if (selected.size() != 3) {
       edit_group->setVisible(false);
       return;
@@ -385,9 +436,10 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
                    + existing.join(", "));
     }
   });
-  auto new_shortcut = [table, add_seq_item](const QKeySequence& seq) -> bool {
+  auto new_shortcut =
+      [this, add_seq_item](const QKeySequence& seq) -> bool {
     if (seq.isEmpty()) return false;
-    auto selected = table->selectedItems();
+    auto selected = shortcuts_->selectedItems();
     QList<QKeySequence> existing;
     if (!selected[2]->text().isEmpty()) {
       existing = QKeySequence::listFromString(selected[2]->text());
@@ -396,6 +448,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
     add_seq_item(seq);
     existing.append(seq);
     selected[2]->setText(QKeySequence::listToString(existing));
+    return true;
   };
   connect(shortcut_edit, &QLineEdit::returnPressed,
           [shortcut_edit, new_shortcut]() {
@@ -434,12 +487,12 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
     shortcut_layout->itemAt(2)->widget()->show();
   });
   connect(reset, &QPushButton::clicked,
-          [record, seq_edit, table, list, new_shortcut, action_meta]() {
+          [this, record, seq_edit, list, new_shortcut, action_meta]() {
     if (record->text() == "Stop Recording") {
       emit seq_edit->editingFinished();
     }
     // Blow away existing and then update
-    auto selected = table->selectedItems();
+    auto selected = shortcuts_->selectedItems();
     selected[2]->setText("");
     while (auto item = list->layout()->takeAt(0)) delete item->widget();
     auto action_type = action_meta.keyToValue(
@@ -456,49 +509,44 @@ QWidget* ProfileSettingsDialog::CreateShortcutTab() {
   return widg;
 }
 
-QJsonObject ProfileSettingsDialog::BuildPrefsJson() {
-  QJsonObject cef;
-  if (cache_path_disabled_->isChecked()) {
-    cef["cachePath"] = "";
-  } else if (!cache_path_edit_->text().isEmpty()) {
-    cef["cachePath"] = cache_path_edit_->text();
-  }
-  if (enable_net_sec_->currentData().toBool()) {
-    cef["enableNetSecurityExpiration"] = true;
-  }
-  if (!user_prefs_->currentData().toBool()) {
-    cef["persistUserPreferences"] = false;
-  }
-  if (!user_agent_edit_->text().isEmpty()) {
-    cef["userAgent"] = user_agent_edit_->text();
-  }
-  if (user_data_path_disabled_->isChecked()) {
-    cef["userDataPath"] = "";
-  } else if (!user_data_path_edit_->text().isEmpty()) {
-    cef["userDataPath"] = user_data_path_edit_->text();
-  }
-  QJsonObject browser;
-  for (const auto& setting : Profile::PossibleBrowserSettings()) {
-    auto state = static_cast<cef_state_t>(
-          browser_setting_widgs_[setting.name]->currentData().toInt());
-    if (state != STATE_DEFAULT) {
-      browser[setting.field] = state == STATE_ENABLED;
+QJsonObject ProfileSettingsDialog::BuildShortcutsPrefsJson() {
+  QJsonObject ret;
+  auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
+  // Just go over every table item
+  for (int i = 0; i < shortcuts_->rowCount(); i++) {
+    auto action_type = action_meta.keyToValue(
+          shortcuts_->item(i, 0)->text().toLocal8Bit().constData());
+    QList<QKeySequence> defs = ActionManager::DefaultShortcuts(action_type);
+    QList<QKeySequence> curr;
+    auto curr_text = shortcuts_->item(i, 2)->text();
+    if (!curr_text.isEmpty()) curr = QKeySequence::listFromString(curr_text);
+    if (defs != curr) {
+      QJsonArray arr;
+      for (auto& seq : curr) {
+        arr.append(QJsonValue(seq.toString()));
+      }
+      ret[action_meta.key(i)] = arr;
     }
   }
-  QJsonObject ret;
-  if (!cef.isEmpty()) ret["cef"] = cef;
-  if (!browser.isEmpty()) ret["browser"] = browser;
   return ret;
 }
 
-void ProfileSettingsDialog::CheckSettingsChange() {
-  auto orig = settings_changed_;
-  auto json = BuildPrefsJson();
-  auto orig_cef = profile_->prefs_.value("cef").toObject();
-  auto orig_browser = profile_->prefs_.value("browser").toObject();
-  settings_changed_ = json.value("cef").toObject() != orig_cef ||
-      json.value("browser").toObject() != orig_browser;
-  if (orig != settings_changed_) emit SettingsChangeUpdated();
+void ProfileSettingsDialog::CheckShortcutsChange() {
+  auto orig = shortcuts_changed_;
+  auto orig_shortcuts = profile_->prefs_.value("shortcuts").toObject();
+  shortcuts_changed_ = orig_shortcuts != BuildShortcutsPrefsJson();
+  if (orig != shortcuts_changed_) emit ShortcutsChangedUpdated();
+}
+
+QJsonObject ProfileSettingsDialog::BuildPrefsJson() {
+  QJsonObject ret;
+  auto cef = BuildCefPrefsJson();
+  if (!cef.isEmpty()) ret["cef"] = cef;
+  auto browser = BuildBrowserPrefsJson();
+  if (!browser.isEmpty()) ret["browser"] = browser;
+  auto shortcuts = BuildShortcutsPrefsJson();
+  if (!shortcuts.isEmpty()) ret["shortcuts"] = shortcuts;
+  return ret;
 }
 
 }  // namespace doogie

@@ -3,13 +3,13 @@
 namespace doogie {
 
 QString Bubble::Name() {
-  return prefs_["name"].toString();
+  return prefs_.value("name").toString();
 }
 
 CefBrowserSettings Bubble::CreateCefBrowserSettings() {
   auto settings = Profile::Current()->CreateBrowserSettings();
 
-  auto browser = prefs_["browser"].toObject();
+  auto browser = prefs_.value("browser").toObject();
 
   auto state = [&browser](cef_state_t& state, const QString& field) {
     if (browser.contains(field)) {

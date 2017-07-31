@@ -236,6 +236,9 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::FocusAddressBar);
   menu_action(menu, ActionManager::FocusBrowser);
   menu_action(menu, ActionManager::LogsWindow);
+
+  // Non-visible actions
+  addAction(ActionManager::Action(ActionManager::NewChildBackgroundPage));
 }
 
 void MainWindow::ShowDevTools(BrowserWidget* browser,

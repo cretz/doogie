@@ -413,7 +413,9 @@ bool Profile::SavePrefs() {
   // Put all bubbles back
   QJsonArray arr;
   for (const auto& bubble : bubbles_) {
-    arr.append(bubble->prefs_);
+    if (!bubble->prefs_.isEmpty()) {
+      arr.append(bubble->prefs_);
+    }
   }
   if (arr.isEmpty()) {
     prefs_.remove("bubbles");
@@ -439,22 +441,24 @@ void Profile::ApplyActionShortcuts() {
   auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
   auto prefs = prefs_.value("shortcuts").toObject();
   for (int i = 0; i < action_meta.keyCount(); i++) {
-    auto seqs = ActionManager::DefaultShortcuts(action_meta.value(i));
-    if (prefs.contains(action_meta.key(i))) {
-      for (auto& pref : prefs[action_meta.key(i)].toArray()) {
-        auto seq = KeySequenceOrEmpty(pref.toString());
-        if (!seq.isEmpty()) seqs.append(seq);
+    auto action = ActionManager::Action(action_meta.value(i));
+    if (action) {
+      auto seqs = ActionManager::DefaultShortcuts(action_meta.value(i));
+      if (prefs.contains(action_meta.key(i))) {
+        seqs.clear();
+        for (auto& pref : prefs[action_meta.key(i)].toArray()) {
+          auto seq = KeySequenceOrEmpty(pref.toString());
+          if (!seq.isEmpty()) seqs.append(seq);
+        }
       }
-    }
-    if (!seqs.isEmpty()) {
-      ActionManager::Action(action_meta.value(i))->setShortcuts(seqs);
+      action->setShortcuts(seqs);
     }
   }
 }
 
 Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)
     : QObject(parent), path_(path), prefs_(prefs) {
-  for (const auto& item : prefs["bubbles"].toArray()) {
+  for (const auto& item : prefs.value("bubbles").toArray()) {
     bubbles_.append(new Bubble(item.toObject(), this));
   }
   // If there are no bubbles, add an empty one
