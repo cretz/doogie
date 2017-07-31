@@ -6,6 +6,7 @@ namespace doogie {
 ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   auto profile = Profile::Current();
   auto layout = new QGridLayout;
+  layout->setSizeConstraint(QLayout::SetFixedSize);
   layout->addWidget(new QLabel("Current Profile:"), 0, 0);
   layout->addWidget(new QLabel(profile->FriendlyName()), 0, 1);
   layout->addWidget(new QLabel("New/Existing Profile:"), 1, 0);
@@ -17,7 +18,7 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   auto found_in_mem = false;
   for (auto const& other_path : Profile::LastTenProfilePaths()) {
     if (other_path != profile->Path()) {
-      if (profile->InMemory()) found_in_mem = true;
+      if (other_path == Profile::kInMemoryPath) found_in_mem = true;
       selector_->addItem(Profile::FriendlyName(other_path), other_path);
     }
   }
@@ -76,6 +77,7 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
 
   setWindowTitle("Change Profile");
   setLayout(layout);
+  setSizeGripEnabled(false);
 }
 
 bool ProfileChangeDialog::NeedsRestart() {

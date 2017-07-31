@@ -16,6 +16,10 @@ QAction* ActionManager::Action(int type) {
   return instance_->actions_[type];
 }
 
+QList<QKeySequence> ActionManager::DefaultShortcuts(int type) {
+  return instance_->default_shortcuts_.value(type);
+}
+
 void ActionManager::registerAction(int type, QAction* action) {
   action->setParent(instance_);
   instance_->actions_[type] = action;
@@ -80,6 +84,31 @@ void ActionManager::CreateActions() {
   registerAction(FocusPageTree, "Focus Page Tree");
   registerAction(FocusAddressBar, "Focus Address Bar");
   registerAction(FocusBrowser, "Focus Browser");
+
+  // Default shortcuts
+  auto shortcuts = [this](ActionManager::Type type, const QString& shortcuts) {
+    default_shortcuts_[type] = QKeySequence::listFromString(shortcuts);
+  };
+  shortcuts(ActionManager::NewWindow, "Ctrl+N");
+  shortcuts(ActionManager::NewTopLevelPage, "Ctrl+T");
+  shortcuts(ActionManager::NewChildForegroundPage, "Ctrl+Shift+T");
+  shortcuts(ActionManager::ClosePage, "Ctrl+F4; Ctrl+W");
+  shortcuts(ActionManager::CloseAllPages, "Ctrl+Shift+F4; Ctrl+Shift+W");
+  shortcuts(ActionManager::ToggleDevTools, "F12; Ctrl+F12");
+  shortcuts(ActionManager::Reload, "F5; Ctrl+F5; Ctrl+R");
+  shortcuts(ActionManager::Stop, "Esc");
+  shortcuts(ActionManager::Back,
+            "Ctrl+Page Up; Ctrl+Shift+Page Down; Backspace");
+  shortcuts(ActionManager::Forward,
+            "Ctrl+Page Down; Ctrl+Shift+Page Up; Shift+Backspace");
+  shortcuts(ActionManager::Print, "Ctrl+P");
+  shortcuts(ActionManager::ZoomIn, "Ctrl++; Ctrl+=");
+  shortcuts(ActionManager::ZoomOut, "Ctrl+-");
+  shortcuts(ActionManager::ResetZoom, "Ctrl+0");
+  shortcuts(ActionManager::FindInPage, "Ctrl+F");
+  shortcuts(ActionManager::FocusPageTree, "Alt+1");
+  shortcuts(ActionManager::FocusAddressBar, "Alt+2; Ctrl+D");
+  shortcuts(ActionManager::FocusBrowser, "Alt+3");
 }
 
 }  // namespace doogie

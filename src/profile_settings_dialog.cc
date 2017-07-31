@@ -26,6 +26,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
   setLayout(layout);
 
   setWindowTitle("Profile Settings");
+  setSizeGripEnabled(true);
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
   connect(this, &ProfileSettingsDialog::SettingsChangeUpdated, [this, ok]() {
@@ -236,24 +237,220 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
 
 QWidget* ProfileSettingsDialog::CreateShortcutTab() {
   auto layout = new QGridLayout;
+
   auto table = new QTableWidget;
   table->setColumnCount(3);
+  table->setSelectionBehavior(QAbstractItemView::SelectRows);
+  table->setSelectionMode(QAbstractItemView::SingleSelection);
   table->setHorizontalHeaderLabels({ "Command", "Label", "Shortcuts" });
   table->verticalHeader()->setVisible(false);
+  table->horizontalHeader()->setSectionResizeMode(
+        0, QHeaderView::ResizeToContents);
+  table->horizontalHeader()->setSectionResizeMode(
+        1, QHeaderView::ResizeToContents);
   table->horizontalHeader()->setStretchLastSection(true);
+  // <seq, <name>>
+  auto known_seqs = new QHash<QString, QStringList>;
+  connect(this, &QDialog::destroyed, [known_seqs]() { delete known_seqs; });
   auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
+  auto string_item = [](const QString& text) -> QTableWidgetItem* {
+    auto item = new QTableWidgetItem(text);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    return item;
+  };
   for (int i = 0; i < action_meta.keyCount(); i++) {
     auto action = ActionManager::Action(action_meta.value(i));
     if (action) {
       auto row = table->rowCount();
       table->setRowCount(row + 1);
-      table->setItem(row, 0, new QTableWidgetItem(action_meta.key(i)));
-      table->setItem(row, 1, new QTableWidgetItem(action->text()));
-      table->setItem(row, 2, new QTableWidgetItem(
+      table->setItem(row, 0, string_item(action_meta.key(i)));
+      table->setItem(row, 1, string_item(action->text()));
+      table->setItem(row, 2, string_item(
           QKeySequence::listToString(action->shortcuts())));
+      for (auto seq : action->shortcuts()) {
+        (*known_seqs)[seq.toString()].append(action_meta.key(i));
+      }
     }
   }
+  table->setSortingEnabled(true);
   layout->addWidget(table, 0, 0);
+
+  auto edit_group = new QGroupBox;
+  edit_group->setVisible(false);
+  // We're gonna do this like a "pill box", but no wrapping...
+  // we'll just let it scroll horizontal as needed
+  auto edit_group_layout = new QGridLayout;
+  edit_group_layout->setSizeConstraint(QLayout::SetMinimumSize);
+  edit_group->setLayout(edit_group_layout);
+  auto list = new QWidget;
+  list->setLayout(new QHBoxLayout());
+  list->layout()->setSizeConstraint(QLayout::SetMinimumSize);
+  auto list_scroll = new QScrollArea();
+  list_scroll->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+  list_scroll->setFrameShape(QFrame::NoFrame);
+  list_scroll->setStyleSheet(
+        "QScrollArea { background: transparent; }"
+        "QScrollArea > QWidget > QWidget { background: transparent; }");
+  list_scroll->setWidget(list);
+  edit_group_layout->addWidget(list_scroll, 0, 0, 1, 4);
+  edit_group_layout->addWidget(new QLabel("New Shortcut"), 1, 0);
+  auto shortcut_layout = new QHBoxLayout;
+  auto seq_edit = new QKeySequenceEdit;
+  seq_edit->setVisible(false);
+  shortcut_layout->addWidget(seq_edit, 1);
+  auto shortcut_edit = new QLineEdit;
+  shortcut_edit->setPlaceholderText("Enter key sequence as text");
+  shortcut_layout->addWidget(shortcut_edit, 1);
+  auto ok = new QPushButton("Add");
+  shortcut_layout->addWidget(ok);
+  edit_group_layout->addLayout(shortcut_layout, 1, 1);
+  edit_group_layout->setColumnStretch(1, 1);
+  auto record = new QPushButton("Record");
+  edit_group_layout->addWidget(record, 1, 2);
+  auto reset = new QPushButton("Reset");
+  edit_group_layout->addWidget(reset, 1, 3);
+  auto err = new QLabel;
+  err->setStyleSheet("color: red;");
+  edit_group_layout->addWidget(err, 2, 0, 1, 4);
+  edit_group->adjustSize();
+
+  auto add_seq_item = [this, known_seqs, table, list](
+      const QKeySequence& seq) {
+    auto item = new QWidget;
+    item->setObjectName("item");
+    item->setStyleSheet(
+          "QWidget#item { border: 1px solid black; border-radius: 3px; }");
+    item->setLayout(new QHBoxLayout());
+    item->layout()->setSizeConstraint(QLayout::SetMinimumSize);
+    auto label = new QLabel(seq.toString());
+    label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+    item->layout()->addWidget(label);
+    auto item_delete = new QToolButton;
+    item_delete->setAutoRaise(true);
+    item_delete->setText("X");
+    item_delete->setStyleSheet("font-weight: bold;");
+    item->layout()->addWidget(item_delete);
+    connect(item_delete, &QToolButton::clicked,
+            [this, table, known_seqs, seq, item, list]() {
+      auto selected = table->selectedItems();
+      auto seqs = QKeySequence::listFromString(selected[2]->text());
+      seqs.removeAll(seq);
+      selected[2]->setText(QKeySequence::listToString(seqs));
+      item->deleteLater();
+      (*known_seqs)[seq.toString()].removeAll(selected[0]->text());
+      list->adjustSize();
+    });
+    list->layout()->addWidget(item);
+    list->adjustSize();
+  };
+
+  connect(table, &QTableWidget::itemSelectionChanged,
+          [table, edit_group, list, seq_edit, shortcut_layout,
+          shortcut_edit, err, add_seq_item, record]() {
+    auto selected = table->selectedItems();
+    if (selected.size() != 3) {
+      edit_group->setVisible(false);
+      return;
+    }
+    record->setText("Record");
+    shortcut_layout->itemAt(0)->widget()->hide();
+    shortcut_layout->itemAt(1)->widget()->show();
+    shortcut_layout->itemAt(2)->widget()->show();
+    while (auto item = list->layout()->takeAt(0)) delete item->widget();
+    shortcut_edit->clear();
+    err->clear();
+    edit_group->setVisible(true);
+    auto seq_str = selected[2]->text();
+    if (!seq_str.isEmpty()) {
+      for (const auto& seq : QKeySequence::listFromString(seq_str)) {
+        add_seq_item(seq);
+      }
+    }
+  });
+
+  connect(shortcut_edit, &QLineEdit::textChanged,
+          [err, ok, known_seqs](const QString& text) {
+    err->clear();
+    ok->setEnabled(false);
+    if (text.isEmpty()) return;
+    auto seq = Profile::KeySequenceOrEmpty(text);
+    if (seq.isEmpty()) {
+      err->setText("Invalid key sequence");
+      return;
+    }
+    ok->setEnabled(true);
+    auto existing = known_seqs->value(seq.toString());
+    if (!existing.isEmpty()) {
+      err->setText(QString("Key sequence exists with other action(s): ")
+                   + existing.join(", "));
+    }
+  });
+  auto new_shortcut = [table, add_seq_item](const QKeySequence& seq) -> bool {
+    if (seq.isEmpty()) return false;
+    auto selected = table->selectedItems();
+    QList<QKeySequence> existing;
+    if (!selected[2]->text().isEmpty()) {
+      existing = QKeySequence::listFromString(selected[2]->text());
+    }
+    if (existing.contains(seq)) return false;
+    add_seq_item(seq);
+    existing.append(seq);
+    selected[2]->setText(QKeySequence::listToString(existing));
+  };
+  connect(shortcut_edit, &QLineEdit::returnPressed,
+          [shortcut_edit, new_shortcut]() {
+    if (new_shortcut(Profile::KeySequenceOrEmpty(shortcut_edit->text()))) {
+      shortcut_edit->clear();
+    }
+  });
+  connect(ok, &QPushButton::clicked, [shortcut_edit, new_shortcut]() {
+    if (new_shortcut(Profile::KeySequenceOrEmpty(shortcut_edit->text()))) {
+      shortcut_edit->clear();
+    }
+  });
+  connect(record, &QPushButton::clicked,
+          [record, shortcut_layout, seq_edit]() {
+    if (record->text() == "Stop Recording") {
+      emit seq_edit->editingFinished();
+    } else {
+      record->setText("Stop Recording");
+      shortcut_layout->itemAt(1)->widget()->hide();
+      shortcut_layout->itemAt(2)->widget()->hide();
+      shortcut_layout->itemAt(0)->widget()->show();
+      seq_edit->clear();
+      seq_edit->setFocus();
+    }
+  });
+  connect(seq_edit, &QKeySequenceEdit::editingFinished,
+          [record, seq_edit, new_shortcut, shortcut_layout]() {
+    record->setText("Record");
+    if (!seq_edit->keySequence().isEmpty()) {
+      new_shortcut(seq_edit->keySequence());
+    }
+    seq_edit->clear();
+    seq_edit->clearFocus();
+    shortcut_layout->itemAt(0)->widget()->hide();
+    shortcut_layout->itemAt(1)->widget()->show();
+    shortcut_layout->itemAt(2)->widget()->show();
+  });
+  connect(reset, &QPushButton::clicked,
+          [record, seq_edit, table, list, new_shortcut, action_meta]() {
+    if (record->text() == "Stop Recording") {
+      emit seq_edit->editingFinished();
+    }
+    // Blow away existing and then update
+    auto selected = table->selectedItems();
+    selected[2]->setText("");
+    while (auto item = list->layout()->takeAt(0)) delete item->widget();
+    auto action_type = action_meta.keyToValue(
+          selected[0]->text().toLocal8Bit().constData());
+    for (auto seq : ActionManager::DefaultShortcuts(action_type)) {
+      new_shortcut(seq);
+    }
+  });
+
+  layout->addWidget(edit_group, 1, 0);
+
   auto widg = new QWidget;
   widg->setLayout(layout);
   return widg;

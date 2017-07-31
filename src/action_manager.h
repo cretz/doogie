@@ -70,6 +70,7 @@ class ActionManager : public QObject {
   static ActionManager* Instance();
   static void CreateInstance(QApplication* app);
   static QAction* Action(int type);
+  static QList<QKeySequence> DefaultShortcuts(int type);
   static void registerAction(int type, QAction* action);
   static void registerAction(int type, const QString& text);
 
@@ -78,6 +79,7 @@ class ActionManager : public QObject {
   void CreateActions();
 
   QHash<int, QAction*> actions_;
+  QHash<int, QList<QKeySequence>> default_shortcuts_;
   static ActionManager* instance_;
 };
 

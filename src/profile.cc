@@ -277,6 +277,16 @@ QStringList Profile::LastTenProfilePaths() {
   return QSettings("cretz", "Doogie").value("profile/lastTen").toStringList();
 }
 
+QKeySequence Profile::KeySequenceOrEmpty(const QString& str) {
+  if (str.isEmpty()) return QKeySequence();
+  auto seq = QKeySequence::fromString(str);
+  if (seq.isEmpty()) return QKeySequence();
+  for (int i = 0; i < seq.count(); i++) {
+    if (seq[i] == Qt::Key_unknown) return QKeySequence();
+  }
+  return seq;
+}
+
 QString Profile::FriendlyName() {
   return FriendlyName(path_);
 }
@@ -405,7 +415,11 @@ bool Profile::SavePrefs() {
   for (const auto& bubble : bubbles_) {
     arr.append(bubble->prefs_);
   }
-  prefs_["bubbles"] = arr;
+  if (arr.isEmpty()) {
+    prefs_.remove("bubbles");
+  } else {
+    prefs_["bubbles"] = arr;
+  }
 
   QFile file(QDir(path_).filePath("settings.doogie.json"));
   qDebug() << "Saving profile prefs to " << file.fileName();
@@ -417,6 +431,25 @@ bool Profile::SavePrefs() {
     return false;
   }
   return true;
+}
+
+void Profile::ApplyActionShortcuts() {
+  // Go over all actions, do what the prefs or the default if
+  // no prefs
+  auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
+  auto prefs = prefs_.value("shortcuts").toObject();
+  for (int i = 0; i < action_meta.keyCount(); i++) {
+    auto seqs = ActionManager::DefaultShortcuts(action_meta.value(i));
+    if (prefs.contains(action_meta.key(i))) {
+      for (auto& pref : prefs[action_meta.key(i)].toArray()) {
+        auto seq = KeySequenceOrEmpty(pref.toString());
+        if (!seq.isEmpty()) seqs.append(seq);
+      }
+    }
+    if (!seqs.isEmpty()) {
+      ActionManager::Action(action_meta.value(i))->setShortcuts(seqs);
+    }
+  }
 }
 
 Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)

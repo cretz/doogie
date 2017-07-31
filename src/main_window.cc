@@ -205,31 +205,7 @@ void MainWindow::SetupActions() {
   });
 
   // Shortcut keys
-  // TODO: make this configurable
-  auto shortcuts = [](ActionManager::Type type, const QString& shortcuts) {
-    auto action = ActionManager::Action(type);
-    action->setShortcuts(QKeySequence::listFromString(shortcuts));
-  };
-  shortcuts(ActionManager::NewWindow, "Ctrl+N");
-  shortcuts(ActionManager::NewTopLevelPage, "Ctrl+T");
-  shortcuts(ActionManager::NewChildForegroundPage, "Ctrl+Shift+T");
-  shortcuts(ActionManager::ClosePage, "Ctrl+F4; Ctrl+W");
-  shortcuts(ActionManager::CloseAllPages, "Ctrl+Shift+F4; Ctrl+Shift+W");
-  shortcuts(ActionManager::ToggleDevTools, "F12; Ctrl+F12");
-  shortcuts(ActionManager::Reload, "F5; Ctrl+F5; Ctrl+R");
-  shortcuts(ActionManager::Stop, "Esc");
-  shortcuts(ActionManager::Back,
-            "Ctrl+Page Up; Ctrl+Shift+Page Down; Backspace");
-  shortcuts(ActionManager::Forward,
-            "Ctrl+Page Down; Ctrl+Shift+Page Up; Shift+Backspace");
-  shortcuts(ActionManager::Print, "Ctrl+P");
-  shortcuts(ActionManager::ZoomIn, "Ctrl++; Ctrl+=");
-  shortcuts(ActionManager::ZoomOut, "Ctrl+-");
-  shortcuts(ActionManager::ResetZoom, "Ctrl+0");
-  shortcuts(ActionManager::FindInPage, "Ctrl+F");
-  shortcuts(ActionManager::FocusPageTree, "Alt+1");
-  shortcuts(ActionManager::FocusAddressBar, "Alt+2; Ctrl+D");
-  shortcuts(ActionManager::FocusBrowser, "Alt+3");
+  Profile::Current()->ApplyActionShortcuts();
 
   // Setup menu
   auto menu_action = [](QMenu* menu, ActionManager::Type type) {

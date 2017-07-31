@@ -36,6 +36,7 @@ class Profile : public QObject {
   static QString FriendlyName(const QString& path);
   static QList<BrowserSetting> PossibleBrowserSettings();
   static QStringList LastTenProfilePaths();
+  static QKeySequence KeySequenceOrEmpty(const QString& str);
 
   QString FriendlyName();
   QString Path();
@@ -49,6 +50,8 @@ class Profile : public QObject {
   // If name is empty, a special "default" bubble is returned
   Bubble* BubbleByName(const QString& name);
   bool SavePrefs();
+
+  void ApplyActionShortcuts();
 
   static const QString kInMemoryPath;
 
