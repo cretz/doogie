@@ -29,6 +29,8 @@ SOURCES += \
     page_tree_dock.cc \
     page_tree_item.cc \
     profile.cc \
+    profile_change_dialog.cc \
+    profile_settings_dialog.cc \
     util.cc
 
 HEADERS += \
@@ -50,6 +52,8 @@ HEADERS += \
     page_tree_dock.h \
     page_tree_item.h \
     profile.h \
+    profile_change_dialog.h \
+    profile_settings_dialog.h \
     util.h
 
 RESOURCES += \

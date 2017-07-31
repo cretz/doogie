@@ -3,6 +3,8 @@
 #include "util.h"
 #include "action_manager.h"
 #include "profile.h"
+#include "profile_settings_dialog.h"
+#include "profile_change_dialog.h"
 
 namespace doogie {
 
@@ -167,26 +169,24 @@ void MainWindow::SetupActions() {
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
   connect(profile_settings, &QAction::triggered, [this]() {
-    bool wants_restart;
-    auto path = Profile::Current()->ShowProfileSettingsDialog(wants_restart);
-    if (!path.isEmpty() && wants_restart) {
-      launch_with_profile_on_close = path;
+    ProfileSettingsDialog dialog(Profile::Current(), this);
+    if (dialog.exec() == QDialog::Accepted && dialog.NeedsRestart()) {
+      launch_with_profile_on_close = Profile::Current()->Path();
       this->close();
     }
   });
   profile_settings->setText(QString("Profile Settings for '") +
               Profile::Current()->FriendlyName() + "'");
-  profile_settings->setEnabled(Profile::Current()->CanChangeSettings());
+  profile_settings->setEnabled(!Profile::Current()->InMemory());
   connect(ActionManager::Action(ActionManager::ChangeProfile),
           &QAction::triggered, [this]() {
-    bool wants_restart;
-    auto path = Profile::Current()->ShowChangeProfileDialog(wants_restart);
-    if (!path.isEmpty()) {
-      if (wants_restart) {
-        launch_with_profile_on_close = path;
+    ProfileChangeDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+      if (dialog.NeedsRestart()) {
+        launch_with_profile_on_close = dialog.ChosenPath();
         this->close();
       } else {
-        Profile::LaunchWithProfile(path);
+        Profile::LaunchWithProfile(dialog.ChosenPath());
       }
     }
   });
