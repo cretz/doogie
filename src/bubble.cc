@@ -1,9 +1,19 @@
 #include "bubble.h"
+#include "util.h"
 
 namespace doogie {
 
+Bubble::~Bubble() {
+}
+
 QString Bubble::Name() {
   return prefs_.value("name").toString();
+}
+
+QString Bubble::FriendlyName() {
+  auto ret = Name();
+  if (!ret.isEmpty()) return ret;
+  return "(default)";
 }
 
 CefBrowserSettings Bubble::CreateCefBrowserSettings() {
@@ -37,6 +47,25 @@ CefBrowserSettings Bubble::CreateCefBrowserSettings() {
   state(settings.webgl, "webgl");
 
   return settings;
+}
+
+QIcon Bubble::Icon() {
+  if (cached_icon_.isNull() && prefs_.contains("icon")) {
+    auto icon = prefs_["icon"].toString();
+    if (icon.isEmpty()) icon = ":/res/images/fontawesome/circle.png";
+    auto color = prefs_.value("color").toString();
+    if (!QColor::isValidColor(color)) {
+      cached_icon_ = Util::CachedIcon(icon);
+    } else {
+      cached_icon_ = QIcon(
+            *Util::CachedPixmapColorOverlay(icon, QColor(color)));
+    }
+  }
+  return cached_icon_;
+}
+
+void Bubble::InvalidateIcon() {
+  cached_icon_ = QIcon();
 }
 
 Bubble::Bubble(QJsonObject prefs, QObject* parent)

@@ -2,23 +2,23 @@
 
 namespace doogie {
 
-QPixmap* Util::CachedPixmap(const QString& resName) {
-  auto ret = QPixmapCache::find(resName);
+QPixmap* Util::CachedPixmap(const QString& res_name) {
+  auto ret = QPixmapCache::find(res_name);
   if (!ret) {
-    ret = new QPixmap(resName);
-    QPixmapCache::insert(resName, *ret);
+    ret = new QPixmap(res_name);
+    QPixmapCache::insert(res_name, *ret);
   }
   return ret;
 }
 
-QIcon Util::CachedIcon(const QString& resName) {
-  return QIcon(*CachedPixmap(resName));
+QIcon Util::CachedIcon(const QString& res_name) {
+  return QIcon(*CachedPixmap(res_name));
 }
 
-QIcon Util::CachedIconLighterDisabled(const QString& resName) {
+QIcon Util::CachedIconLighterDisabled(const QString& res_name) {
   // I didn't feel some of the disabled icons were lightened enough
-  auto pixmap = CachedPixmap(resName);
-  auto disabled_key = resName + "_lighter_disabled";
+  auto pixmap = CachedPixmap(res_name);
+  auto disabled_key = res_name + "_lighter_disabled";
   auto pixmap_disabled = QPixmapCache::find(disabled_key);
   if (!pixmap_disabled) {
     pixmap_disabled = new QPixmap(pixmap->size());
@@ -40,6 +40,24 @@ void Util::LighterDisabled(const QPixmap& source, QPixmap* dest) {
   painter.end();
 }
 
+QPixmap* Util::CachedPixmapColorOverlay(const QString& res_name,
+                                        const QColor& color) {
+  auto color_key = res_name + "__" + color.name();
+  auto pixmap = QPixmapCache::find(color_key);
+  if (!pixmap) {
+    auto orig = CachedPixmap(res_name);
+    pixmap = new QPixmap(orig->size());
+    pixmap->fill(Qt::transparent);
+    QPainter painter(pixmap);
+    painter.drawPixmap(0, 0, *orig);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(pixmap->rect(), color);
+    painter.end();
+    QPixmapCache::insert(color_key, *pixmap);
+  }
+  return pixmap;
+}
+
 QJsonObject Util::DebugWidgetGeom(QWidget* widg) {
   return Util::DebugWidgetGeom(widg, widg->rect());
 }
@@ -48,10 +66,10 @@ QJsonObject Util::DebugWidgetGeom(QWidget* widg, const QRect& rect) {
   return Util::DebugRect(widg->mapToGlobal(rect.topLeft()), rect.size());
 }
 
-QJsonObject Util::DebugRect(const QPoint& topLeft, const QSize& size) {
+QJsonObject Util::DebugRect(const QPoint& top_left, const QSize& size) {
   return {
-    {"x", topLeft.x() },
-    {"y", topLeft.y() },
+    {"x", top_left.x() },
+    {"y", top_left.y() },
     {"w", size.width() },
     {"h", size.height() }
   };

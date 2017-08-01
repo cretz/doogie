@@ -15,6 +15,7 @@ SOURCES += \
     browser_stack.cc \
     browser_widget.cc \
     bubble.cc \
+    bubble_settings_dialog.cc \
     cef.cc \
     cef_app_handler.cc \
     cef_base_widget.cc \
@@ -38,6 +39,7 @@ HEADERS += \
     browser_stack.h \
     browser_widget.h \
     bubble.h \
+    bubble_settings_dialog.h \
     cef.h \
     cef_app_handler.h \
     cef_base.h \

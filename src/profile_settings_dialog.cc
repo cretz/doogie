@@ -1,5 +1,7 @@
 #include "profile_settings_dialog.h"
 #include "action_manager.h"
+#include "util.h"
+#include "bubble_settings_dialog.h"
 
 namespace doogie {
 
@@ -15,6 +17,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
   auto tabs = new QTabWidget;
   tabs->addTab(CreateSettingsTab(), "Browser Settings");
   tabs->addTab(CreateShortcutsTab(), "Keyboard Shortcuts");
+  tabs->addTab(CreateBubblesTab(), "Bubbles");
   layout->addWidget(tabs, 1, 0, 1, 2);
   layout->setColumnStretch(0, 1);
 
@@ -30,7 +33,9 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
   auto apply_change = [this, ok]() {
-    ok->setEnabled(settings_changed_ || shortcuts_changed_);
+    ok->setEnabled(settings_changed_ ||
+                   shortcuts_changed_ ||
+                   bubbles_changed_);
     if (ok->isEnabled() && NeedsRestart()) {
       ok->setText("Save and Restart to Apply");
     } else {
@@ -39,8 +44,13 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
   };
   connect(this, &ProfileSettingsDialog::SettingsChangedUpdated, apply_change);
   connect(this, &ProfileSettingsDialog::ShortcutsChangedUpdated, apply_change);
+  connect(this, &ProfileSettingsDialog::BubblesChangedUpdated, apply_change);
 
   restoreGeometry(QSettings().value("profileSettings/geom").toByteArray());
+}
+
+ProfileSettingsDialog::~ProfileSettingsDialog() {
+  qDeleteAll(bubbles_);
 }
 
 bool ProfileSettingsDialog::NeedsRestart() {
@@ -536,6 +546,107 @@ void ProfileSettingsDialog::CheckShortcutsChange() {
   auto orig_shortcuts = profile_->prefs_.value("shortcuts").toObject();
   shortcuts_changed_ = orig_shortcuts != BuildShortcutsPrefsJson();
   if (orig != shortcuts_changed_) emit ShortcutsChangedUpdated();
+}
+
+QWidget* ProfileSettingsDialog::CreateBubblesTab() {
+  // This is going to be a list of bubbles w/ their icons in tow
+  // And the edit screen is a completely separate dialog
+  auto layout = new QGridLayout;
+
+  auto list = new QListWidget;
+  list->setSelectionBehavior(QAbstractItemView::SelectRows);
+  list->setSelectionMode(QAbstractItemView::SingleSelection);
+  // Create a copy of each bubble into a local list
+  for (const auto& prev_bubble : profile_->Bubbles()) {
+    auto bubble = new Bubble(prev_bubble->prefs_);
+    bubbles_.append(bubble);
+    auto item = new QListWidgetItem(bubble->Icon(), bubble->FriendlyName());
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    list->addItem(item);
+  }
+  layout->addWidget(list, 0, 0, 1, 5);
+  layout->setColumnStretch(0, 1);
+  auto new_bubble = new QPushButton("New Bubble");
+  layout->addWidget(new_bubble, 1, 0, Qt::AlignRight);
+  auto up_bubble = new QPushButton("Move Selected Bubble Up");
+  layout->addWidget(up_bubble, 1, 1);
+  auto down_bubble = new QPushButton("Move Selected Bubble Down");\
+  layout->addWidget(down_bubble, 1, 2);
+  auto edit_bubble = new QPushButton("Edit Selected Bubble");
+  layout->addWidget(edit_bubble, 1, 3);
+  auto delete_bubble = new QPushButton("Delete Selected Bubble");
+  layout->addWidget(delete_bubble, 1, 4);
+
+  // row is -1 for new
+  auto new_or_edit = [=](int row) {
+    QJsonObject json;
+    if (row > -1) json = bubbles_[row]->prefs_;
+    QStringList invalid_names;
+    for (int i = 0; i < bubbles_.size(); i++) {
+      if (row != i) invalid_names.append(bubbles_[i]->Name());
+    }
+    Bubble edit_bubble(json);
+    BubbleSettingsDialog bubble_settings(&edit_bubble, invalid_names, this);
+    if (bubble_settings.exec() == QDialog::Accepted) {
+      // TODO
+    }
+  };
+
+  auto update_buttons = [=]() {
+    if (list->selectedItems().isEmpty()) {
+      up_bubble->setEnabled(false);
+      down_bubble->setEnabled(false);
+      edit_bubble->setEnabled(false);
+      delete_bubble->setEnabled(false);
+    } else {
+      auto item = list->selectedItems().first();
+      auto row = list->row(item);
+      up_bubble->setEnabled(row > 0);
+      down_bubble->setEnabled(row < list->count() - 1);
+      edit_bubble->setEnabled(true);
+      delete_bubble->setEnabled(true);
+    }
+  };
+  update_buttons();
+  connect(list, &QListWidget::itemSelectionChanged, update_buttons);
+  connect(list, &QListWidget::itemDoubleClicked, [=](QListWidgetItem* item) {
+    new_or_edit(list->row(item));
+  });
+  connect(new_bubble, &QPushButton::clicked, [=]() {
+    new_or_edit(-1);
+  });
+  connect(up_bubble, &QPushButton::clicked, [=]() {
+    auto item = list->selectedItems().first();
+    auto row = list->row(item);
+    bubbles_.move(row, row - 1);
+    list->takeItem(row);
+    list->insertItem(row - 1, item);
+  });
+  connect(down_bubble, &QPushButton::clicked, [=]() {
+    auto item = list->selectedItems().first();
+    auto row = list->row(item);
+    bubbles_.move(row, row + 1);
+    list->takeItem(row);
+    list->insertItem(row + 1, item);
+  });
+  connect(edit_bubble, &QPushButton::clicked, [=]() {
+    new_or_edit(list->row(list->selectedItems().first()));
+  });
+  connect(new_bubble, &QPushButton::clicked, [=]() {
+    new_or_edit(-1);
+  });
+
+  auto widg = new QWidget;
+  widg->setLayout(layout);
+  return widg;
+}
+
+QJsonArray ProfileSettingsDialog::BuildBubblesPrefsJson() {
+  return {};
+}
+
+void ProfileSettingsDialog::CheckBubblesChange() {
+
 }
 
 QJsonObject ProfileSettingsDialog::BuildPrefsJson() {

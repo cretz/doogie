@@ -7,14 +7,16 @@ namespace doogie {
 
 class Util {
  public:
-  static QPixmap* CachedPixmap(const QString& resName);
-  static QIcon CachedIcon(const QString& resName);
-  static QIcon CachedIconLighterDisabled(const QString& resName);
+  static QPixmap* CachedPixmap(const QString& res_name);
+  static QIcon CachedIcon(const QString& res_name);
+  static QIcon CachedIconLighterDisabled(const QString& res_name);
   static void LighterDisabled(const QPixmap& source, QPixmap* dest);
+  static QPixmap* CachedPixmapColorOverlay(const QString& res_name,
+                                           const QColor& color);
 
   static QJsonObject DebugWidgetGeom(QWidget* widg);
   static QJsonObject DebugWidgetGeom(QWidget* widg, const QRect& rect);
-  static QJsonObject DebugRect(const QPoint& topLeft, const QSize& size);
+  static QJsonObject DebugRect(const QPoint& top_left, const QSize& size);
 };
 
 }  // namespace doogie

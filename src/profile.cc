@@ -390,7 +390,7 @@ CefBrowserSettings Profile::CreateBrowserSettings() {
   return settings;
 }
 
-QList<Bubble*> Profile::Bubbles() {
+const QList<Bubble*> Profile::Bubbles() {
   return bubbles_;
 }
 
@@ -413,15 +413,9 @@ bool Profile::SavePrefs() {
   // Put all bubbles back
   QJsonArray arr;
   for (const auto& bubble : bubbles_) {
-    if (!bubble->prefs_.isEmpty()) {
-      arr.append(bubble->prefs_);
-    }
+    arr.append(bubble->prefs_);
   }
-  if (arr.isEmpty()) {
-    prefs_.remove("bubbles");
-  } else {
-    prefs_["bubbles"] = arr;
-  }
+  prefs_["bubbles"] = arr;
 
   QFile file(QDir(path_).filePath("settings.doogie.json"));
   qDebug() << "Saving profile prefs to " << file.fileName();

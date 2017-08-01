@@ -45,7 +45,7 @@ class Profile : public QObject {
   CefSettings CreateCefSettings();
   CefBrowserSettings CreateBrowserSettings();
 
-  QList<Bubble*> Bubbles();
+  const QList<Bubble*> Bubbles();
   Bubble* DefaultBubble();
   // If name is empty, a special "default" bubble is returned
   Bubble* BubbleByName(const QString& name);
