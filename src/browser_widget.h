@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "cef_widget.h"
 #include "find_widget.h"
+#include "bubble.h"
 
 namespace doogie {
 
@@ -23,6 +24,7 @@ class BrowserWidget : public QWidget {
   Q_ENUM(ContextMenuCommand)
 
   explicit BrowserWidget(Cef* cef,
+                         Bubble* bubble,
                          const QString& url = "",
                          QWidget* parent = nullptr);
 
@@ -30,6 +32,8 @@ class BrowserWidget : public QWidget {
   void TryClose();
   void FocusUrlEdit();
   void FocusBrowser();
+  Bubble* CurrentBubble();
+  void ChangeCurrentBubble(Bubble* bubble);
   QIcon CurrentFavicon();
   QString CurrentTitle();
   QString CurrentUrl();
@@ -71,6 +75,7 @@ class BrowserWidget : public QWidget {
   void AboutToShowJSDialog();
   void CloseCancelled();
   void SuspensionChanged();
+  void BubbleMaybeChanged();
 
  protected:
   void moveEvent(QMoveEvent* event) override;
@@ -88,6 +93,7 @@ class BrowserWidget : public QWidget {
                                 CefContextMenuHandler::EventFlags event_flags);
 
   Cef* cef_;
+  Bubble* bubble_;
   QToolButton* back_button_ = nullptr;
   QToolButton* forward_button_ = nullptr;
   QMenu* nav_menu_ = nullptr;

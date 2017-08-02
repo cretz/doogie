@@ -50,15 +50,21 @@ CefBrowserSettings Bubble::CreateCefBrowserSettings() {
 }
 
 QIcon Bubble::Icon() {
-  if (cached_icon_.isNull() && prefs_.contains("icon")) {
-    auto icon = prefs_["icon"].toString();
-    if (icon.isEmpty()) icon = ":/res/images/fontawesome/circle.png";
-    auto color = prefs_.value("color").toString();
-    if (!QColor::isValidColor(color)) {
-      cached_icon_ = Util::CachedIcon(icon);
+  if (cached_icon_.isNull()) {
+    if (prefs_.contains("icon")) {
+      auto icon = prefs_["icon"].toString();
+      if (icon.isEmpty()) icon = ":/res/images/fontawesome/circle.png";
+      auto color = prefs_.value("color").toString();
+      if (!QColor::isValidColor(color)) {
+        cached_icon_ = Util::CachedIcon(icon);
+      } else {
+        cached_icon_ = QIcon(
+              *Util::CachedPixmapColorOverlay(icon, QColor(color)));
+      }
     } else {
-      cached_icon_ = QIcon(
-            *Util::CachedPixmapColorOverlay(icon, QColor(color)));
+      QPixmap pixmap(16, 16);
+      pixmap.fill(Qt::transparent);
+      cached_icon_ = QIcon(pixmap);
     }
   }
   return cached_icon_;

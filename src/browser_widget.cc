@@ -4,9 +4,10 @@
 namespace doogie {
 
 BrowserWidget::BrowserWidget(Cef* cef,
+                             Bubble* bubble,
                              const QString& url,
                              QWidget* parent)
-    : QWidget(parent), cef_(cef) {
+    : QWidget(parent), cef_(cef), bubble_(bubble) {
 
   nav_menu_ = new QMenu(this);
   // When this menu is about to be opened we have to populate the items
@@ -126,6 +127,17 @@ void BrowserWidget::FocusUrlEdit() {
 
 void BrowserWidget::FocusBrowser() {
   cef_widg_->setFocus();
+}
+
+Bubble* BrowserWidget::CurrentBubble() {
+  return bubble_;
+}
+
+void BrowserWidget::ChangeCurrentBubble(Bubble* bubble) {
+  bubble_ = bubble;
+  emit BubbleMaybeChanged();
+  // TODO: test when suspended
+  RecreateCefWidget(CurrentUrl());
 }
 
 QIcon BrowserWidget::CurrentFavicon() {
@@ -277,7 +289,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     cef_widg_->disconnect();
     cef_widg_->deleteLater();
   }
-  cef_widg_ = new CefWidget(cef_, url, this);
+  cef_widg_ = new CefWidget(cef_, bubble_, url, this);
   connect(cef_widg_, &CefWidget::PreContextMenu,
           this, &BrowserWidget::BuildContextMenu);
   connect(cef_widg_, &CefWidget::ContextMenuCommand,

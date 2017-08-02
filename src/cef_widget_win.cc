@@ -6,13 +6,12 @@
 namespace doogie {
 
 void CefWidget::InitBrowser(const QString& url) {
-  auto settings = Profile::Current()->
-      DefaultBubble()->CreateCefBrowserSettings();
-  browser_ = CefBrowserHost::CreateBrowserSync(window_info_,
-                                               handler_,
-                                               CefString(url.toStdString()),
-                                               settings,
-                                               nullptr);
+  browser_ = CefBrowserHost::CreateBrowserSync(
+        window_info_,
+        handler_,
+        CefString(url.toStdString()),
+        bubble_->CreateCefBrowserSettings(),
+        nullptr);
 }
 
 void CefWidget::UpdateSize() {

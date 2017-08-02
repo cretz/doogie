@@ -10,7 +10,9 @@ namespace doogie {
 class ProfileSettingsDialog : public QDialog {
   Q_OBJECT
  public:
-  explicit ProfileSettingsDialog(Profile*, QWidget* parent = nullptr);
+  explicit ProfileSettingsDialog(Profile* profile,
+                                 QSet<QString> in_use_bubble_names,
+                                 QWidget* parent = nullptr);
   ~ProfileSettingsDialog();
   bool NeedsRestart();
   void done(int r) override;
@@ -36,6 +38,7 @@ class ProfileSettingsDialog : public QDialog {
   QJsonObject BuildPrefsJson();
 
   Profile* profile_;
+  QSet<QString> in_use_bubble_names_;
 
   QCheckBox* cache_path_disabled_;
   QLineEdit* cache_path_edit_;

@@ -6,7 +6,7 @@ namespace doogie {
 
 PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     : QTreeWidget(parent), browser_stack_(browser_stack) {
-  setColumnCount(2);
+  setColumnCount(PageTreeItem::kCloseButtonColumn + 1);
   setHeaderHidden(true);
   setSelectionBehavior(QAbstractItemView::SelectItems);
   setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -20,7 +20,11 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   setAnimated(false);
   header()->setStretchLastSection(false);
   header()->setSectionResizeMode(0, QHeaderView::Stretch);
-  header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  setColumnWidth(PageTreeItem::kBubbleIconColumn, 16);
+  header()->setSectionResizeMode(PageTreeItem::kBubbleIconColumn,
+                                 QHeaderView::Fixed);
+  header()->setSectionResizeMode(PageTreeItem::kCloseButtonColumn,
+                                 QHeaderView::ResizeToContents);
 
   // Emit empty on row removal
   connect(model(), &QAbstractItemModel::rowsRemoved,
@@ -68,7 +72,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
       // Only applies if there is a close button under the mouse. It also
       // can't be the last one we saw being dragged on
       if (mouse_item && mouse_item != close_dragging_on_ &&
-          columnAt(local_pos.x()) == 1) {
+          columnAt(local_pos.x()) == PageTreeItem::kCloseButtonColumn) {
         // Flip the checked state
         mouse_item->CloseButton()->setChecked(
               !mouse_item->CloseButton()->isChecked());
@@ -97,7 +101,13 @@ PageTreeItem* PageTree::CurrentItem()  {
 PageTreeItem* PageTree::NewPage(const QString &url,
                                 PageTreeItem* parent,
                                 bool make_current) {
-  auto browser = browser_stack_->NewBrowser(url);
+  Bubble* bubble;
+  if (parent) {
+    bubble = parent->Browser()->CurrentBubble();
+  } else {
+    bubble = Profile::Current()->DefaultBubble();
+  }
+  auto browser = browser_stack_->NewBrowser(bubble, url);
   return AddBrowser(browser, parent, make_current);
 }
 
@@ -270,9 +280,9 @@ bool PageTree::dropMimeData(QTreeWidgetItem* parent,
   // If there is a URL we go ahead and put each one under the parent
   if (data->hasUrls()) {
     for (const auto& url : data->urls()) {
-      AddBrowser(browser_stack_->NewBrowser(url.url()),
-                 static_cast<PageTreeItem*>(parent),
-                 true);
+      NewPage(url.url(),
+              static_cast<PageTreeItem*>(parent),
+              true);
     }
     return true;
   }
@@ -664,7 +674,7 @@ PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
     if (type != CefHandler::OpenTypeNewWindow) {
       parent = browser_item;
     }
-    AddBrowser(browser_stack_->NewBrowser(url), parent, make_current);
+    NewPage(url, parent, make_current);
     if (make_current) browser_item->Browser()->FocusBrowser();
   });
   return browser_item;
@@ -694,9 +704,7 @@ void PageTree::DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent) {
   // No parent means grab from item (which can still be no parent)
   if (!to_parent) to_parent = item->Parent();
   // Duplicate myself first, then children
-  auto new_item = AddBrowser(
-        browser_stack_->NewBrowser(item->Browser()->CurrentUrl()),
-        to_parent, false);
+  auto new_item = NewPage(item->Browser()->CurrentUrl(), to_parent, false);
   for (int i = 0; i < item->childCount(); i++) {
     DuplicateTree(static_cast<PageTreeItem*>(item->child(i)), new_item);
   }

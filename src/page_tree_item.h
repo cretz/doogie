@@ -27,6 +27,11 @@ class PageTreeItem : public QTreeWidgetItem {
 
   QList<PageTreeItem*> Siblings();
 
+  QMenu* CreateBubbleSelectMenu();
+
+  static const int kBubbleIconColumn = 1;
+  static const int kCloseButtonColumn = 2;
+
  private:
   void ApplyFavicon();
 

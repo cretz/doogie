@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include "browser_widget.h"
+#include "bubble.h"
 
 namespace doogie {
 
@@ -11,8 +12,9 @@ class BrowserStack : public QStackedWidget {
 
  public:
   explicit BrowserStack(Cef* cef, QWidget* parent = nullptr);
-  QPointer<BrowserWidget> NewBrowser(const QString& url);
+  QPointer<BrowserWidget> NewBrowser(Bubble* bubble, const QString& url);
   BrowserWidget* CurrentBrowser();
+  QList<BrowserWidget*> Browsers();
 
  signals:
   void BrowserChanged(BrowserWidget* browser);

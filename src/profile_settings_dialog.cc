@@ -6,8 +6,12 @@
 
 namespace doogie {
 
-ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
-    : QDialog(parent), profile_(profile) {
+ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile,
+                                             QSet<QString> in_use_bubble_names,
+                                             QWidget* parent)
+    : QDialog(parent),
+      profile_(profile),
+      in_use_bubble_names_(in_use_bubble_names) {
 
   auto layout = new QGridLayout;
   layout->addWidget(
@@ -63,13 +67,29 @@ void ProfileSettingsDialog::done(int r) {
   if (r == Accepted) {
     auto old = profile_->prefs_;
     profile_->prefs_ = BuildPrefsJson();
-    // Also copy all bubbles and delete existing ones
+    // Update all bubbles by their name
     if (bubbles_changed_) {
-      qDeleteAll(profile_->bubbles_);
-      profile_->bubbles_.clear();
+      // We have to assume no bubbles are deleted that are in use
+      QList<Bubble*> new_bubbles;
+      QSet<QString> names_found;
       for (const auto& bubble : bubbles_) {
-        profile_->bubbles_.append(new Bubble(bubble->prefs_, profile_));
+        auto existing_bubble = profile_->BubbleByName(bubble->Name());
+        names_found.insert(bubble->Name());
+        if (existing_bubble) {
+          existing_bubble->prefs_ = bubble->prefs_;
+          existing_bubble->InvalidateIcon();
+          new_bubbles.append(existing_bubble);
+        } else {
+          new_bubbles.append(new Bubble(bubble->prefs_, profile_));
+        }
       }
+      // Delete bubbles whose names weren't found
+      for (auto bubble : profile_->Bubbles()) {
+        if (!names_found.contains(bubble->Name())) {
+          bubble->deleteLater();
+        }
+      }
+      profile_->bubbles_ = new_bubbles;
     }
     if (!profile_->SavePrefs()) {
       QMessageBox::critical(nullptr, "Save Profile", "Error saving profile");
@@ -551,20 +571,27 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
     bubbles_.append(bubble);
     auto item = new QListWidgetItem(bubble->Icon(), bubble->FriendlyName());
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    if (in_use_bubble_names_.contains(bubble->Name())) {
+      item->setText(item->text() + "*");
+    }
     list->addItem(item);
   }
   layout->addWidget(list, 1, 0, 1, 5);
   layout->setColumnStretch(0, 1);
+  auto in_use_label = new QLabel(
+      "* - Bubbles on existing pages cannot be edited or deleted.");
+  layout->addWidget(in_use_label, 2, 0, 1, 5);
+  if (in_use_bubble_names_.isEmpty()) in_use_label->setVisible(false);
   auto new_bubble = new QPushButton("New Bubble");
-  layout->addWidget(new_bubble, 2, 0, Qt::AlignRight);
+  layout->addWidget(new_bubble, 3, 0, Qt::AlignRight);
   auto up_bubble = new QPushButton("Move Selected Bubble Up");
-  layout->addWidget(up_bubble, 2, 1);
+  layout->addWidget(up_bubble, 3, 1);
   auto down_bubble = new QPushButton("Move Selected Bubble Down");\
-  layout->addWidget(down_bubble, 2, 2);
+  layout->addWidget(down_bubble, 3, 2);
   auto edit_bubble = new QPushButton("Edit Selected Bubble");
-  layout->addWidget(edit_bubble, 2, 3);
+  layout->addWidget(edit_bubble, 3, 3);
   auto delete_bubble = new QPushButton("Delete Selected Bubble");
-  layout->addWidget(delete_bubble, 2, 4);
+  layout->addWidget(delete_bubble, 3, 4);
 
   // row is -1 for new
   auto new_or_edit = [=](int row) {
@@ -605,14 +632,18 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
       auto row = list->row(item);
       up_bubble->setEnabled(row > 0);
       down_bubble->setEnabled(row < list->count() - 1);
-      edit_bubble->setEnabled(true);
-      delete_bubble->setEnabled(list->count() > 1);
+      auto editable = !in_use_bubble_names_.contains(bubbles_[row]->Name());
+      edit_bubble->setEnabled(editable);
+      delete_bubble->setEnabled(editable && list->count() > 1);
     }
   };
   update_buttons();
   connect(list, &QListWidget::itemSelectionChanged, update_buttons);
   connect(list, &QListWidget::itemDoubleClicked, [=](QListWidgetItem* item) {
-    new_or_edit(list->row(item));
+    auto row = list->row(item);
+    if (!in_use_bubble_names_.contains(bubbles_[row]->Name())) {
+      new_or_edit(row);
+    }
   });
   connect(new_bubble, &QPushButton::clicked, [=]() {
     new_or_edit(-1);
@@ -642,7 +673,9 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   });
   connect(delete_bubble, &QPushButton::clicked, [=]() {
     auto row = list->row(list->selectedItems().first());
-    delete bubbles_.takeAt(row);
+    // XXX: we recognize the leak here and accept it just in case
+    // there are browsers still holding on to bubbles.
+    bubbles_.removeAt(row);
     delete list->takeItem(row);
     CheckBubblesChange();
     update_buttons();

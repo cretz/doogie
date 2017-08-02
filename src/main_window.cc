@@ -169,7 +169,11 @@ void MainWindow::SetupActions() {
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
   connect(profile_settings, &QAction::triggered, [this]() {
-    ProfileSettingsDialog dialog(Profile::Current(), this);
+    QSet<QString> in_use_names;
+    for (const auto& browser : browser_stack_->Browsers()) {
+      in_use_names.insert(browser->CurrentBubble()->Name());
+    }
+    ProfileSettingsDialog dialog(Profile::Current(), in_use_names, this);
     if (dialog.exec() == QDialog::Accepted && dialog.NeedsRestart()) {
       launch_with_profile_on_close = Profile::Current()->Path();
       this->close();

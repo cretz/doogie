@@ -53,6 +53,14 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
       // Icon change should happen on load
     }
   });
+  browser->connect(browser, &BrowserWidget::BubbleMaybeChanged, [=]() {
+    auto label = qobject_cast<QLabel*>(
+          treeWidget()->itemWidget(this, kBubbleIconColumn));
+    if (label) {
+      label->setPixmap(browser_->CurrentBubble()->Icon().pixmap(16, 16));
+      label->setToolTip("Bubble: " + browser_->CurrentBubble()->FriendlyName());
+    }
+  });
 }
 
 PageTreeItem::~PageTreeItem() {
@@ -72,6 +80,20 @@ QToolButton* PageTreeItem::CloseButton() {
 void PageTreeItem::AfterAdded() {
   auto tree = static_cast<PageTree*>(treeWidget());
   ApplyFavicon();
+
+  // Set the icon
+  auto label = new QLabel;
+  label->setFixedWidth(16);
+  label->setAlignment(Qt::AlignCenter);
+  label->setPixmap(browser_->CurrentBubble()->Icon().pixmap(16, 16));
+  label->setToolTip("Bubble: " + browser_->CurrentBubble()->FriendlyName());
+  tree->setItemWidget(this, kBubbleIconColumn, label);
+  label->setContextMenuPolicy(Qt::CustomContextMenu);
+  tree->connect(label, &QLabel::customContextMenuRequested, [=]() {
+    auto menu = CreateBubbleSelectMenu();
+    menu->exec(label->mapToGlobal(label->rect().bottomLeft()));
+    menu->deleteLater();
+  });
 
   // Create a new close button everytime because it is destroyed otherwise
   close_button_ = new QToolButton();
@@ -94,7 +116,7 @@ void PageTreeItem::AfterAdded() {
   tree->connect(close_button_, &QAbstractButton::released, [this, tree]() {
     emit tree->ItemCloseRelease(this);
   });
-  tree->setItemWidget(this, 1, close_button_);
+  tree->setItemWidget(this, kCloseButtonColumn, close_button_);
   // Gotta call it on my children too sadly
   for (int i = 0; i < childCount(); i++) {
     static_cast<PageTreeItem*>(child(i))->AfterAdded();
@@ -179,6 +201,23 @@ QList<PageTreeItem*> PageTreeItem::Siblings() {
     ret.append(static_cast<PageTreeItem*>(my_parent->child(i)));
   }
   return ret;
+}
+
+QMenu* PageTreeItem::CreateBubbleSelectMenu() {
+  auto menu = new QMenu(treeWidget());
+  for (const auto& bubble : Profile::Current()->Bubbles()) {
+    auto action = menu->addAction(bubble->Icon(), bubble->FriendlyName());
+    if (bubble->Name() == browser_->CurrentBubble()->Name()) {
+      action->setCheckable(true);
+      action->setChecked(true);
+      action->setDisabled(true);
+    } else {
+      treeWidget()->connect(action, &QAction::triggered, [=]() {
+        browser_->ChangeCurrentBubble(bubble);
+      });
+    }
+  }
+  return menu;
 }
 
 void PageTreeItem::ApplyFavicon() {

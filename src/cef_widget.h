@@ -5,6 +5,7 @@
 #include <vector>
 #include "cef_base_widget.h"
 #include "cef_handler.h"
+#include "bubble.h"
 
 namespace doogie {
 
@@ -20,12 +21,13 @@ class CefWidget : public CefBaseWidget {
   std::vector<NavEntry> NavEntries();
 
   explicit CefWidget(Cef* cef,
+                     Bubble* bubble,
                      const QString& url = "",
                      QWidget* parent = nullptr);
   ~CefWidget();
 
   // If result is non-null, it needs to replace this widget
-  QPointer<QWidget> OverrideWidget();\
+  QPointer<QWidget> OverrideWidget();
   void LoadUrl(const QString& url);
   QString CurrentUrl();
   void TryClose();
@@ -117,6 +119,7 @@ class CefWidget : public CefBaseWidget {
 
   void InitBrowser(const QString& url);
 
+  Bubble* bubble_;
   CefRefPtr<CefHandler> handler_;
   CefRefPtr<CefBrowser> browser_;
   CefRefPtr<CefHandler> dev_tools_handler_;

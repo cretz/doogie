@@ -3,8 +3,11 @@
 
 namespace doogie {
 
-CefWidget::CefWidget(Cef* cef, const QString& url, QWidget* parent)
-    : CefBaseWidget(cef, parent) {
+CefWidget::CefWidget(Cef* cef,
+                     Bubble* bubble,
+                     const QString& url,
+                     QWidget* parent)
+    : CefBaseWidget(cef, parent), bubble_(bubble) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
   connect(handler_, &CefHandler::PreContextMenu,

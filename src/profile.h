@@ -47,7 +47,6 @@ class Profile : public QObject {
 
   const QList<Bubble*> Bubbles();
   Bubble* DefaultBubble();
-  // If name is empty, a special "default" bubble is returned
   Bubble* BubbleByName(const QString& name);
   bool SavePrefs();
 

@@ -12,8 +12,9 @@ BrowserStack::BrowserStack(Cef* cef, QWidget* parent)
   SetupActions();
 }
 
-QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
-  auto widg = new BrowserWidget(cef_, "");
+QPointer<BrowserWidget> BrowserStack::NewBrowser(Bubble* bubble,
+                                                 const QString& url) {
+  auto widg = new BrowserWidget(cef_, bubble, "");
   connect(widg, &BrowserWidget::LoadingStateChanged, [this, widg]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();
   });
@@ -32,6 +33,15 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(const QString& url) {
 
 BrowserWidget* BrowserStack::CurrentBrowser() {
   return static_cast<BrowserWidget*>(currentWidget());
+}
+
+QList<BrowserWidget*> BrowserStack::Browsers() {
+  QList<BrowserWidget*> ret;
+  for (int i = 0; i < count(); i++) {
+    auto browser = qobject_cast<BrowserWidget*>(widget(i));
+    if (browser) ret.append(browser);
+  }
+  return ret;
 }
 
 void BrowserStack::SetupActions() {

@@ -243,6 +243,16 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
                                                  existing);
     if (!dir.isEmpty()) cache_path_edit->setText(dir);
   });
+  if (!cef.contains("cachePath")) {
+    cache_path_default->setChecked(true);
+  } else {
+    cache_path_default->setChecked(false);
+    if (cef["cachePath"].isNull()) {
+      cache_path_disabled->setChecked(true);
+    } else {
+      cache_path_edit->setText(cef["cachePath"].toString());
+    }
+  }
 
   settings->AddSetting(
         "Cache Path",
@@ -310,7 +320,7 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
         cef["cachePath"] = cache_path_edit->text();
       }
     }
-    if (enable_net_sec->currentIndex() == 0) {
+    if (enable_net_sec->currentIndex() > 0) {
       cef["enableNetSecurityExpiration"] = enable_net_sec->currentIndex() == 1;
     }
     if (user_prefs->currentIndex() > 0) {
