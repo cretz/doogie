@@ -32,6 +32,7 @@ SOURCES += \
     profile.cc \
     profile_change_dialog.cc \
     profile_settings_dialog.cc \
+    settings_widget.cc \
     util.cc
 
 HEADERS += \
@@ -56,6 +57,7 @@ HEADERS += \
     profile.h \
     profile_change_dialog.h \
     profile_settings_dialog.h \
+    settings_widget.h \
     util.h
 
 RESOURCES += \

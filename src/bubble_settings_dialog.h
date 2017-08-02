@@ -17,11 +17,18 @@ class BubbleSettingsDialog : public QDialog {
  private:
   QLayoutItem* CreateNameSection();
   QLayoutItem* CreateIconSection();
+  QLayoutItem* CreateSettingsSection();
+  void CheckSettingsChanged();
 
   Bubble* bubble_;
+  QJsonObject orig_prefs_;
   QStringList invalid_names_;
   QPushButton* ok_;
   QPushButton* cancel_;
+  bool settings_changed_;
+
+ signals:
+  void SettingsChangedUpdated();
 };
 
 }  // namespace doogie

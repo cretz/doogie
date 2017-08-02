@@ -1,4 +1,5 @@
 #include "bubble_settings_dialog.h"
+#include "settings_widget.h"
 
 namespace doogie {
 
@@ -6,7 +7,9 @@ BubbleSettingsDialog::BubbleSettingsDialog(Bubble* bubble,
                                            QStringList invalid_names,
                                            QWidget* parent)
     : QDialog(parent), bubble_(bubble), invalid_names_(invalid_names) {
+  orig_prefs_ = bubble->prefs_;
   ok_ = new QPushButton("OK");
+  ok_->setEnabled(false);
   cancel_ = new QPushButton("Cancel");
 
   auto layout = new QGridLayout;
@@ -18,13 +21,32 @@ BubbleSettingsDialog::BubbleSettingsDialog(Bubble* bubble,
   layout->addItem(CreateNameSection(), 0, 0, 1, 2);
   layout->addWidget(hr(), 1, 0, 1, 2);
   layout->addItem(CreateIconSection(), 2, 0, 1, 2);
+  layout->addWidget(hr(), 3, 0, 1, 2);
+  layout->addItem(CreateSettingsSection(), 4, 0, 1, 2);
+  layout->addWidget(hr(), 5, 0, 1, 2);
   layout->setColumnStretch(0, 1);
-  layout->addWidget(ok_, 3, 0, Qt::AlignRight);
-  layout->addWidget(cancel_, 3, 1);
+  layout->addWidget(ok_, 6, 0, Qt::AlignRight);
+  layout->addWidget(cancel_, 6, 1);
 
-  setWindowTitle("Profile Settings");
+  setWindowTitle("Bubble Settings");
   setSizeGripEnabled(true);
   setLayout(layout);
+
+  connect(ok_, &QPushButton::clicked, this, &QDialog::accept);
+  connect(cancel_, &QPushButton::clicked, this, &QDialog::reject);
+  auto check_ok_enabled = [=]() {
+    if (!settings_changed_) {
+      ok_->setEnabled(false);
+    } else {
+      auto name_valid = !invalid_names.contains(
+            bubble_->prefs_.value("name").toString());
+      ok_->setEnabled(name_valid);
+    }
+  };
+  check_ok_enabled();
+  connect(this,
+          &BubbleSettingsDialog::SettingsChangedUpdated,
+          check_ok_enabled);
 }
 
 QLayoutItem* BubbleSettingsDialog::CreateNameSection() {
@@ -38,7 +60,7 @@ QLayoutItem* BubbleSettingsDialog::CreateNameSection() {
   auto name_err = new QLabel;
   name_err->setStyleSheet("color: red");
   layout->addWidget(name_err);
-  connect(name_edit, &QLineEdit::textChanged, [=]() {
+  auto name_changed = [=]() {
     if (invalid_names_.contains(name_edit->text())) {
       name_err->setText("Name exists");
     } else {
@@ -49,7 +71,10 @@ QLayoutItem* BubbleSettingsDialog::CreateNameSection() {
     } else {
       bubble_->prefs_["name"] = name_edit->text();
     }
-  });
+    CheckSettingsChanged();
+  };
+  name_changed();
+  connect(name_edit, &QLineEdit::textChanged, name_changed);
   return layout;
 }
 
@@ -68,11 +93,11 @@ QLayoutItem* BubbleSettingsDialog::CreateIconSection() {
   layout->addLayout(hlayout, 0, 1);
   layout->setColumnStretch(1, 1);
   hlayout = new QHBoxLayout;
-  hlayout->addStretch(1);
   auto choose_file = new QPushButton("Choose Image File");
   hlayout->addWidget(choose_file);
   auto reset = new QPushButton("Reset to Default");
   hlayout->addWidget(reset);
+  hlayout->addStretch(1);
   layout->addLayout(hlayout, 1, 1);
   hlayout = new QHBoxLayout;
   auto icon_color_enabled = new QCheckBox("Color Override");
@@ -122,6 +147,7 @@ QLayoutItem* BubbleSettingsDialog::CreateIconSection() {
       icon_color_enabled->setEnabled(false);
       icon_color->setEnabled(false);
     }
+    CheckSettingsChanged();
   };
   update_icon_info();
   connect(icon_enabled, &QCheckBox::clicked, [=](bool checked) {
@@ -171,6 +197,168 @@ QLayoutItem* BubbleSettingsDialog::CreateIconSection() {
   });
 
   return layout;
+}
+
+QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
+  auto layout = new QVBoxLayout;
+  auto warn_restart =
+      new QLabel("NOTE: Most changes to these settings only apply to new "
+                 "pages in this bubble, not current open ones.");
+  warn_restart->setStyleSheet("color: red; font-weight: bold");
+  layout->addWidget(warn_restart);
+
+  auto settings = new SettingsWidget;
+  layout->addWidget(settings);
+
+  auto cef = bubble_->prefs_.value("cef").toObject();
+
+  auto cache_path_layout = new QHBoxLayout;
+  auto cache_path_default = new QCheckBox("Same as profile");
+  cache_path_layout->addWidget(cache_path_default);
+  auto cache_path_disabled = new QCheckBox("No cache");
+  cache_path_layout->addWidget(cache_path_disabled);
+  auto cache_path_edit = new QLineEdit;
+  cache_path_edit->setPlaceholderText("Default: PROFILE_DIR/cache");
+  cache_path_layout->addWidget(cache_path_edit, 1);
+  auto cache_path_open = new QToolButton();
+  cache_path_open->setAutoRaise(true);
+  cache_path_open->setText("...");
+  cache_path_layout->addWidget(cache_path_open);
+  auto cache_path_widg = new QWidget;
+  cache_path_widg->setLayout(cache_path_layout);
+  connect(cache_path_default, &QCheckBox::toggled, [=](bool checked) {
+    cache_path_disabled->setEnabled(!checked);
+    cache_path_edit->setEnabled(!checked && !cache_path_disabled->isChecked());
+    cache_path_open->setEnabled(!checked && !cache_path_disabled->isChecked());
+  });
+  connect(cache_path_disabled, &QCheckBox::toggled, [=](bool checked) {
+    cache_path_edit->setEnabled(!checked && !cache_path_default->isChecked());
+    cache_path_open->setEnabled(!checked && !cache_path_default->isChecked());
+  });
+  connect(cache_path_open, &QToolButton::clicked, [=]() {
+    auto existing = cache_path_edit->text();
+    if (existing.isEmpty()) existing = Profile::Current()->Path();
+    auto dir = QFileDialog::getExistingDirectory(this,
+                                                 "Choose Cache Path",
+                                                 existing);
+    if (!dir.isEmpty()) cache_path_edit->setText(dir);
+  });
+
+  settings->AddSetting(
+        "Cache Path",
+        "The location where cache data is stored on disk, if any. ",
+        cache_path_widg);
+  settings->AddSettingBreak();
+
+  auto enable_net_sec_index = 0;
+  if (cef.contains("enableNetSecurityExpiration")) {
+    enable_net_sec_index = cef["enableNetSecurityExpiration"].toBool() ? 1 : 0;
+  }
+  auto enable_net_sec = settings->AddComboBoxSetting(
+      "Enable Net Security Expiration",
+      "Enable date-based expiration of built in network security information "
+      "(i.e. certificate transparency logs, HSTS preloading and pinning "
+      "information). Enabling this option improves network security but may "
+      "cause HTTPS load failures when using CEF binaries built more than 10 "
+      "weeks in the past. See https://www.certificate-transparency.org/ and "
+      "https://www.chromium.org/hsts for details.",
+      { "Same as profile", "Enabled", "Disabled" },
+      enable_net_sec_index);
+
+  auto user_pref_index = 0;
+  if (cef.contains("persistUserPreferences")) {
+    user_pref_index = cef["persistUserPreferences"].toBool() ? 1 : 0;
+  }
+  auto user_prefs = settings->AddComboBoxSetting(
+        "Persist User Preferences",
+        "Whether to persist user preferences as a JSON file "
+        "in the cache path. Requires cache to be enabled.",
+        { "Same as profile", "Enabled", "Disabled" },
+        user_pref_index);
+  settings->AddSettingBreak();
+
+  auto user_agent = new QLineEdit;
+  user_agent->setPlaceholderText("Same as profile");
+  settings->AddSetting(
+        "User Agent",
+        "Custom user agent override.",
+        user_agent);
+  if (cef.contains("userAgent")) {
+    user_agent->setText(cef.value("userAgent").toString());
+  }
+
+  auto browser = bubble_->prefs_.value("browser").toObject();
+  QHash<QString, QComboBox*> browser_settings;
+  for (const auto& setting : Profile::PossibleBrowserSettings()) {
+    settings->AddSettingBreak();
+    auto index = 0;
+    if (browser.contains(setting.field)) {
+      index = browser[setting.field].toBool() ? 1 : 0;
+    }
+    browser_settings[setting.name] = settings->AddComboBoxSetting(
+          setting.name, setting.desc,
+          { "Same as profile", "Enabled", "Disabled" },
+          index);
+  }
+
+  auto update_cef_prefs = [=]() {
+    QJsonObject cef;
+    if (!cache_path_default->isChecked()) {
+      if (cache_path_disabled->isChecked()) {
+        cef["cachePath"] = QJsonValue();
+      } else {
+        cef["cachePath"] = cache_path_edit->text();
+      }
+    }
+    if (enable_net_sec->currentIndex() == 0) {
+      cef["enableNetSecurityExpiration"] = enable_net_sec->currentIndex() == 1;
+    }
+    if (user_prefs->currentIndex() > 0) {
+      cef["persistUserPreferences"] = user_prefs->currentIndex() == 1;
+    }
+    if (!user_agent->text().isEmpty()) {
+      cef["userAgent"] = user_agent->text();
+    }
+    if (cef.isEmpty()) {
+      bubble_->prefs_.remove("cef");
+    } else {
+      bubble_->prefs_["cef"] = cef;
+    }
+    CheckSettingsChanged();
+  };
+
+  connect(cache_path_default, &QCheckBox::clicked, update_cef_prefs);
+  connect(cache_path_disabled, &QCheckBox::clicked, update_cef_prefs);
+  connect(cache_path_edit, &QLineEdit::textChanged, update_cef_prefs);
+  connect(enable_net_sec, &QComboBox::currentTextChanged, update_cef_prefs);
+  connect(user_prefs, &QComboBox::currentTextChanged, update_cef_prefs);
+
+  auto update_browser_prefs = [=]() {
+    QJsonObject browser;
+    for (const auto& setting : Profile::PossibleBrowserSettings()) {
+      auto index = browser_settings[setting.name]->currentIndex();
+      if (index > 0) browser[setting.field] = index == 1;
+    }
+    if (browser.isEmpty()) {
+      bubble_->prefs_.remove("browser");
+    } else {
+      bubble_->prefs_["browser"] = browser;
+    }
+    CheckSettingsChanged();
+  };
+  for (const auto& setting : Profile::PossibleBrowserSettings()) {
+    connect(browser_settings[setting.name],
+            &QComboBox::currentTextChanged,
+            update_browser_prefs);
+  }
+
+  return layout;
+}
+
+void BubbleSettingsDialog::CheckSettingsChanged() {
+  auto orig = settings_changed_;
+  settings_changed_ = orig_prefs_ != bubble_->prefs_;
+  if (settings_changed_ != orig) emit SettingsChangedUpdated();
 }
 
 }  // namespace doogie

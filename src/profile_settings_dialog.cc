@@ -2,6 +2,7 @@
 #include "action_manager.h"
 #include "util.h"
 #include "bubble_settings_dialog.h"
+#include "settings_widget.h"
 
 namespace doogie {
 
@@ -51,6 +52,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile, QWidget* parent)
 
 ProfileSettingsDialog::~ProfileSettingsDialog() {
   qDeleteAll(bubbles_);
+  bubbles_.clear();
 }
 
 bool ProfileSettingsDialog::NeedsRestart() {
@@ -61,6 +63,14 @@ void ProfileSettingsDialog::done(int r) {
   if (r == Accepted) {
     auto old = profile_->prefs_;
     profile_->prefs_ = BuildPrefsJson();
+    // Also copy all bubbles and delete existing ones
+    if (bubbles_changed_) {
+      qDeleteAll(profile_->bubbles_);
+      profile_->bubbles_.clear();
+      for (const auto& bubble : bubbles_) {
+        profile_->bubbles_.append(new Bubble(bubble->prefs_, profile_));
+      }
+    }
     if (!profile_->SavePrefs()) {
       QMessageBox::critical(nullptr, "Save Profile", "Error saving profile");
       profile_->prefs_ = old;
@@ -86,40 +96,14 @@ void ProfileSettingsDialog::keyPressEvent(QKeyEvent* event) {
 
 QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   auto cef = profile_->prefs_.value("cef").toObject();
-  auto layout = new QGridLayout;
-  layout->setVerticalSpacing(3);
+  auto layout = new QVBoxLayout;
   auto warn_restart =
       new QLabel("NOTE: Changing browser settings requires a restart");
   warn_restart->setStyleSheet("color: red; font-weight: bold");
-  layout->addWidget(warn_restart, 0, 0, 1, 2);
-  auto create_setting = [layout](
-      const QString& name, const QString& desc, QWidget* widg) {
-    auto name_label = new QLabel(name);
-    name_label->setStyleSheet("font-weight: bold;");
-    auto row = layout->rowCount();
-    layout->addWidget(name_label, row, 0);
-    auto desc_label = new QLabel(desc);
-    desc_label->setWordWrap(true);
-    layout->addWidget(widg, row, 1);
-    layout->addWidget(desc_label, row + 1, 0, 1, 2);
-  };
-  auto create_bool_setting = [create_setting](
-      const QString& name,
-      const QString& desc,
-      bool curr,
-      bool default_val) -> QComboBox* {
-    auto widg = new QComboBox;
-    widg->addItem(QString("Yes") + (default_val ? " (default)" : ""), true);
-    widg->addItem(QString("No") + (!default_val ? " (default)" : ""), false);
-    widg->setCurrentIndex(curr ? 0 : 1);
-    create_setting(name, desc, widg);
-    return widg;
-  };
-  auto setting_break = [layout]() {
-    auto frame = new QFrame;
-    frame->setFrameShape(QFrame::HLine);
-    layout->addWidget(frame, layout->rowCount(), 0, 1, 2);
-  };
+  layout->addWidget(warn_restart);
+
+  auto settings = new SettingsWidget;
+  layout->addWidget(settings);
 
   auto cache_path_layout = new QHBoxLayout;
   cache_path_disabled_ = new QCheckBox("No cache");
@@ -132,26 +116,36 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
           this, &ProfileSettingsDialog::CheckSettingsChange);
   cache_path_layout->addWidget(cache_path_edit_, 1);
   auto cache_path_open = new QToolButton();
+  cache_path_open->setAutoRaise(true);
   cache_path_open->setText("...");
   cache_path_layout->addWidget(cache_path_open);
   auto cache_path_widg = new QWidget;
   cache_path_widg->setLayout(cache_path_layout);
-  create_setting("Cache Path",
-                 "The location where cache data is stored on disk, if any. ",
-                 cache_path_widg);
+  settings->AddSetting(
+        "Cache Path",
+        "The location where cache data is stored on disk, if any. ",
+        cache_path_widg);
   connect(cache_path_disabled_, &QCheckBox::toggled,
           [this, cache_path_open](bool checked) {
     cache_path_edit_->setEnabled(!checked);
     cache_path_open->setEnabled(!checked);
+  });
+  connect(cache_path_open, &QToolButton::clicked, [=]() {
+    auto existing = cache_path_edit_->text();
+    if (existing.isEmpty()) existing = Profile::Current()->Path();
+    auto dir = QFileDialog::getExistingDirectory(this,
+                                                 "Choose Cache Path",
+                                                 existing);
+    if (!dir.isEmpty()) cache_path_edit_->setText(dir);
   });
   auto curr_cache_path = cef.contains("cachePath") ?
         cef.value("cachePath").toString() : QString();
   cache_path_disabled_->setChecked(!curr_cache_path.isNull() &&
                                    curr_cache_path.isEmpty());
   cache_path_edit_->setText(curr_cache_path);
-  setting_break();
+  settings->AddSettingBreak();
 
-  enable_net_sec_ = create_bool_setting(
+  enable_net_sec_ = settings->AddYesNoSetting(
       "Enable Net Security Expiration",
       "Enable date-based expiration of built in network security information "
       "(i.e. certificate transparency logs, HSTS preloading and pinning "
@@ -163,9 +157,9 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
       false);
   connect(enable_net_sec_, &QComboBox::currentTextChanged,
           this, &ProfileSettingsDialog::CheckSettingsChange);
-  setting_break();
+  settings->AddSettingBreak();
 
-  user_prefs_ = create_bool_setting(
+  user_prefs_ = settings->AddYesNoSetting(
       "Persist User Preferences",
       "Whether to persist user preferences as a JSON file "
       "in the cache path. Requires cache to be enabled.",
@@ -173,19 +167,20 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
       true);
   connect(user_prefs_, &QComboBox::currentTextChanged,
           this, &ProfileSettingsDialog::CheckSettingsChange);
-  setting_break();
+  settings->AddSettingBreak();
 
   user_agent_edit_ = new QLineEdit;
   user_agent_edit_->setPlaceholderText("Browser default");
   connect(user_agent_edit_, &QLineEdit::textChanged,
           this, &ProfileSettingsDialog::CheckSettingsChange);
-  create_setting("User Agent",
-                 "Custom user agent override.",
-                 user_agent_edit_);
+  settings->AddSetting(
+        "User Agent",
+        "Custom user agent override.",
+        user_agent_edit_);
   if (cef.contains("userAgent")) {
     user_agent_edit_->setText(cef.value("userAgent").toString());
   }
-  setting_break();
+  settings->AddSettingBreak();
 
   auto user_data_path_layout = new QHBoxLayout;
   user_data_path_disabled_ = new QCheckBox("Browser default");
@@ -202,10 +197,11 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   user_data_path_layout->addWidget(user_data_path_open);
   auto user_data_path_widg = new QWidget;
   user_data_path_widg->setLayout(user_data_path_layout);
-  create_setting("User Data Path",
-                 "The location where user data such as spell checking "
-                 "dictionary files will be stored on disk.",
-                 user_data_path_widg);
+  settings->AddSetting(
+        "User Data Path",
+        "The location where user data such as spell checking "
+        "dictionary files will be stored on disk.",
+        user_data_path_widg);
   connect(user_data_path_disabled_, &QCheckBox::toggled,
           [this, user_data_path_open](bool checked) {
     user_data_path_edit_->setEnabled(!checked);
@@ -219,34 +215,24 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
 
   auto browser = profile_->prefs_.value("browser").toObject();
   for (const auto& setting : Profile::PossibleBrowserSettings()) {
-    setting_break();
+    settings->AddSettingBreak();
 
-    auto widg = new QComboBox;
-    widg->addItem("Browser Default", static_cast<int>(STATE_DEFAULT));
-    widg->addItem("Enabled", static_cast<int>(STATE_ENABLED));
-    widg->addItem("Disabled", static_cast<int>(STATE_DISABLED));
-    if (!browser.contains(setting.field)) {
-      widg->setCurrentIndex(0);
-    } else {
-      widg->setCurrentIndex(browser.value(setting.field).toBool() ? 1 : 2);
+    auto index = 0;
+    if (browser.contains(setting.field)) {
+      index = browser[setting.field].toBool() ? 1 : 2;
     }
-    create_setting(setting.name, setting.desc, widg);
-    connect(widg, &QComboBox::currentTextChanged,
+    auto box = settings->AddComboBoxSetting(
+          setting.name, setting.desc,
+          { "Browser Default", "Enabled", "Disabled" },
+          index);
+    connect(box, &QComboBox::currentTextChanged,
             this, &ProfileSettingsDialog::CheckSettingsChange);
-    browser_setting_widgs_[setting.name] = widg;
+    browser_setting_widgs_[setting.name] = box;
   }
 
   auto widg = new QWidget;
-  layout->setRowStretch(layout->rowCount(), 1);
   widg->setLayout(layout);
-  auto widg_scroll = new QScrollArea;
-  widg_scroll->setFrameShape(QFrame::NoFrame);
-  widg_scroll->setStyleSheet(
-        "QScrollArea { background: transparent; }"
-        "QScrollArea > QWidget > QWidget { background: transparent; }");
-  widg_scroll->setWidget(widg);
-  widg_scroll->setWidgetResizable(true);
-  return widg_scroll;
+  return widg;
 }
 
 QJsonObject ProfileSettingsDialog::BuildCefPrefsJson() {
@@ -256,10 +242,10 @@ QJsonObject ProfileSettingsDialog::BuildCefPrefsJson() {
   } else if (!cache_path_edit_->text().isEmpty()) {
     ret["cachePath"] = cache_path_edit_->text();
   }
-  if (enable_net_sec_->currentData().toBool()) {
+  if (enable_net_sec_->currentIndex() == 0) {
     ret["enableNetSecurityExpiration"] = true;
   }
-  if (!user_prefs_->currentData().toBool()) {
+  if (user_prefs_->currentIndex() == 1) {
     ret["persistUserPreferences"] = false;
   }
   if (!user_agent_edit_->text().isEmpty()) {
@@ -276,10 +262,9 @@ QJsonObject ProfileSettingsDialog::BuildCefPrefsJson() {
 QJsonObject ProfileSettingsDialog::BuildBrowserPrefsJson() {
   QJsonObject ret;
   for (const auto& setting : Profile::PossibleBrowserSettings()) {
-    auto state = static_cast<cef_state_t>(
-          browser_setting_widgs_[setting.name]->currentData().toInt());
-    if (state != STATE_DEFAULT) {
-      ret[setting.field] = state == STATE_ENABLED;
+    auto index = browser_setting_widgs_[setting.name]->currentIndex();
+    if (index != 0) {
+      ret[setting.field] = index == 1;
     }
   }
   return ret;
@@ -553,6 +538,10 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   // And the edit screen is a completely separate dialog
   auto layout = new QGridLayout;
 
+  layout->addWidget(
+        new QLabel("At least one bubble required. Top bubble is default."),
+        0, 0, 1, 5);
+
   auto list = new QListWidget;
   list->setSelectionBehavior(QAbstractItemView::SelectRows);
   list->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -564,18 +553,18 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     list->addItem(item);
   }
-  layout->addWidget(list, 0, 0, 1, 5);
+  layout->addWidget(list, 1, 0, 1, 5);
   layout->setColumnStretch(0, 1);
   auto new_bubble = new QPushButton("New Bubble");
-  layout->addWidget(new_bubble, 1, 0, Qt::AlignRight);
+  layout->addWidget(new_bubble, 2, 0, Qt::AlignRight);
   auto up_bubble = new QPushButton("Move Selected Bubble Up");
-  layout->addWidget(up_bubble, 1, 1);
+  layout->addWidget(up_bubble, 2, 1);
   auto down_bubble = new QPushButton("Move Selected Bubble Down");\
-  layout->addWidget(down_bubble, 1, 2);
+  layout->addWidget(down_bubble, 2, 2);
   auto edit_bubble = new QPushButton("Edit Selected Bubble");
-  layout->addWidget(edit_bubble, 1, 3);
+  layout->addWidget(edit_bubble, 2, 3);
   auto delete_bubble = new QPushButton("Delete Selected Bubble");
-  layout->addWidget(delete_bubble, 1, 4);
+  layout->addWidget(delete_bubble, 2, 4);
 
   // row is -1 for new
   auto new_or_edit = [=](int row) {
@@ -588,7 +577,20 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
     Bubble edit_bubble(json);
     BubbleSettingsDialog bubble_settings(&edit_bubble, invalid_names, this);
     if (bubble_settings.exec() == QDialog::Accepted) {
-      // TODO
+      if (row == -1) {
+        auto bubble = new Bubble(edit_bubble.prefs_);
+        bubbles_.append(bubble);
+        auto item = new QListWidgetItem(bubble->Icon(), bubble->FriendlyName());
+        item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        list->addItem(item);
+      } else {
+        bubbles_[row]->prefs_ = edit_bubble.prefs_;
+        bubbles_[row]->InvalidateIcon();
+        auto item = list->item(row);
+        item->setText(bubbles_[row]->FriendlyName());
+        item->setIcon(bubbles_[row]->Icon());
+      }
+      CheckBubblesChange();
     }
   };
 
@@ -604,7 +606,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
       up_bubble->setEnabled(row > 0);
       down_bubble->setEnabled(row < list->count() - 1);
       edit_bubble->setEnabled(true);
-      delete_bubble->setEnabled(true);
+      delete_bubble->setEnabled(list->count() > 1);
     }
   };
   update_buttons();
@@ -614,6 +616,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   });
   connect(new_bubble, &QPushButton::clicked, [=]() {
     new_or_edit(-1);
+    update_buttons();
   });
   connect(up_bubble, &QPushButton::clicked, [=]() {
     auto item = list->selectedItems().first();
@@ -621,6 +624,8 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
     bubbles_.move(row, row - 1);
     list->takeItem(row);
     list->insertItem(row - 1, item);
+    CheckBubblesChange();
+    list->setCurrentItem(item);
   });
   connect(down_bubble, &QPushButton::clicked, [=]() {
     auto item = list->selectedItems().first();
@@ -628,12 +633,19 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
     bubbles_.move(row, row + 1);
     list->takeItem(row);
     list->insertItem(row + 1, item);
+    CheckBubblesChange();
+    list->setCurrentItem(item);
   });
   connect(edit_bubble, &QPushButton::clicked, [=]() {
     new_or_edit(list->row(list->selectedItems().first()));
+    update_buttons();
   });
-  connect(new_bubble, &QPushButton::clicked, [=]() {
-    new_or_edit(-1);
+  connect(delete_bubble, &QPushButton::clicked, [=]() {
+    auto row = list->row(list->selectedItems().first());
+    delete bubbles_.takeAt(row);
+    delete list->takeItem(row);
+    CheckBubblesChange();
+    update_buttons();
   });
 
   auto widg = new QWidget;
@@ -641,12 +653,18 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   return widg;
 }
 
-QJsonArray ProfileSettingsDialog::BuildBubblesPrefsJson() {
-  return {};
-}
-
 void ProfileSettingsDialog::CheckBubblesChange() {
-
+  auto orig = bubbles_changed_;
+  bubbles_changed_ = profile_->Bubbles().size() != bubbles_.size();
+  if (!bubbles_changed_) {
+    for (int i = 0; i < profile_->Bubbles().size(); i++) {
+      if (profile_->Bubbles()[i]->prefs_ != bubbles_[i]->prefs_) {
+        bubbles_changed_ = true;
+        break;
+      }
+    }
+  }
+  if (bubbles_changed_ != orig) emit BubblesChangedUpdated();
 }
 
 QJsonObject ProfileSettingsDialog::BuildPrefsJson() {
