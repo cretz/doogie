@@ -23,7 +23,8 @@ Cef::Cef(int argc, char* argv[]) {
     return;
   }
 
-  auto settings = Profile::Current()->CreateCefSettings();
+  CefSettings settings;
+  Profile::Current()->ApplyCefSettings(settings);
   if (!CefInitialize(main_args, settings, app_handler_, nullptr)) {
     throw std::runtime_error("Unable to initialize CEF");
   }

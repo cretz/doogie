@@ -17,7 +17,9 @@ class Bubble : public QObject {
   ~Bubble();
   QString Name();
   QString FriendlyName();
-  CefBrowserSettings CreateCefBrowserSettings();
+  void ApplyCefBrowserSettings(CefBrowserSettings& settings);
+  void ApplyCefRequestContextSettings(CefRequestContextSettings& settings);
+  CefRefPtr<CefRequestContext> CreateCefRequestContext();
   QIcon Icon();
   void InvalidateIcon();
 

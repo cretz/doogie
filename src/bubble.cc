@@ -16,8 +16,8 @@ QString Bubble::FriendlyName() {
   return "(default)";
 }
 
-CefBrowserSettings Bubble::CreateCefBrowserSettings() {
-  auto settings = Profile::Current()->CreateBrowserSettings();
+void Bubble::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
+  Profile::Current()->ApplyCefBrowserSettings(settings);
 
   auto browser = prefs_.value("browser").toObject();
 
@@ -45,8 +45,58 @@ CefBrowserSettings Bubble::CreateCefBrowserSettings() {
         "universalAccessFromFileUrls");
   state(settings.web_security, "webSecurity");
   state(settings.webgl, "webgl");
+}
 
-  return settings;
+void Bubble::ApplyCefRequestContextSettings(
+    CefRequestContextSettings& settings) {
+  CefSettings global;
+  Profile::Current()->ApplyCefSettings(global);
+
+  auto cef = prefs_.value("cef").toObject();
+
+  if (cef.contains("cachePath")) {
+    auto cache_path = cef["cachePath"].toString();
+    // Empty/null is disabled, otherwise qualify w/ profile dir if necessary
+    if (!cache_path.isEmpty()) {
+      cache_path = QDir::toNativeSeparators(QDir::cleanPath(QDir(
+          Profile::Current()->Path()).filePath(cache_path)));
+    }
+    CefString(&settings.cache_path) = cache_path.toStdString();
+  } else {
+    CefString(&settings.cache_path) = CefString(&global.cache_path).ToString();
+  }
+
+  if (cef.contains("enableNetSecurityExpiration")) {
+    settings.enable_net_security_expiration =
+        cef["enableNetSecurityExpiration"].toBool() ? 1 : 0;
+  } else {
+    settings.enable_net_security_expiration =
+        global.enable_net_security_expiration;
+  }
+
+  if (cef.contains("persistUserPreferences")) {
+    settings.persist_user_preferences =
+        cef["persistUserPreferences"].toBool() ? 1 : 0;
+  } else {
+    settings.persist_user_preferences = global.persist_user_preferences;
+  }
+
+  // TODO: Due to a CEF bug, we cannot have user preferences persisted if we
+  //  have a cache path. This is due to the fact that the pref JSON is created
+  //  on the wrong thread.
+  // See: https://bitbucket.org/chromiumembedded/cef/issues/2233
+  if (settings.cache_path.length > 0 &&
+      settings.persist_user_preferences == 1) {
+    qCritical() << "Unable to have cache path and user prefs set "
+                   "for a bubble due to internal bug.";
+    settings.persist_user_preferences = 0;
+  }
+}
+
+CefRefPtr<CefRequestContext> Bubble::CreateCefRequestContext() {
+  CefRequestContextSettings settings;
+  ApplyCefRequestContextSettings(settings);
+  return CefRequestContext::CreateContext(settings, nullptr);
 }
 
 QIcon Bubble::Icon() {

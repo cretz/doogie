@@ -299,8 +299,7 @@ bool Profile::InMemory() {
   return path_ == kInMemoryPath;
 }
 
-CefSettings Profile::CreateCefSettings() {
-  CefSettings settings;
+void Profile::ApplyCefSettings(CefSettings& settings) {
   settings.no_sandbox = true;
   // Enable remote debugging on debug version
 #ifdef QT_DEBUG
@@ -312,6 +311,7 @@ CefSettings Profile::CreateCefSettings() {
   QString cache_path;
   if (path_ == kInMemoryPath) {
     // Do nothing to cache path, leave it alone
+    cache_path = "";
   } else if (!cef.contains("cachePath")) {
     // Default is path/cache
     cache_path = QDir(path_).filePath("cache");
@@ -342,6 +342,7 @@ CefSettings Profile::CreateCefSettings() {
   QString user_data_path;
   if (path_ == kInMemoryPath) {
     // Do nothing to user data path, leave it alone
+    user_data_path = "";
   } else if (!cef.contains("userDataPath")) {
     // Default is path/cache
     user_data_path = QDir(path_).filePath("user_data");
@@ -353,13 +354,9 @@ CefSettings Profile::CreateCefSettings() {
     }
   }
   CefString(&settings.user_data_path) = user_data_path.toStdString();
-
-  return settings;
 }
 
-CefBrowserSettings Profile::CreateBrowserSettings() {
-  CefBrowserSettings settings;
-
+void Profile::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
   auto browser = prefs_.value("browser").toObject();
 
   auto state = [&browser](cef_state_t& state, const QString& field) {
@@ -386,8 +383,6 @@ CefBrowserSettings Profile::CreateBrowserSettings() {
         "universalAccessFromFileUrls");
   state(settings.web_security, "webSecurity");
   state(settings.webgl, "webgl");
-
-  return settings;
 }
 
 const QList<Bubble*> Profile::Bubbles() {

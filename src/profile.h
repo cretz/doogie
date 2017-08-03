@@ -42,8 +42,8 @@ class Profile : public QObject {
   QString Path();
   bool InMemory();
 
-  CefSettings CreateCefSettings();
-  CefBrowserSettings CreateBrowserSettings();
+  void ApplyCefSettings(CefSettings& settings);
+  void ApplyCefBrowserSettings(CefBrowserSettings& settings);
 
   const QList<Bubble*> Bubbles();
   Bubble* DefaultBubble();
