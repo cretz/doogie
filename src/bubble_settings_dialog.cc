@@ -47,6 +47,30 @@ BubbleSettingsDialog::BubbleSettingsDialog(Bubble* bubble,
   connect(this,
           &BubbleSettingsDialog::SettingsChangedUpdated,
           check_ok_enabled);
+
+  restoreGeometry(QSettings().value("bubbleSettings/geom").toByteArray());
+}
+
+Bubble* BubbleSettingsDialog::NewBubble(QWidget* parent) {
+  QStringList invalid_names;
+  for (const auto& bubble : Profile::Current()->Bubbles()) {
+    invalid_names.append(bubble->Name());
+  }
+  QJsonObject json;
+  Bubble new_bubble(json);
+  BubbleSettingsDialog bubble_settings(&new_bubble, invalid_names, parent);
+  if (bubble_settings.exec() == QDialog::Rejected) {
+    return nullptr;
+  }
+  auto bubble = new Bubble(new_bubble.prefs_);
+  Profile::Current()->AddBubble(bubble);
+  Profile::Current()->SavePrefs();
+  return bubble;
+}
+
+void BubbleSettingsDialog::closeEvent(QCloseEvent* event) {
+  QSettings().setValue("bubbleSettings/geom", saveGeometry());
+  QDialog::closeEvent(event);
 }
 
 QLayoutItem* BubbleSettingsDialog::CreateNameSection() {
@@ -161,17 +185,23 @@ QLayoutItem* BubbleSettingsDialog::CreateIconSection() {
   connect(choose_file, &QPushButton::clicked, [=]() {
     auto filter = "Images (*.bmp *.gif *.jpg *.jpeg *.png "
                   "*.pbm *.pgm *.ppm *.xbm *.xpm *.svg)";
-    auto existing_dir = QStandardPaths::writableLocation(
-          QStandardPaths::PicturesLocation);
+    auto existing_dir =
+        QSettings().value("bubbleSettings/iconFileOpen").toString();
     auto icon_path = bubble_->prefs_.value("icon").toString();
     if (!icon_path.isEmpty()) {
       existing_dir = QFileInfo(icon_path).dir().path();
+    }
+    if (existing_dir.isEmpty()) {
+      existing_dir = QStandardPaths::writableLocation(
+          QStandardPaths::PicturesLocation);
     }
     auto file = QFileDialog::getOpenFileName(this, "Choose Image File",
                                              existing_dir, filter);
     if (!file.isEmpty() && !QImageReader::imageFormat(file).isEmpty()) {
       bubble_->prefs_["icon"] = file;
       update_icon_info();
+      QSettings().setValue("bubbleSettings/iconFileOpen",
+                           QFileInfo(file).dir().path());
     }
   });
   connect(reset, &QPushButton::clicked, [=]() {
@@ -237,11 +267,17 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
   });
   connect(cache_path_open, &QToolButton::clicked, [=]() {
     auto existing = cache_path_edit->text();
+    if (existing.isEmpty()) {
+      existing = QSettings().value("bubbleSettings/cachePathOpen").toString();
+    }
     if (existing.isEmpty()) existing = Profile::Current()->Path();
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  "Choose Cache Path",
                                                  existing);
-    if (!dir.isEmpty()) cache_path_edit->setText(dir);
+    if (!dir.isEmpty()) {
+      QSettings().setValue("bubbleSettings/cachePathOpen", dir);
+      cache_path_edit->setText(dir);
+    }
   });
   if (!cef.contains("cachePath")) {
     cache_path_default->setChecked(true);

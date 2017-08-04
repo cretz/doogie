@@ -402,6 +402,10 @@ Bubble* Profile::BubbleByName(const QString& name) {
   return nullptr;
 }
 
+void Profile::AddBubble(Bubble* bubble) {
+  bubbles_.append(bubble);
+}
+
 bool Profile::SavePrefs() {
   // In memory saves nothing...
   if (InMemory()) return true;

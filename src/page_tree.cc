@@ -1,6 +1,8 @@
 #include "page_tree.h"
 #include <algorithm>
 #include "action_manager.h"
+#include "bubble_settings_dialog.h"
+#include "workspace_tree_item.h"
 
 namespace doogie {
 
@@ -25,6 +27,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
                                  QHeaderView::Fixed);
   header()->setSectionResizeMode(PageTreeItem::kCloseButtonColumn,
                                  QHeaderView::ResizeToContents);
+  setStyleSheet("QTreeWidget { border: none; }");
 
   // Emit empty on row removal
   connect(model(), &QAbstractItemModel::rowsRemoved,
@@ -35,6 +38,16 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   // Each time one is selected, we need to make sure to show that on the stack
   connect(this, &QTreeWidget::currentItemChanged,
           [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
+    // Before anything, if current is a workspace item, we don't support
+    //  "current" so put it back
+    if (current && current->type() == kWorkspaceItemType) {
+      if (!previous || previous->type() != kWorkspaceItemType) {
+        setCurrentItem(previous);
+      } else {
+        setCurrentItem(nullptr);
+      }
+      return;
+    }
     // Deactivate previous
     if (previous) {
       auto old_font = previous->font(0);
@@ -43,7 +56,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     }
     // Sometimes current isn't set or isn't in the tree anymore
     if (current && indexFromItem(current).isValid()) {
-      auto page_item = static_cast<PageTreeItem*>(current);
+      auto page_item = AsPageTreeItem(current);
       browser_stack_->setCurrentWidget(page_item->Browser());
       auto new_font = page_item->font(0);
       new_font.setBold(true);
@@ -68,7 +81,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
 
       // We are dragging, grab the one under the mouse
       auto local_pos = mapFromGlobal(QCursor::pos());
-      auto mouse_item = static_cast<PageTreeItem*>(itemAt(local_pos));
+      auto mouse_item = AsPageTreeItem(itemAt(local_pos));
       // Only applies if there is a close button under the mouse. It also
       // can't be the last one we saw being dragged on
       if (mouse_item && mouse_item != close_dragging_on_ &&
@@ -95,7 +108,7 @@ QMovie* PageTree::LoadingIconMovie() {
 }
 
 PageTreeItem* PageTree::CurrentItem()  {
-  return static_cast<PageTreeItem*>(currentItem());
+  return AsPageTreeItem(currentItem());
 }
 
 PageTreeItem* PageTree::NewPage(const QString &url,
@@ -139,12 +152,22 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
       });
     }
   }
+  menu->addSeparator();
+  menu->addAction("New Bubble...", [=]() {
+    auto bubble = BubbleSettingsDialog::NewBubble();
+    if (bubble) {
+      for (const auto& item : apply_to_items) {
+        item->SetCurrentBubbleIfDifferent(bubble);
+      }
+    }
+  });
 }
 
 QJsonObject PageTree::DebugDump() {
   QJsonArray items;
   for (int i = 0; i < topLevelItemCount(); i++) {
-    items.append(static_cast<PageTreeItem*>(topLevelItem(i))->DebugDump());
+    auto item = AsPageTreeItem(topLevelItem(i));
+    items.append(item->DebugDump());
   }
   return  {
     { "items", items }
@@ -161,10 +184,8 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
 
   menu.addAction(ActionManager::Action(ActionManager::NewTopLevelPage));
 
-  auto has_multiple_bubbles = Profile::Current()->Bubbles().size() > 1;
-
   // Single-page
-  auto affected = static_cast<PageTreeItem*>(itemAt(event->pos()));
+  auto affected = AsPageTreeItem(itemAt(event->pos()));
   if (affected) {
     auto sub = menu.addMenu("Clicked-On Page");
     sub->addAction("New Child Background Page", [=]() {
@@ -214,12 +235,10 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
     sub->addAction("Close Other Trees", [=]() {
       CloseItemsInReverseOrder(affected->Siblings());
     });
-    if (has_multiple_bubbles) {
-      auto bubble_menu = menu.addMenu("Clicked-On Page Bubble");
-      ApplyBubbleSelectMenu(bubble_menu, { affected });
-    }
+    auto bubble_menu = menu.addMenu("Clicked-On Page Bubble");
+    ApplyBubbleSelectMenu(bubble_menu, { affected });
   } else {
-    affected = static_cast<PageTreeItem*>(currentItem());
+    affected = CurrentItem();
     if (affected) {
       auto sub = menu.addMenu("Current Page");
       sub->addAction(ActionManager::Action(
@@ -248,10 +267,8 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
                       ActionManager::CloseSameHostPages));
       sub->addAction(ActionManager::Action(
                       ActionManager::CloseOtherTrees));
-      if (has_multiple_bubbles) {
-        auto bubble_menu = menu.addMenu("Current Page Bubble");
-        ApplyBubbleSelectMenu(bubble_menu, { affected });
-      }
+      auto bubble_menu = menu.addMenu("Current Page Bubble");
+      ApplyBubbleSelectMenu(bubble_menu, { affected });
     }
   }
 
@@ -282,10 +299,8 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
         ActionManager::CloseNonSelectedPages));
     sub->addAction(ActionManager::Action(
         ActionManager::CloseNonSelectedTrees));
-    if (has_multiple_bubbles) {
-      auto bubble_menu = menu.addMenu("Selected Pages Bubble");
-      ApplyBubbleSelectMenu(bubble_menu, SelectedItems());
-    }
+    auto bubble_menu = menu.addMenu("Selected Pages Bubble");
+    ApplyBubbleSelectMenu(bubble_menu, SelectedItems());
   }
 
   if (topLevelItemCount() > 0) {
@@ -302,11 +317,15 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
         ActionManager::CollapseAllTrees));
     sub->addAction(ActionManager::Action(
         ActionManager::CloseAllPages));
-    if (has_multiple_bubbles) {
-      auto bubble_menu = menu.addMenu("All Pages Bubble");
-      ApplyBubbleSelectMenu(bubble_menu, Items());
-    }
+    auto bubble_menu = menu.addMenu("All Pages Bubble");
+    ApplyBubbleSelectMenu(bubble_menu, Items());
   }
+
+  menu.addAction("New Workspace", [=]() {
+    auto item = new WorkspaceTreeItem();
+    addTopLevelItem(item);
+    editItem(item);
+  });
 
   menu.exec(event->globalPos());
 }
@@ -334,6 +353,17 @@ void PageTree::dragMoveEvent(QDragMoveEvent* event) {
   QTreeWidget::dragMoveEvent(event);
 }
 
+void PageTree::drawRow(QPainter* painter,
+                       const QStyleOptionViewItem& option,
+                       const QModelIndex& index) const {
+  if (itemFromIndex(index)->type() == kWorkspaceItemType) {
+    painter->save();
+    painter->fillRect(option.rect, QGuiApplication::palette().window());
+    painter->restore();
+  }
+  QTreeWidget::drawRow(painter, option, index);
+}
+
 void PageTree::dropEvent(QDropEvent* event) {
   // Due to bad internal Qt logic, we reset the current here
   if (event->source() == this) {
@@ -356,10 +386,9 @@ bool PageTree::dropMimeData(QTreeWidgetItem* parent,
                             Qt::DropAction action) {
   // If there is a URL we go ahead and put each one under the parent
   if (data->hasUrls()) {
+    auto parent_item = AsPageTreeItem(parent);
     for (const auto& url : data->urls()) {
-      NewPage(url.url(),
-              static_cast<PageTreeItem*>(parent),
-              true);
+      NewPage(url.url(), parent_item, true);
     }
     return true;
   }
@@ -381,10 +410,13 @@ QMimeData* PageTree::mimeData(const QList<QTreeWidgetItem*> items) const {
   auto ret = QTreeWidget::mimeData(items);
   QList<QUrl> urls;
   for (const auto& item : items) {
-    auto browser = static_cast<PageTreeItem*>(item)->Browser();
-    if (browser) {
-      auto url = browser->CurrentUrl();
-      if (!url.isEmpty()) urls.append(QUrl(url));
+    auto page_item = AsPageTreeItem(item);
+    if (page_item) {
+      auto browser = page_item->Browser();
+      if (browser) {
+        auto url = browser->CurrentUrl();
+        if (!url.isEmpty()) urls.append(QUrl(url));
+      }
     }
   }
   if (!urls.isEmpty()) ret->setUrls(urls);
@@ -492,9 +524,12 @@ void PageTree::rowsInserted(const QModelIndex& parent, int start, int end) {
   // movement occurs.
   // Ref: https://stackoverflow.com/questions/25559221/qtreewidgetitem-issue-items-set-using-setwidgetitem-are-dispearring-after-movin
   for (int i = start; i <= end; i++) {
-    auto item = static_cast<PageTreeItem*>(
-          itemFromIndex(model()->index(i, 0, parent)));
-    item->AfterAdded();
+    auto item = itemFromIndex(model()->index(i, 0, parent));
+    if (item && item->type() == kPageItemType) {
+      AsPageTreeItem(item)->AfterAdded();
+    } else if (item && item->type() == kWorkspaceItemType) {
+      AsWorkspaceTreeItem(item)->AfterAdded();
+    }
   }
   QTreeWidget::rowsInserted(parent, start, end);
 }
@@ -509,6 +544,20 @@ QItemSelectionModel::SelectionFlags PageTree::selectionCommand(
     }
   }
   return QTreeWidget::selectionCommand(index, event);
+}
+
+PageTreeItem* PageTree::AsPageTreeItem(QTreeWidgetItem* item) const {
+  if (item && item->type() == kPageItemType) {
+    return static_cast<PageTreeItem*>(item);
+  }
+  return nullptr;
+}
+
+WorkspaceTreeItem* PageTree::AsWorkspaceTreeItem(QTreeWidgetItem* item) const {
+  if (item && item->type() == kWorkspaceItemType) {
+    return static_cast<WorkspaceTreeItem*>(item);
+  }
+  return nullptr;
 }
 
 void PageTree::SetupActions() {
@@ -764,7 +813,7 @@ void PageTree::CloseItem(PageTreeItem* item) {
   if (!item->isExpanded()) {
     // Close backwards up the list
     for (int i = item->childCount() - 1; i >= 0; i--) {
-      CloseItem(static_cast<PageTreeItem*>(item->child(i)));
+      CloseItem(AsPageTreeItem(item->child(i)));
     }
   }
   // Now we can close myself
@@ -783,7 +832,7 @@ void PageTree::DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent) {
   // Duplicate myself first, then children
   auto new_item = NewPage(item->Browser()->CurrentUrl(), to_parent, false);
   for (int i = 0; i < item->childCount(); i++) {
-    DuplicateTree(static_cast<PageTreeItem*>(item->child(i)), new_item);
+    DuplicateTree(AsPageTreeItem(item->child(i)), new_item);
   }
   new_item->setExpanded(item->isExpanded());
 }
@@ -792,7 +841,8 @@ QList<PageTreeItem*> PageTree::Items() {
   QList<PageTreeItem*> ret;
   QTreeWidgetItemIterator it(this);
   while (*it) {
-    ret.append(static_cast<PageTreeItem*>(*it));
+    auto item = AsPageTreeItem(*it);
+    if (item) ret.append(item);
     it++;
   }
   return ret;
@@ -803,7 +853,8 @@ QList<PageTreeItem*> PageTree::SelectedItems() {
   QTreeWidgetItemIterator it(this);
   while (*it) {
     if ((*it)->isSelected()) {
-      ret.append(static_cast<PageTreeItem*>(*it));
+      auto item = AsPageTreeItem(*it);
+      ret.append(item);
     }
     it++;
   }
@@ -813,8 +864,10 @@ QList<PageTreeItem*> PageTree::SelectedItems() {
 QList<PageTreeItem*> PageTree::SelectedItemsOnlyHighestLevel() {
   QList<PageTreeItem*> ret;
   for (int i = 0; i < topLevelItemCount(); i++) {
-    ret.append(static_cast<PageTreeItem*>(topLevelItem(i))->
-               SelfSelectedOrChildrenSelected());
+    auto item = AsPageTreeItem(topLevelItem(i));
+    if (item) {
+      ret.append(item->SelfSelectedOrChildrenSelected());
+    }
   }
   return ret;
 }
@@ -824,8 +877,8 @@ QList<PageTreeItem*> PageTree::SameHostPages(PageTreeItem* to_comp) {
   QList<PageTreeItem*> ret;
   QTreeWidgetItemIterator it(this);
   while (*it) {
-    auto item = static_cast<PageTreeItem*>(*it);
-    if (host == QUrl(item->Browser()->CurrentUrl()).host()) {
+    auto item = AsPageTreeItem(*it);
+    if (item && host == QUrl(item->Browser()->CurrentUrl()).host()) {
       ret.append(ret);
     }
     it++;

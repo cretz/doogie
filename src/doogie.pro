@@ -33,7 +33,8 @@ SOURCES += \
     profile_change_dialog.cc \
     profile_settings_dialog.cc \
     settings_widget.cc \
-    util.cc
+    util.cc \
+    workspace_tree_item.cc
 
 HEADERS += \
     action_manager.h \
@@ -58,7 +59,8 @@ HEADERS += \
     profile_change_dialog.h \
     profile_settings_dialog.h \
     settings_widget.h \
-    util.h
+    util.h \
+    workspace_tree_item.h
 
 RESOURCES += \
     doogie.qrc

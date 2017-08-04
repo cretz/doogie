@@ -5,7 +5,7 @@
 namespace doogie {
 
 PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
-    : QTreeWidgetItem(QTreeWidgetItem::UserType + 1), browser_(browser) {
+    : QTreeWidgetItem(PageTree::kPageItemType), browser_(browser) {
   setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled |
            Qt::ItemIsDropEnabled | Qt::ItemIsEnabled);
   // Connect title and favicon change

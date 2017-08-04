@@ -152,11 +152,17 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   });
   connect(cache_path_open, &QToolButton::clicked, [=]() {
     auto existing = cache_path_edit_->text();
+    if (existing.isEmpty()) {
+      existing = QSettings().value("profileSettings/cachePathOpen").toString();
+    }
     if (existing.isEmpty()) existing = Profile::Current()->Path();
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  "Choose Cache Path",
                                                  existing);
-    if (!dir.isEmpty()) cache_path_edit_->setText(dir);
+    if (!dir.isEmpty()) {
+      QSettings().setValue("profileSettings/cachePathOpen", dir);
+      cache_path_edit_->setText(dir);
+    }
   });
   auto curr_cache_path = cef.contains("cachePath") ?
         cef.value("cachePath").toString() : QString();

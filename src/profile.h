@@ -48,6 +48,7 @@ class Profile : public QObject {
   const QList<Bubble*> Bubbles();
   Bubble* DefaultBubble();
   Bubble* BubbleByName(const QString& name);
+  void AddBubble(Bubble* bubble);
   bool SavePrefs();
 
   void ApplyActionShortcuts();

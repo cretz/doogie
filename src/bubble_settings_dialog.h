@@ -14,6 +14,11 @@ class BubbleSettingsDialog : public QDialog {
                                 QStringList invalid_names,
                                 QWidget* parent = nullptr);
 
+  static Bubble* NewBubble(QWidget* parent = nullptr);
+
+ protected:
+  void closeEvent(QCloseEvent* event) override;
+
  private:
   QLayoutItem* CreateNameSection();
   QLayoutItem* CreateIconSection();

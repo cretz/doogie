@@ -5,6 +5,7 @@
 #include "browser_stack.h"
 #include "browser_widget.h"
 #include "page_tree_item.h"
+#include "workspace_tree_item.h"
 
 namespace doogie {
 
@@ -22,11 +23,17 @@ class PageTree : public QTreeWidget {
                              QList<PageTreeItem*> apply_to_items);
   QJsonObject DebugDump();
 
+  static const int kPageItemType = QTreeWidgetItem::UserType + 1;
+  static const int kWorkspaceItemType = QTreeWidgetItem::UserType + 2;
+
  protected:
   Qt::DropActions supportedDropActions() const override;
   void contextMenuEvent(QContextMenuEvent* event) override;
   void dragEnterEvent(QDragEnterEvent* event) override;
   void dragMoveEvent(QDragMoveEvent* event) override;
+  void drawRow(QPainter* painter,
+               const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override;
   void dropEvent(QDropEvent* event) override;
   bool dropMimeData(QTreeWidgetItem* parent,
                     int index, const QMimeData* data,
@@ -45,6 +52,8 @@ class PageTree : public QTreeWidget {
       const QModelIndex& index, const QEvent* event) const override;
 
  private:
+  PageTreeItem* AsPageTreeItem(QTreeWidgetItem* item) const;
+  WorkspaceTreeItem* AsWorkspaceTreeItem(QTreeWidgetItem* item) const;
   void SetupActions();
   PageTreeItem* AddBrowser(QPointer<BrowserWidget> browser,
                            PageTreeItem* parent,
