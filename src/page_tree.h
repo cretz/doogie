@@ -18,6 +18,8 @@ class PageTree : public QTreeWidget {
   PageTreeItem* NewPage(const QString &url,
                         PageTreeItem* parent,
                         bool make_current);
+  void ApplyBubbleSelectMenu(QMenu* menu,
+                             QList<PageTreeItem*> apply_to_items);
   QJsonObject DebugDump();
 
  protected:

@@ -111,6 +111,36 @@ PageTreeItem* PageTree::NewPage(const QString &url,
   return AddBrowser(browser, parent, make_current);
 }
 
+void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
+                                     QList<PageTreeItem*> apply_to_items) {
+  // If there is a commonly selected one for all of them, we will mark
+  // that one as checked and unable to be selected
+  QString common_bubble_name;
+  for (const auto& item : apply_to_items) {
+    auto bubble_name = item->Browser()->CurrentBubble()->Name();
+    if (common_bubble_name.isNull()) {
+      common_bubble_name = bubble_name;
+    } else if (common_bubble_name != bubble_name) {
+      common_bubble_name = QString();
+      break;
+    }
+  }
+  for (const auto& bubble : Profile::Current()->Bubbles()) {
+    auto action = menu->addAction(bubble->Icon(), bubble->FriendlyName());
+    if (!common_bubble_name.isNull() && common_bubble_name == bubble->Name()) {
+      action->setCheckable(true);
+      action->setChecked(true);
+      action->setDisabled(true);
+    } else {
+      connect(action, &QAction::triggered, [=]() {
+        for (const auto& item : apply_to_items) {
+          item->SetCurrentBubbleIfDifferent(bubble);
+        }
+      });
+    }
+  }
+}
+
 QJsonObject PageTree::DebugDump() {
   QJsonArray items;
   for (int i = 0; i < topLevelItemCount(); i++) {
@@ -127,108 +157,155 @@ Qt::DropActions PageTree::supportedDropActions() const {
 }
 
 void PageTree::contextMenuEvent(QContextMenuEvent* event) {
-  QMenu menu(this);
+  QMenu menu;
 
   menu.addAction(ActionManager::Action(ActionManager::NewTopLevelPage));
 
+  auto has_multiple_bubbles = Profile::Current()->Bubbles().size() > 1;
+
   // Single-page
-  auto clicked_on = static_cast<PageTreeItem*>(itemAt(event->pos()));
-  auto current = static_cast<PageTreeItem*>(currentItem());
-  auto affected = (clicked_on) ? clicked_on : current;
+  auto affected = static_cast<PageTreeItem*>(itemAt(event->pos()));
   if (affected) {
-    QString type = (clicked_on) ? "Clicked-On" : "Current";
-    menu.addSection(type + " Page");
-    menu.addAction("New Child Background Page", [this, affected]() {
+    auto sub = menu.addMenu("Clicked-On Page");
+    sub->addAction("New Child Background Page", [=]() {
       NewPage("", affected, false);
     });
-    menu.addAction("New Foreground Child Page", [this, affected]() {
+    sub->addAction("New Foreground Child Page", [=]() {
       auto page = NewPage("", affected, false);
       page->Browser()->FocusUrlEdit();
     });
-    menu.addAction("Reload " + type + " Page", [this, affected]() {
+    sub->addAction("Reload Page", [=]() {
       affected->Browser()->Refresh();
     });
-    menu.addAction("Suspend " + type + " Page", [this, affected]() {
+    sub->addAction("Suspend Page", [=]() {
       affected->Browser()->SetSuspended(true);
     })->setEnabled(!affected->Browser()->Suspended());
-    menu.addAction("Unsuspend " + type + " Page", [this, affected]() {
+    sub->addAction("Unsuspend Page", [=]() {
       affected->Browser()->SetSuspended(false);
     })->setEnabled(affected->Browser()->Suspended());
-    menu.addAction("Expand " + type + " Tree", [this, affected]() {
+    sub->addAction("Expand Tree", [=]() {
       affected->ExpandSelfAndChildren();
     })->setEnabled(affected->SelfOrAnyChildCollapsed());
-    menu.addAction("Collapse " + type + " Tree", [this, affected]() {
+    sub->addAction("Collapse Tree", [=]() {
       affected->CollapseSelfAndChildren();
     })->setEnabled(affected->SelfOrAnyChildExpanded());
-    menu.addAction("Duplicate " + type + " Tree", [this, affected]() {
+    sub->addAction("Duplicate Tree", [=]() {
       DuplicateTree(affected);
     });
-    menu.addAction("Select " + type + " Same-Host Pages", [this, affected]() {
+    sub->addAction("Select Same-Host Pages", [=]() {
       clearSelection();
       for (const auto& item : SameHostPages(affected)) {
         item->setSelected(true);
       }
     });
-    menu.addAction("Close " + type + " Page", [this, affected]() {
+    sub->addAction("Close Page", [=]() {
       // We expand this to force children upwards
       affected->setExpanded(true);
       CloseItem(affected);
     });
-    menu.addAction("Close " + type + " Tree", [this, affected]() {
+    sub->addAction("Close Tree", [=]() {
       // We collapse everything here to force children to close
       affected->CollapseSelfAndChildren();
       CloseItem(affected);
     });
-    menu.addAction("Close " + type + " Same-Host Pages", [this, affected]() {
+    sub->addAction("Close Same-Host Pages", [=]() {
       CloseItemsInReverseOrder(SameHostPages(affected));
     });
-    menu.addAction("Close Non-" + type + " Trees", [this, affected]() {
+    sub->addAction("Close Other Trees", [=]() {
       CloseItemsInReverseOrder(affected->Siblings());
     });
+    if (has_multiple_bubbles) {
+      auto bubble_menu = menu.addMenu("Clicked-On Page Bubble");
+      ApplyBubbleSelectMenu(bubble_menu, { affected });
+    }
+  } else {
+    affected = static_cast<PageTreeItem*>(currentItem());
+    if (affected) {
+      auto sub = menu.addMenu("Current Page");
+      sub->addAction(ActionManager::Action(
+                      ActionManager::NewChildBackgroundPage));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::NewChildForegroundPage));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::Reload));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::SuspendPage));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::UnsuspendPage));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::ExpandTree));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::CollapseTree));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::DuplicateTree));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::SelectSameHostPages));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::ClosePage));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::CloseTree));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::CloseSameHostPages));
+      sub->addAction(ActionManager::Action(
+                      ActionManager::CloseOtherTrees));
+      if (has_multiple_bubbles) {
+        auto bubble_menu = menu.addMenu("Current Page Bubble");
+        ApplyBubbleSelectMenu(bubble_menu, { affected });
+      }
+    }
   }
 
+  // Selected pages
   auto selected_indices = selectedIndexes();
   auto has_selected_not_affected = selected_indices.count() > 1 ||
       (selected_indices.count() == 1 &&
         (!affected || selected_indices[0] != indexFromItem(affected)));
   if (has_selected_not_affected) {
-    menu.addSection("Selected Pages");
-    menu.addAction(ActionManager::Action(
+    auto sub = menu.addMenu("Selected Pages");
+    sub->addAction(ActionManager::Action(
         ActionManager::ReloadSelectedPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::SuspendSelectedPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::UnsuspendSelectedPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::ExpandSelectedTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CollapseSelectedTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::DuplicateSelectedTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CloseSelectedPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CloseSelectedTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CloseNonSelectedPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CloseNonSelectedTrees));
+    if (has_multiple_bubbles) {
+      auto bubble_menu = menu.addMenu("Selected Pages Bubble");
+      ApplyBubbleSelectMenu(bubble_menu, SelectedItems());
+    }
   }
 
   if (topLevelItemCount() > 0) {
-    menu.addSection("All Pages");
-    menu.addAction(ActionManager::Action(
+    auto sub = menu.addMenu("All Pages");
+    sub->addAction(ActionManager::Action(
         ActionManager::ReloadAllPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::SuspendAllPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::UnsuspendAllPages));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::ExpandAllTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CollapseAllTrees));
-    menu.addAction(ActionManager::Action(
+    sub->addAction(ActionManager::Action(
         ActionManager::CloseAllPages));
+    if (has_multiple_bubbles) {
+      auto bubble_menu = menu.addMenu("All Pages Bubble");
+      ApplyBubbleSelectMenu(bubble_menu, Items());
+    }
   }
 
   menu.exec(event->globalPos());

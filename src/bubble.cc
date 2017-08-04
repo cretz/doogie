@@ -7,7 +7,7 @@ Bubble::~Bubble() {
 }
 
 QString Bubble::Name() {
-  return prefs_.value("name").toString();
+  return prefs_.value("name").toString("");
 }
 
 QString Bubble::FriendlyName() {

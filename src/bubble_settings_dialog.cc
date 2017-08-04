@@ -287,16 +287,6 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
         user_pref_index);
   settings->AddSettingBreak();
 
-  auto user_agent = new QLineEdit;
-  user_agent->setPlaceholderText("Same as profile");
-  settings->AddSetting(
-        "User Agent",
-        "Custom user agent override.",
-        user_agent);
-  if (cef.contains("userAgent")) {
-    user_agent->setText(cef.value("userAgent").toString());
-  }
-
   auto browser = bubble_->prefs_.value("browser").toObject();
   QHash<QString, QComboBox*> browser_settings;
   for (const auto& setting : Profile::PossibleBrowserSettings()) {
@@ -325,9 +315,6 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
     }
     if (user_prefs->currentIndex() > 0) {
       cef["persistUserPreferences"] = user_prefs->currentIndex() == 1;
-    }
-    if (!user_agent->text().isEmpty()) {
-      cef["userAgent"] = user_agent->text();
     }
     if (cef.isEmpty()) {
       bubble_->prefs_.remove("cef");

@@ -90,9 +90,9 @@ void PageTreeItem::AfterAdded() {
   tree->setItemWidget(this, kBubbleIconColumn, label);
   label->setContextMenuPolicy(Qt::CustomContextMenu);
   tree->connect(label, &QLabel::customContextMenuRequested, [=]() {
-    auto menu = CreateBubbleSelectMenu();
-    menu->exec(label->mapToGlobal(label->rect().bottomLeft()));
-    menu->deleteLater();
+    QMenu menu;
+    tree->ApplyBubbleSelectMenu(&menu, { this });
+    menu.exec(label->mapToGlobal(label->rect().bottomLeft()));
   });
 
   // Create a new close button everytime because it is destroyed otherwise
@@ -203,21 +203,11 @@ QList<PageTreeItem*> PageTreeItem::Siblings() {
   return ret;
 }
 
-QMenu* PageTreeItem::CreateBubbleSelectMenu() {
-  auto menu = new QMenu(treeWidget());
-  for (const auto& bubble : Profile::Current()->Bubbles()) {
-    auto action = menu->addAction(bubble->Icon(), bubble->FriendlyName());
-    if (bubble->Name() == browser_->CurrentBubble()->Name()) {
-      action->setCheckable(true);
-      action->setChecked(true);
-      action->setDisabled(true);
-    } else {
-      treeWidget()->connect(action, &QAction::triggered, [=]() {
-        browser_->ChangeCurrentBubble(bubble);
-      });
-    }
+void PageTreeItem::SetCurrentBubbleIfDifferent(Bubble *bubble) {
+  // Only change if the name is different
+  if (bubble->Name() != browser_->CurrentBubble()->Name()) {
+    browser_->ChangeCurrentBubble(bubble);
   }
-  return menu;
 }
 
 void PageTreeItem::ApplyFavicon() {
