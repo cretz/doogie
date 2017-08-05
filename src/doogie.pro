@@ -16,11 +16,6 @@ SOURCES += \
     browser_widget.cc \
     bubble.cc \
     bubble_settings_dialog.cc \
-    cef.cc \
-    cef_app_handler.cc \
-    cef_base_widget.cc \
-    cef_handler.cc \
-    cef_widget.cc \
     dev_tools_dock.cc \
     find_widget.cc \
     logging_dock.cc \
@@ -42,12 +37,6 @@ HEADERS += \
     browser_widget.h \
     bubble.h \
     bubble_settings_dialog.h \
-    cef.h \
-    cef_app_handler.h \
-    cef_base.h \
-    cef_base_widget.h \
-    cef_handler.h \
-    cef_widget.h \
     dev_tools_dock.h \
     find_widget.h \
     logging_dock.h \
@@ -73,17 +62,8 @@ debug:HEADERS += debug_meta_server.h
 release:PROFILE = Release
 debug:PROFILE = Debug
 
-INCLUDEPATH += $$(CEF_DIR)
-
 win32 {
-    SOURCES += \
-        cef_base_widget_win.cc \
-        cef_widget_win.cc \
-        cef_win.cc
-
     LIBS += -luser32
-    LIBS += -L$$(CEF_DIR)/$$PROFILE -llibcef
-    LIBS += -L$$(CEF_DIR)/libcef_dll_wrapper/$$PROFILE -llibcef_dll_wrapper
 
     # Chromium reads the manifest, needs a specific one
     # See http://magpcss.org/ceforum/viewtopic.php?f=6&t=14721
@@ -92,15 +72,7 @@ win32 {
 }
 
 unix {
-    SOURCES += \
-        cef_embed_window_linux.cc \
-        cef_linux.cc \
-        cef_widget_linux.cc
-    HEADERS += \
-        cef_embed_window_linux.h
     LIBS += -lX11
-    LIBS += -L$$(CEF_DIR)/$$PROFILE -lcef
-    LIBS += -L$$(CEF_DIR)/libcef_dll_wrapper -lcef_dll_wrapper_$$PROFILE
     QMAKE_RPATHDIR += $ORIGIN
 
     release:MOC_DIR = release
@@ -110,3 +82,6 @@ unix {
     debug:OBJECTS_DIR = debug
     debug:DESTDIR = debug
 }
+
+# include cef folder
+include(cef/cef.pri)

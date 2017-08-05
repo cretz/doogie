@@ -4,7 +4,7 @@
 #include <QtWidgets>
 
 #include "bubble.h"
-#include "cef_widget.h"
+#include "cef/cef_widget.h"
 #include "find_widget.h"
 
 namespace doogie {

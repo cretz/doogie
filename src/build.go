@@ -428,7 +428,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	// Debug libs are d.dll
 	if target == "debug" {
 		// Only need web sockets during debug
-		qtDlls = append(qtDlls, "Qt5WebSockets.dll", "Qt5Network.dll");
+		qtDlls = append(qtDlls, "Qt5WebSockets.dll", "Qt5Network.dll")
 		for i := range qtDlls {
 			qtDlls[i] = strings.Replace(qtDlls[i], ".dll", "d.dll", -1)
 		}

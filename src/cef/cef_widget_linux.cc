@@ -1,7 +1,9 @@
-#include "cef_widget.h"
+#include "cef/cef_widget.h"
+
 #include <X11/Xlib.h>
-#include "cef_handler.h"
-#include "cef_embed_window_linux.h"
+
+#include "cef/cef_handler.h"
+#include "cef/cef_embed_window_linux.h"
 
 namespace doogie {
 

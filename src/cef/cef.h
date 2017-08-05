@@ -1,8 +1,8 @@
 #ifndef DOOGIE_CEF_H_
 #define DOOGIE_CEF_H_
 
-#include "cef_app_handler.h"
-#include "cef_base.h"
+#include "cef/cef_app_handler.h"
+#include "cef/cef_base.h"
 
 namespace doogie {
 

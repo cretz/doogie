@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 
-#include "cef.h"
+#include "cef/cef.h"
 
 namespace doogie {
 

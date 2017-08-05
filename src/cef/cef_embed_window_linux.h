@@ -2,8 +2,9 @@
 #define DOOGIE_CEF_EMBED_WINDOW_LINUX_H_
 
 #include <QtWidgets>
-#include "cef.h"
-#include "cef_widget.h"
+
+#include "cef/cef.h"
+#include "cef/cef_widget.h"
 
 namespace doogie {
 

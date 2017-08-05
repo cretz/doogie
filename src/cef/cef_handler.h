@@ -4,7 +4,7 @@
 #include <QtWidgets>
 #include <vector>
 
-#include "cef.h"
+#include "cef/cef.h"
 
 namespace doogie {
 

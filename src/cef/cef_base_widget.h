@@ -3,8 +3,8 @@
 
 #include <QtWidgets>
 
-#include "cef.h"
-#include "cef_handler.h"
+#include "cef/cef.h"
+#include "cef/cef_handler.h"
 
 namespace doogie {
 

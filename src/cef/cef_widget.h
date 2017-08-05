@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "bubble.h"
-#include "cef_base_widget.h"
-#include "cef_handler.h"
+#include "cef/cef_base_widget.h"
+#include "cef/cef_handler.h"
 
 namespace doogie {
 

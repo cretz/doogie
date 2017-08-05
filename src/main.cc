@@ -1,7 +1,8 @@
 #include <QApplication>
-#include "main_window.h"
-#include "cef.h"
+
 #include "action_manager.h"
+#include "cef/cef.h"
+#include "main_window.h"
 
 #ifdef QT_DEBUG
 #include "debug_meta_server.h"

@@ -4,8 +4,8 @@
 #include <QtWidgets>
 
 #include "browser_stack.h"
-#include "cef.h"
-#include "cef_widget.h"
+#include "cef/cef.h"
+#include "cef/cef_widget.h"
 #include "dev_tools_dock.h"
 #include "logging_dock.h"
 #include "page_tree_dock.h"
