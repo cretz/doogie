@@ -1,28 +1,28 @@
 #include "browser_stack.h"
+
 #include "action_manager.h"
 
 namespace doogie {
 
-BrowserStack::BrowserStack(Cef* cef, QWidget* parent)
+BrowserStack::BrowserStack(const Cef& cef, QWidget* parent)
     : QStackedWidget(parent), cef_(cef) {
-  connect(this, &BrowserStack::currentChanged, [this](int) {
+  connect(this, &BrowserStack::currentChanged, [=](int) {
     emit BrowserChanged(CurrentBrowser());
     emit CurrentBrowserOrLoadingStateChanged();
   });
   SetupActions();
 }
 
-QPointer<BrowserWidget> BrowserStack::NewBrowser(Bubble* bubble,
-                                                 const QString& url) {
+BrowserWidget* BrowserStack::NewBrowser(Bubble* bubble, const QString& url) {
   auto widg = new BrowserWidget(cef_, bubble, "");
-  connect(widg, &BrowserWidget::LoadingStateChanged, [this, widg]() {
+  connect(widg, &BrowserWidget::LoadingStateChanged, [=]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();
   });
   connect(widg, &BrowserWidget::ShowDevToolsRequest,
-          [this, widg](const QPoint& inspect_at) {
+          [=](const QPoint& inspect_at) {
     emit ShowDevToolsRequest(widg, inspect_at);
   });
-  connect(widg, &BrowserWidget::CloseCancelled, [this, widg]() {
+  connect(widg, &BrowserWidget::CloseCancelled, [=]() {
     emit BrowserCloseCancelled(widg);
   });
   // We load the URL separately so we can have the loading icon and what not
@@ -31,11 +31,11 @@ QPointer<BrowserWidget> BrowserStack::NewBrowser(Bubble* bubble,
   return widg;
 }
 
-BrowserWidget* BrowserStack::CurrentBrowser() {
-  return static_cast<BrowserWidget*>(currentWidget());
+BrowserWidget* BrowserStack::CurrentBrowser() const {
+  return qobject_cast<BrowserWidget*>(currentWidget());
 }
 
-QList<BrowserWidget*> BrowserStack::Browsers() {
+QList<BrowserWidget*> BrowserStack::Browsers() const {
   QList<BrowserWidget*> ret;
   for (int i = 0; i < count(); i++) {
     auto browser = qobject_cast<BrowserWidget*>(widget(i));
@@ -46,18 +46,18 @@ QList<BrowserWidget*> BrowserStack::Browsers() {
 
 void BrowserStack::SetupActions() {
   connect(ActionManager::Action(ActionManager::FocusAddressBar),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     auto browser = CurrentBrowser();
     if (browser) browser->FocusUrlEdit();
   });
   connect(ActionManager::Action(ActionManager::FocusBrowser),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     auto browser = CurrentBrowser();
     if (browser) browser->FocusBrowser();
   });
 
   // Let's disable/enable a bunch of actions on change
-  connect(this, &BrowserStack::CurrentBrowserOrLoadingStateChanged, [this]() {
+  connect(this, &BrowserStack::CurrentBrowserOrLoadingStateChanged, [=]() {
     auto current = CurrentBrowser();
     auto enabled = [](ActionManager::Type type, bool value) {
       ActionManager::Action(type)->setEnabled(value);

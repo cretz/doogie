@@ -12,7 +12,6 @@ WorkspaceTreeItem::WorkspaceTreeItem()
 }
 
 void WorkspaceTreeItem::AfterAdded() {
-
   auto menu_button = new QToolButton;
   menu_button->setIcon(
         Util::CachedIcon(":/res/images/fontawesome/bars.png"));

@@ -58,11 +58,11 @@ QPixmap* Util::CachedPixmapColorOverlay(const QString& res_name,
   return pixmap;
 }
 
-QJsonObject Util::DebugWidgetGeom(QWidget* widg) {
+QJsonObject Util::DebugWidgetGeom(const QWidget* widg) {
   return Util::DebugWidgetGeom(widg, widg->rect());
 }
 
-QJsonObject Util::DebugWidgetGeom(QWidget* widg, const QRect& rect) {
+QJsonObject Util::DebugWidgetGeom(const QWidget* widg, const QRect& rect) {
   return Util::DebugRect(widg->mapToGlobal(rect.topLeft()), rect.size());
 }
 

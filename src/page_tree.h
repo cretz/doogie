@@ -2,6 +2,7 @@
 #define DOOGIE_PAGE_TREE_H_
 
 #include <QtWidgets>
+
 #include "browser_stack.h"
 #include "browser_widget.h"
 #include "page_tree_item.h"
@@ -13,18 +14,18 @@ class PageTree : public QTreeWidget {
   Q_OBJECT
 
  public:
+  static const int kPageItemType = QTreeWidgetItem::UserType + 1;
+  static const int kWorkspaceItemType = QTreeWidgetItem::UserType + 2;
+
   explicit PageTree(BrowserStack* browser_stack, QWidget* parent = nullptr);
   QMovie* LoadingIconMovie();
-  PageTreeItem* CurrentItem();
-  PageTreeItem* NewPage(const QString &url,
+  PageTreeItem* CurrentItem() const;
+  PageTreeItem* NewPage(const QString& url,
                         PageTreeItem* parent,
                         bool make_current);
   void ApplyBubbleSelectMenu(QMenu* menu,
                              QList<PageTreeItem*> apply_to_items);
-  QJsonObject DebugDump();
-
-  static const int kPageItemType = QTreeWidgetItem::UserType + 1;
-  static const int kWorkspaceItemType = QTreeWidgetItem::UserType + 2;
+  QJsonObject DebugDump() const;
 
  protected:
   Qt::DropActions supportedDropActions() const override;

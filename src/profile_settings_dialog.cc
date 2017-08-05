@@ -1,8 +1,9 @@
 #include "profile_settings_dialog.h"
+
 #include "action_manager.h"
-#include "util.h"
 #include "bubble_settings_dialog.h"
 #include "settings_widget.h"
+#include "util.h"
 
 namespace doogie {
 
@@ -37,7 +38,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile,
   setSizeGripEnabled(true);
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
-  auto apply_change = [this, ok]() {
+  auto apply_change = [=]() {
     ok->setEnabled(settings_changed_ ||
                    shortcuts_changed_ ||
                    bubbles_changed_);
@@ -59,7 +60,7 @@ ProfileSettingsDialog::~ProfileSettingsDialog() {
   bubbles_.clear();
 }
 
-bool ProfileSettingsDialog::NeedsRestart() {
+bool ProfileSettingsDialog::NeedsRestart() const {
   return settings_changed_;
 }
 
@@ -72,7 +73,7 @@ void ProfileSettingsDialog::done(int r) {
       // We have to assume no bubbles are deleted that are in use
       QList<Bubble*> new_bubbles;
       QSet<QString> names_found;
-      for (const auto& bubble : bubbles_) {
+      for (auto bubble : bubbles_) {
         auto existing_bubble = profile_->BubbleByName(bubble->Name());
         names_found.insert(bubble->Name());
         if (existing_bubble) {
@@ -145,8 +146,7 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
         "Cache Path",
         "The location where cache data is stored on disk, if any. ",
         cache_path_widg);
-  connect(cache_path_disabled_, &QCheckBox::toggled,
-          [this, cache_path_open](bool checked) {
+  connect(cache_path_disabled_, &QCheckBox::toggled, [=](bool checked) {
     cache_path_edit_->setEnabled(!checked);
     cache_path_open->setEnabled(!checked);
   });
@@ -228,8 +228,7 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
         "The location where user data such as spell checking "
         "dictionary files will be stored on disk.",
         user_data_path_widg);
-  connect(user_data_path_disabled_, &QCheckBox::toggled,
-          [this, user_data_path_open](bool checked) {
+  connect(user_data_path_disabled_, &QCheckBox::toggled, [=](bool checked) {
     user_data_path_edit_->setEnabled(!checked);
     user_data_path_open->setEnabled(!checked);
   });
@@ -240,7 +239,7 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   user_data_path_edit_->setText(curr_user_data_path);
 
   auto browser = profile_->prefs_.value("browser").toObject();
-  for (const auto& setting : Profile::PossibleBrowserSettings()) {
+  for (auto& setting : Profile::PossibleBrowserSettings()) {
     settings->AddSettingBreak();
 
     auto index = 0;
@@ -287,7 +286,7 @@ QJsonObject ProfileSettingsDialog::BuildCefPrefsJson() {
 
 QJsonObject ProfileSettingsDialog::BuildBrowserPrefsJson() {
   QJsonObject ret;
-  for (const auto& setting : Profile::PossibleBrowserSettings()) {
+  for (auto& setting : Profile::PossibleBrowserSettings()) {
     auto index = browser_setting_widgs_[setting.name]->currentIndex();
     if (index != 0) {
       ret[setting.field] = index == 1;
@@ -321,7 +320,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
   shortcuts_->horizontalHeader()->setStretchLastSection(true);
   // <seq, <name>>
   auto known_seqs = new QHash<QString, QStringList>;
-  connect(this, &QDialog::destroyed, [known_seqs]() { delete known_seqs; });
+  connect(this, &QDialog::destroyed, [=]() { delete known_seqs; });
   auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
   auto string_item = [](const QString& text) -> QTableWidgetItem* {
     auto item = new QTableWidgetItem(text);
@@ -387,7 +386,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
   connect(shortcuts_, &QTableWidget::itemChanged,
           this, &ProfileSettingsDialog::CheckShortcutsChange);
 
-  auto add_seq_item = [this, known_seqs, list](const QKeySequence& seq) {
+  auto add_seq_item = [=](const QKeySequence& seq) {
     auto item = new QWidget;
     item->setObjectName("item");
     item->setStyleSheet(
@@ -402,8 +401,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
     item_delete->setText("X");
     item_delete->setStyleSheet("font-weight: bold;");
     item->layout()->addWidget(item_delete);
-    connect(item_delete, &QToolButton::clicked,
-            [this, known_seqs, seq, item, list]() {
+    connect(item_delete, &QToolButton::clicked, [=]() {
       auto selected = shortcuts_->selectedItems();
       auto seqs = QKeySequence::listFromString(selected[2]->text());
       seqs.removeAll(seq);
@@ -416,9 +414,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
     list->adjustSize();
   };
 
-  connect(shortcuts_, &QTableWidget::itemSelectionChanged,
-          [this, edit_group, list, seq_edit, shortcut_layout,
-          shortcut_edit, err, add_seq_item, record]() {
+  connect(shortcuts_, &QTableWidget::itemSelectionChanged, [=]() {
     auto selected = shortcuts_->selectedItems();
     if (selected.size() != 3) {
       edit_group->setVisible(false);
@@ -440,8 +436,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
     }
   });
 
-  connect(shortcut_edit, &QLineEdit::textChanged,
-          [err, ok, known_seqs](const QString& text) {
+  connect(shortcut_edit, &QLineEdit::textChanged, [=](const QString& text) {
     err->clear();
     ok->setEnabled(false);
     if (text.isEmpty()) return;
@@ -457,8 +452,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
                    + existing.join(", "));
     }
   });
-  auto new_shortcut =
-      [this, add_seq_item](const QKeySequence& seq) -> bool {
+  auto new_shortcut = [=](const QKeySequence& seq) -> bool {
     if (seq.isEmpty()) return false;
     auto selected = shortcuts_->selectedItems();
     QList<QKeySequence> existing;
@@ -471,19 +465,17 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
     selected[2]->setText(QKeySequence::listToString(existing));
     return true;
   };
-  connect(shortcut_edit, &QLineEdit::returnPressed,
-          [shortcut_edit, new_shortcut]() {
+  connect(shortcut_edit, &QLineEdit::returnPressed, [=]() {
     if (new_shortcut(Profile::KeySequenceOrEmpty(shortcut_edit->text()))) {
       shortcut_edit->clear();
     }
   });
-  connect(ok, &QPushButton::clicked, [shortcut_edit, new_shortcut]() {
+  connect(ok, &QPushButton::clicked, [=]() {
     if (new_shortcut(Profile::KeySequenceOrEmpty(shortcut_edit->text()))) {
       shortcut_edit->clear();
     }
   });
-  connect(record, &QPushButton::clicked,
-          [record, shortcut_layout, seq_edit]() {
+  connect(record, &QPushButton::clicked, [=]() {
     if (record->text() == "Stop Recording") {
       emit seq_edit->editingFinished();
     } else {
@@ -495,8 +487,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
       seq_edit->setFocus();
     }
   });
-  connect(seq_edit, &QKeySequenceEdit::editingFinished,
-          [record, seq_edit, new_shortcut, shortcut_layout]() {
+  connect(seq_edit, &QKeySequenceEdit::editingFinished, [=]() {
     record->setText("Record");
     if (!seq_edit->keySequence().isEmpty()) {
       new_shortcut(seq_edit->keySequence());
@@ -507,8 +498,7 @@ QWidget* ProfileSettingsDialog::CreateShortcutsTab() {
     shortcut_layout->itemAt(1)->widget()->show();
     shortcut_layout->itemAt(2)->widget()->show();
   });
-  connect(reset, &QPushButton::clicked,
-          [this, record, seq_edit, list, new_shortcut, action_meta]() {
+  connect(reset, &QPushButton::clicked, [=]() {
     if (record->text() == "Stop Recording") {
       emit seq_edit->editingFinished();
     }
@@ -572,7 +562,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   list->setSelectionBehavior(QAbstractItemView::SelectRows);
   list->setSelectionMode(QAbstractItemView::SingleSelection);
   // Create a copy of each bubble into a local list
-  for (const auto& prev_bubble : profile_->Bubbles()) {
+  for (auto prev_bubble : profile_->Bubbles()) {
     auto bubble = new Bubble(prev_bubble->prefs_);
     bubbles_.append(bubble);
     auto item = new QListWidgetItem(bubble->Icon(), bubble->FriendlyName());

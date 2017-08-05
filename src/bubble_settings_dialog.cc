@@ -1,4 +1,5 @@
 #include "bubble_settings_dialog.h"
+
 #include "settings_widget.h"
 
 namespace doogie {

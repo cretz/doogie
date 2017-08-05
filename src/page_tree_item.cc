@@ -1,4 +1,5 @@
 #include "page_tree_item.h"
+
 #include "page_tree.h"
 #include "util.h"
 
@@ -10,17 +11,17 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
            Qt::ItemIsDropEnabled | Qt::ItemIsEnabled);
   // Connect title and favicon change
   setText(0, "(New Window)");
-  browser->connect(browser, &BrowserWidget::TitleChanged, [this]() {
+  browser->connect(browser, &BrowserWidget::TitleChanged, [=]() {
     if (browser_) {
       setText(0, browser_->CurrentTitle());
       setToolTip(0, browser_->CurrentTitle());
     }
   });
   browser->connect(browser, &BrowserWidget::LoadingStateChanged,
-                   [this]() { ApplyFavicon(); });
+                   [=]() { ApplyFavicon(); });
   browser->connect(browser, &BrowserWidget::FaviconChanged,
-                   [this]() { ApplyFavicon(); });
-  browser->connect(browser, &BrowserWidget::destroyed, [this]() {
+                   [=]() { ApplyFavicon(); });
+  browser->connect(browser, &BrowserWidget::destroyed, [=]() {
     // Move all the children up
     if (parent()) {
       parent()->insertChildren(parent()->indexOfChild(this), takeChildren());
@@ -31,13 +32,13 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     delete this;
   });
   browser->connect(browser, &BrowserWidget::AboutToShowJSDialog,
-                   [this]() {
+                   [=]() {
     treeWidget()->setCurrentItem(this);
   });
-  browser->connect(browser, &BrowserWidget::CloseCancelled, [this]() {
+  browser->connect(browser, &BrowserWidget::CloseCancelled, [=]() {
     close_button_->setChecked(false);
   });
-  browser->connect(browser, &BrowserWidget::SuspensionChanged, [this]() {
+  browser->connect(browser, &BrowserWidget::SuspensionChanged, [=]() {
     auto palette = QGuiApplication::palette();
     if (browser_->Suspended()) {
       setForeground(0, palette.brush(QPalette::Disabled, QPalette::Text));
@@ -69,11 +70,11 @@ PageTreeItem::~PageTreeItem() {
   }
 }
 
-QPointer<BrowserWidget> PageTreeItem::Browser() {
+QPointer<BrowserWidget> PageTreeItem::Browser() const {
   return browser_;
 }
 
-QToolButton* PageTreeItem::CloseButton() {
+QToolButton* PageTreeItem::CloseButton() const {
   return close_button_;
 }
 
@@ -123,7 +124,7 @@ void PageTreeItem::AfterAdded() {
   }
 }
 
-QJsonObject PageTreeItem::DebugDump() {
+QJsonObject PageTreeItem::DebugDump() const {
   QJsonArray children;
   for (int i = 0; i < childCount(); i++) {
     children.append(static_cast<PageTreeItem*>(child(i))->DebugDump());
@@ -143,7 +144,7 @@ QJsonObject PageTreeItem::DebugDump() {
   };
 }
 
-bool PageTreeItem::SelfOrAnyChildCollapsed() {
+bool PageTreeItem::SelfOrAnyChildCollapsed() const {
   for (int i = 0; i < childCount(); i++) {
     if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildCollapsed()) {
       return true;
@@ -152,7 +153,7 @@ bool PageTreeItem::SelfOrAnyChildCollapsed() {
   return false;
 }
 
-bool PageTreeItem::SelfOrAnyChildExpanded() {
+bool PageTreeItem::SelfOrAnyChildExpanded() const {
   for (int i = 0; i < childCount(); i++) {
     if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildExpanded()) {
       return true;
@@ -175,8 +176,8 @@ void PageTreeItem::CollapseSelfAndChildren() {
   }
 }
 
-QList<PageTreeItem*> PageTreeItem::SelfSelectedOrChildrenSelected() {
-  if (isSelected()) return { this };
+QList<PageTreeItem*> PageTreeItem::SelfSelectedOrChildrenSelected() const {
+  if (isSelected()) return { const_cast<PageTreeItem*>(this) };
   QList<PageTreeItem*> ret;
   for (int i = 0; i < childCount(); i++) {
     ret.append(static_cast<PageTreeItem*>(child(i))->
@@ -185,20 +186,21 @@ QList<PageTreeItem*> PageTreeItem::SelfSelectedOrChildrenSelected() {
   return ret;
 }
 
-bool PageTreeItem::SelectedOrHasSelectedParent() {
+bool PageTreeItem::SelectedOrHasSelectedParent() const {
   if (isSelected()) return true;
-  auto my_parent = static_cast<PageTreeItem*>(parent());
-  if (!my_parent) return false;
-  return my_parent->SelectedOrHasSelectedParent();
+  if (!parent() || parent()->type() != PageTree::kPageItemType) return false;
+  return static_cast<PageTreeItem*>(parent())->SelectedOrHasSelectedParent();
 }
 
-QList<PageTreeItem*> PageTreeItem::Siblings() {
+QList<PageTreeItem*> PageTreeItem::Siblings() const {
   auto my_parent = parent();
   if (!my_parent) my_parent = treeWidget()->invisibleRootItem();
   QList<PageTreeItem*> ret;
-  ret.reserve(my_parent->childCount() - 1);
   for (int i = 0; i < my_parent->childCount(); i++) {
-    ret.append(static_cast<PageTreeItem*>(my_parent->child(i)));
+    auto item = my_parent->child(i);
+    if (item && item->type() == PageTree::kPageItemType) {
+      ret.append(static_cast<PageTreeItem*>(item));
+    }
   }
   return ret;
 }

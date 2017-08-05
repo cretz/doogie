@@ -1,5 +1,7 @@
 #include "page_tree.h"
+
 #include <algorithm>
+
 #include "action_manager.h"
 #include "bubble_settings_dialog.h"
 #include "workspace_tree_item.h"
@@ -31,13 +33,13 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
 
   // Emit empty on row removal
   connect(model(), &QAbstractItemModel::rowsRemoved,
-          [this](const QModelIndex&, int, int) {
+          [=](const QModelIndex&, int, int) {
     if (topLevelItemCount() == 0) emit TreeEmpty();
   });
 
   // Each time one is selected, we need to make sure to show that on the stack
   connect(this, &QTreeWidget::currentItemChanged,
-          [this](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
+          [=](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
     // Before anything, if current is a workspace item, we don't support
     //  "current" so put it back
     if (current && current->type() == kWorkspaceItemType) {
@@ -67,7 +69,7 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   // Connect the simple close
   connect(this, &PageTree::ItemClose, this, &PageTree::CloseItem);
 
-  connect(this, &PageTree::ItemCloseRelease, [this](PageTreeItem* item) {
+  connect(this, &PageTree::ItemCloseRelease, [=](PageTreeItem* item) {
     auto button_down = QApplication::mouseButtons().testFlag(Qt::LeftButton);
     if (button_down) {
       item->CloseButton()->setDown(true);
@@ -107,7 +109,7 @@ QMovie* PageTree::LoadingIconMovie() {
   return loading_icon_movie_;
 }
 
-PageTreeItem* PageTree::CurrentItem()  {
+PageTreeItem* PageTree::CurrentItem() const {
   return AsPageTreeItem(currentItem());
 }
 
@@ -129,7 +131,7 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   // If there is a commonly selected one for all of them, we will mark
   // that one as checked and unable to be selected
   QString common_bubble_name;
-  for (const auto& item : apply_to_items) {
+  for (auto item : apply_to_items) {
     auto bubble_name = item->Browser()->CurrentBubble()->Name();
     if (common_bubble_name.isNull()) {
       common_bubble_name = bubble_name;
@@ -138,7 +140,7 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
       break;
     }
   }
-  for (const auto& bubble : Profile::Current()->Bubbles()) {
+  for (auto bubble : Profile::Current()->Bubbles()) {
     auto action = menu->addAction(bubble->Icon(), bubble->FriendlyName());
     if (!common_bubble_name.isNull() && common_bubble_name == bubble->Name()) {
       action->setCheckable(true);
@@ -156,14 +158,14 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   menu->addAction("New Bubble...", [=]() {
     auto bubble = BubbleSettingsDialog::NewBubble();
     if (bubble) {
-      for (const auto& item : apply_to_items) {
+      for (auto item : apply_to_items) {
         item->SetCurrentBubbleIfDifferent(bubble);
       }
     }
   });
 }
 
-QJsonObject PageTree::DebugDump() {
+QJsonObject PageTree::DebugDump() const {
   QJsonArray items;
   for (int i = 0; i < topLevelItemCount(); i++) {
     auto item = AsPageTreeItem(topLevelItem(i));
@@ -387,7 +389,7 @@ bool PageTree::dropMimeData(QTreeWidgetItem* parent,
   // If there is a URL we go ahead and put each one under the parent
   if (data->hasUrls()) {
     auto parent_item = AsPageTreeItem(parent);
-    for (const auto& url : data->urls()) {
+    for (auto url : data->urls()) {
       NewPage(url.url(), parent_item, true);
     }
     return true;
@@ -562,117 +564,117 @@ WorkspaceTreeItem* PageTree::AsWorkspaceTreeItem(QTreeWidgetItem* item) const {
 
 void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::NewTopLevelPage),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     auto page = NewPage("", nullptr, true);
     // Focus URL edit
     page->Browser()->FocusUrlEdit();
   });
   connect(ActionManager::Action(ActionManager::NewChildForegroundPage),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     auto page = NewPage("", CurrentItem(), true);
     // Focus URL edit
     page->Browser()->FocusUrlEdit();
   });
   connect(ActionManager::Action(ActionManager::NewChildBackgroundPage),
           &QAction::triggered,
-          [this]() { NewPage("", CurrentItem(), false); });
+          [=]() { NewPage("", CurrentItem(), false); });
   connect(ActionManager::Action(ActionManager::Reload),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->Refresh(); });
+          [=]() { CurrentItem()->Browser()->Refresh(); });
   connect(ActionManager::Action(ActionManager::SuspendPage),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->SetSuspended(true); });
+          [=]() { CurrentItem()->Browser()->SetSuspended(true); });
   connect(ActionManager::Action(ActionManager::UnsuspendPage),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->SetSuspended(false); });
+          [=]() { CurrentItem()->Browser()->SetSuspended(false); });
   connect(ActionManager::Action(ActionManager::Stop),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->Stop(); });
+          [=]() { CurrentItem()->Browser()->Stop(); });
   connect(ActionManager::Action(ActionManager::Forward),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->Forward(); });
+          [=]() { CurrentItem()->Browser()->Forward(); });
   connect(ActionManager::Action(ActionManager::Print),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->Print(); });
+          [=]() { CurrentItem()->Browser()->Print(); });
   connect(ActionManager::Action(ActionManager::ZoomIn),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     CurrentItem()->Browser()->SetZoomLevel(
-          CurrentItem()->Browser()->GetZoomLevel() + 0.1);
+          CurrentItem()->Browser()->ZoomLevel() + 0.1);
   });
   connect(ActionManager::Action(ActionManager::ZoomOut),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     CurrentItem()->Browser()->SetZoomLevel(
-          CurrentItem()->Browser()->GetZoomLevel() - 0.1);
+          CurrentItem()->Browser()->ZoomLevel() - 0.1);
   });
   connect(ActionManager::Action(ActionManager::ResetZoom),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->SetZoomLevel(0.0); });
+          [=]() { CurrentItem()->Browser()->SetZoomLevel(0.0); });
   connect(ActionManager::Action(ActionManager::FindInPage),
           &QAction::triggered,
-          [this]() { CurrentItem()->Browser()->ShowFind(); });
+          [=]() { CurrentItem()->Browser()->ShowFind(); });
   connect(ActionManager::Action(ActionManager::ExpandTree),
           &QAction::triggered,
-          [this]() { CurrentItem()->ExpandSelfAndChildren(); });
+          [=]() { CurrentItem()->ExpandSelfAndChildren(); });
   connect(ActionManager::Action(ActionManager::CollapseTree),
           &QAction::triggered,
-          [this]() { CurrentItem()->CollapseSelfAndChildren(); });
+          [=]() { CurrentItem()->CollapseSelfAndChildren(); });
   connect(ActionManager::Action(ActionManager::DuplicateTree),
           &QAction::triggered,
-          [this]() { DuplicateTree(CurrentItem()); });
+          [=]() { DuplicateTree(CurrentItem()); });
   connect(ActionManager::Action(ActionManager::SelectSameHostPages),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     clearSelection();
-    for (const auto& item : SameHostPages(CurrentItem())) {
+    for (auto item : SameHostPages(CurrentItem())) {
       item->setSelected(true);
     }
   });
   connect(ActionManager::Action(ActionManager::ClosePage),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     // Expand it to prevent child close
     CurrentItem()->setExpanded(true);
     CloseItem(CurrentItem());
   });
   connect(ActionManager::Action(ActionManager::CloseTree),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     // Collapse to force child close
     CurrentItem()->CollapseSelfAndChildren();
     CloseItem(CurrentItem());
   });
   connect(ActionManager::Action(ActionManager::CloseSameHostPages),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     CloseItemsInReverseOrder(SameHostPages(CurrentItem()));
   });
   connect(ActionManager::Action(ActionManager::CloseOtherTrees),
           &QAction::triggered,
-          [this]() { CloseItemsInReverseOrder(CurrentItem()->Siblings()); });
+          [=]() { CloseItemsInReverseOrder(CurrentItem()->Siblings()); });
 
   connect(ActionManager::Action(ActionManager::ReloadSelectedPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItems()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItems()) {
       item->Browser()->Refresh();
     }
   });
   connect(ActionManager::Action(ActionManager::SuspendSelectedPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItems()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItems()) {
       item->Browser()->SetSuspended(true);
     }
   });
   connect(ActionManager::Action(ActionManager::UnsuspendSelectedPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItems()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItems()) {
       item->Browser()->SetSuspended(false);
     }
   });
   connect(ActionManager::Action(ActionManager::ExpandSelectedTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItemsOnlyHighestLevel()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItemsOnlyHighestLevel()) {
       item->ExpandSelfAndChildren();
     }
   });
   connect(ActionManager::Action(ActionManager::CollapseSelectedTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItemsOnlyHighestLevel()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItemsOnlyHighestLevel()) {
       item->CollapseSelfAndChildren();
     }
   });
@@ -680,13 +682,13 @@ void PageTree::SetupActions() {
   // is selected. Otherwise, the definition of child+parent duplication
   // can be ambiguous depending on which you duplicate first.
   connect(ActionManager::Action(ActionManager::DuplicateSelectedTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItemsOnlyHighestLevel()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItemsOnlyHighestLevel()) {
       DuplicateTree(item);
     }
   });
   connect(ActionManager::Action(ActionManager::CloseSelectedPages),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     // Go backwards and expand before closing
     auto items = SelectedItems();
     for (auto i = items.crbegin(); i != items.crend(); i++) {
@@ -695,15 +697,15 @@ void PageTree::SetupActions() {
     }
   });
   connect(ActionManager::Action(ActionManager::CloseSelectedTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : SelectedItemsOnlyHighestLevel()) {
+          &QAction::triggered, [=]() {
+    for (auto item : SelectedItemsOnlyHighestLevel()) {
       // We always collapse to kill everything
       item->CollapseSelfAndChildren();
       CloseItem(item);
     }
   });
   connect(ActionManager::Action(ActionManager::CloseNonSelectedPages),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     // Expand non-selected and close in reverse
     auto items = Items();
     for (auto i = items.crbegin(); i != items.crend(); i++) {
@@ -714,7 +716,7 @@ void PageTree::SetupActions() {
     }
   });
   connect(ActionManager::Action(ActionManager::CloseNonSelectedTrees),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     // Basically go in reverse and expand+close anything not selected
     // and without a selected parent.
     auto items = Items();
@@ -727,41 +729,41 @@ void PageTree::SetupActions() {
   });
 
   connect(ActionManager::Action(ActionManager::ReloadAllPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : Items()) {
+          &QAction::triggered, [=]() {
+    for (auto item : Items()) {
       item->Browser()->Refresh();
     }
   });
   connect(ActionManager::Action(ActionManager::SuspendAllPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : Items()) {
+          &QAction::triggered, [=]() {
+    for (auto item : Items()) {
       item->Browser()->SetSuspended(true);
     }
   });
   connect(ActionManager::Action(ActionManager::UnsuspendAllPages),
-          &QAction::triggered, [this]() {
-    for (const auto& item : Items()) {
+          &QAction::triggered, [=]() {
+    for (auto item : Items()) {
       item->Browser()->SetSuspended(false);
     }
   });
   connect(ActionManager::Action(ActionManager::ExpandAllTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : Items()) {
+          &QAction::triggered, [=]() {
+    for (auto item : Items()) {
       item->setExpanded(true);
     }
   });
   connect(ActionManager::Action(ActionManager::CollapseAllTrees),
-          &QAction::triggered, [this]() {
-    for (const auto& item : Items()) {
+          &QAction::triggered, [=]() {
+    for (auto item : Items()) {
       item->setExpanded(false);
     }
   });
   connect(ActionManager::Action(ActionManager::CloseAllPages),
           &QAction::triggered,
-          [this]() { CloseItemsInReverseOrder(Items()); });
+          [=]() { CloseItemsInReverseOrder(Items()); });
   connect(ActionManager::Action(ActionManager::FocusPageTree),
           &QAction::triggered,
-          [this]() { setFocus(); });
+          [=]() { setFocus(); });
 }
 
 PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
@@ -786,11 +788,11 @@ PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   }
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,
-          [this, browser_item](CefHandler::WindowOpenType type,
-                               const QString& url,
-                               bool user_gesture) {
+          [=](CefHandler::WindowOpenType type,
+              const QString& url,
+              bool user_gesture) {
     PageTreeItem* parent = nullptr;
-    // TODO: better UI and should I block all non-user page changes?
+    // TODO(cretz): better UI and should I block all non-user page changes?
     if (!user_gesture) {
       qDebug() << "Popup blocked for: " << url;
       return;

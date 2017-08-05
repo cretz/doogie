@@ -2,6 +2,7 @@
 #define DOOGIE_DEBUG_META_SERVER_H_
 
 #include <QtWidgets>
+
 #include "main_window.h"
 
 namespace doogie {

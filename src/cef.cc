@@ -1,5 +1,7 @@
 #include "cef.h"
+
 #include <QtGlobal>
+
 #include "profile.h"
 
 namespace doogie {
@@ -24,7 +26,7 @@ Cef::Cef(int argc, char* argv[]) {
   }
 
   CefSettings settings;
-  Profile::Current()->ApplyCefSettings(settings);
+  Profile::Current()->ApplyCefSettings(&settings);
   if (!CefInitialize(main_args, settings, app_handler_, nullptr)) {
     throw std::runtime_error("Unable to initialize CEF");
   }
@@ -34,15 +36,15 @@ Cef::~Cef() {
   if (early_exit_code_ < 0) CefShutdown();
 }
 
-int Cef::EarlyExitCode() {
+int Cef::EarlyExitCode() const {
   return early_exit_code_;
 }
 
-void Cef::Tick() {
+void Cef::Tick() const {
   CefDoMessageLoopWork();
 }
 
-CefRefPtr<CefAppHandler> Cef::AppHandler() {
+CefRefPtr<CefAppHandler> Cef::AppHandler() const {
   return app_handler_;
 }
 

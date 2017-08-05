@@ -1,13 +1,15 @@
 #include "cef_widget.h"
+
 #include <Windows.h>
-#include "profile.h"
+
 #include "bubble.h"
+#include "profile.h"
 
 namespace doogie {
 
 void CefWidget::InitBrowser(const QString& url) {
   CefBrowserSettings settings;
-  bubble_->ApplyCefBrowserSettings(settings);
+  bubble_->ApplyCefBrowserSettings(&settings);
   browser_ = CefBrowserHost::CreateBrowserSync(
         window_info_,
         handler_,

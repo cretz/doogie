@@ -20,73 +20,73 @@ QList<QKeySequence> ActionManager::DefaultShortcuts(int type) {
   return instance_->default_shortcuts_.value(type);
 }
 
-void ActionManager::registerAction(int type, QAction* action) {
+void ActionManager::RegisterAction(int type, QAction* action) {
   action->setParent(instance_);
   instance_->actions_[type] = action;
 }
 
-void ActionManager::registerAction(int type, const QString& text) {
-  ActionManager::registerAction(type, new QAction(text));
+void ActionManager::RegisterAction(int type, const QString& text) {
+  ActionManager::RegisterAction(type, new QAction(text));
 }
 
-ActionManager::ActionManager(QObject *parent) : QObject(parent) {
+ActionManager::ActionManager(QObject* parent) : QObject(parent) {
   instance_ = this;
   CreateActions();
 }
 
 void ActionManager::CreateActions() {
-  registerAction(NewWindow, "New Window");
-  registerAction(NewTopLevelPage, "New Top-Level Page");
-  registerAction(ProfileSettings, "Profile Settings");
-  registerAction(ChangeProfile, "Change Profile");
-  registerAction(NewChildForegroundPage, "New Child Foreground Page");
-  registerAction(NewChildBackgroundPage, "New Child Background Page");
-  registerAction(Reload, "Reload");
-  registerAction(Stop, "Stop");
-  registerAction(Back, "Back");
-  registerAction(Forward, "Forward");
-  registerAction(Print, "Print");
-  registerAction(ZoomIn, "Zoom In");
-  registerAction(ZoomOut, "Zoom Out");
-  registerAction(ResetZoom, "Reset Zoom");
-  registerAction(FindInPage, "Find in Page");
-  registerAction(SuspendPage, "Suspend Current Page");
-  registerAction(UnsuspendPage, "Unsuspend Current Page");
-  registerAction(ExpandTree, "Expand Current Tree");
-  registerAction(CollapseTree, "Collapse Current Tree");
-  registerAction(DuplicateTree, "Duplicate Current Tree");
-  registerAction(SelectSameHostPages, "Select Current Same-Host Pages");
-  registerAction(ClosePage, "Close Current Page");
-  registerAction(CloseTree, "Close Current Tree");
-  registerAction(CloseSameHostPages, "Close Current Same-Host Pages");
-  registerAction(CloseOtherTrees, "Close Non-Current Trees");
+  RegisterAction(NewWindow, "New Window");
+  RegisterAction(NewTopLevelPage, "New Top-Level Page");
+  RegisterAction(ProfileSettings, "Profile Settings");
+  RegisterAction(ChangeProfile, "Change Profile");
+  RegisterAction(NewChildForegroundPage, "New Child Foreground Page");
+  RegisterAction(NewChildBackgroundPage, "New Child Background Page");
+  RegisterAction(Reload, "Reload");
+  RegisterAction(Stop, "Stop");
+  RegisterAction(Back, "Back");
+  RegisterAction(Forward, "Forward");
+  RegisterAction(Print, "Print");
+  RegisterAction(ZoomIn, "Zoom In");
+  RegisterAction(ZoomOut, "Zoom Out");
+  RegisterAction(ResetZoom, "Reset Zoom");
+  RegisterAction(FindInPage, "Find in Page");
+  RegisterAction(SuspendPage, "Suspend Current Page");
+  RegisterAction(UnsuspendPage, "Unsuspend Current Page");
+  RegisterAction(ExpandTree, "Expand Current Tree");
+  RegisterAction(CollapseTree, "Collapse Current Tree");
+  RegisterAction(DuplicateTree, "Duplicate Current Tree");
+  RegisterAction(SelectSameHostPages, "Select Current Same-Host Pages");
+  RegisterAction(ClosePage, "Close Current Page");
+  RegisterAction(CloseTree, "Close Current Tree");
+  RegisterAction(CloseSameHostPages, "Close Current Same-Host Pages");
+  RegisterAction(CloseOtherTrees, "Close Non-Current Trees");
 
-  registerAction(ReloadSelectedPages, "Reload Selected Pages");  
-  registerAction(SuspendSelectedPages, "Suspend Selected Pages");
-  registerAction(UnsuspendSelectedPages, "Unsuspend Selected Pages");
-  registerAction(ExpandSelectedTrees, "Expand Selected Trees");
-  registerAction(CollapseSelectedTrees, "Collapse Selected Trees");
-  registerAction(DuplicateSelectedTrees, "Duplicate Selected Trees");
-  registerAction(CloseSelectedPages, "Close Selected Pages");
-  registerAction(CloseSelectedTrees, "Close Selected Trees");
-  registerAction(CloseNonSelectedPages, "Close Non-Selected Pages");
-  registerAction(CloseNonSelectedTrees, "Close Non-Selected Trees");
+  RegisterAction(ReloadSelectedPages, "Reload Selected Pages");
+  RegisterAction(SuspendSelectedPages, "Suspend Selected Pages");
+  RegisterAction(UnsuspendSelectedPages, "Unsuspend Selected Pages");
+  RegisterAction(ExpandSelectedTrees, "Expand Selected Trees");
+  RegisterAction(CollapseSelectedTrees, "Collapse Selected Trees");
+  RegisterAction(DuplicateSelectedTrees, "Duplicate Selected Trees");
+  RegisterAction(CloseSelectedPages, "Close Selected Pages");
+  RegisterAction(CloseSelectedTrees, "Close Selected Trees");
+  RegisterAction(CloseNonSelectedPages, "Close Non-Selected Pages");
+  RegisterAction(CloseNonSelectedTrees, "Close Non-Selected Trees");
 
-  registerAction(ReloadAllPages, "Reload All Pages");
-  registerAction(SuspendAllPages, "Suspend All Pages");
-  registerAction(UnsuspendAllPages, "Unsuspend All Pages");
-  registerAction(ExpandAllTrees, "Expand All Trees");
-  registerAction(CollapseAllTrees, "Collapse All Trees");
-  registerAction(CloseAllPages, "Close All Pages");
+  RegisterAction(ReloadAllPages, "Reload All Pages");
+  RegisterAction(SuspendAllPages, "Suspend All Pages");
+  RegisterAction(UnsuspendAllPages, "Unsuspend All Pages");
+  RegisterAction(ExpandAllTrees, "Expand All Trees");
+  RegisterAction(CollapseAllTrees, "Collapse All Trees");
+  RegisterAction(CloseAllPages, "Close All Pages");
 
-  registerAction(ToggleDevTools, "Toggle Dev Tools");
-  registerAction(LogsWindow, "Logs");
-  registerAction(FocusPageTree, "Focus Page Tree");
-  registerAction(FocusAddressBar, "Focus Address Bar");
-  registerAction(FocusBrowser, "Focus Browser");
+  RegisterAction(ToggleDevTools, "Toggle Dev Tools");
+  RegisterAction(LogsWindow, "Logs");
+  RegisterAction(FocusPageTree, "Focus Page Tree");
+  RegisterAction(FocusAddressBar, "Focus Address Bar");
+  RegisterAction(FocusBrowser, "Focus Browser");
 
   // Default shortcuts
-  auto shortcuts = [this](ActionManager::Type type, const QString& shortcuts) {
+  auto shortcuts = [=](ActionManager::Type type, const QString& shortcuts) {
     default_shortcuts_[type] = QKeySequence::listFromString(shortcuts);
   };
   shortcuts(ActionManager::NewWindow, "Ctrl+N");

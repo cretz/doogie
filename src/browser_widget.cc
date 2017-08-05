@@ -1,9 +1,10 @@
 #include "browser_widget.h"
+
 #include "util.h"
 
 namespace doogie {
 
-BrowserWidget::BrowserWidget(Cef* cef,
+BrowserWidget::BrowserWidget(const Cef& cef,
                              Bubble* bubble,
                              const QString& url,
                              QWidget* parent)
@@ -21,7 +22,7 @@ BrowserWidget::BrowserWidget(Cef* cef,
       ":/res/images/fontawesome/arrow-left.png"));
   back_button_->setAutoRaise(true);
   back_button_->setDisabled(true);
-  connect(back_button_, &QToolButton::clicked, [this](bool) { Back(); });
+  connect(back_button_, &QToolButton::clicked, [=](bool) { Back(); });
 
   forward_button_ = new QToolButton();
   forward_button_->setText("Forward");
@@ -30,10 +31,10 @@ BrowserWidget::BrowserWidget(Cef* cef,
       ":/res/images/fontawesome/arrow-right.png"));
   forward_button_->setAutoRaise(true);
   forward_button_->setDisabled(true);
-  connect(forward_button_, &QToolButton::clicked, [this](bool) { Forward(); });
+  connect(forward_button_, &QToolButton::clicked, [=](bool) { Forward(); });
 
   url_edit_ = new QLineEdit(this);
-  connect(url_edit_, &QLineEdit::returnPressed, [this]() {
+  connect(url_edit_, &QLineEdit::returnPressed, [=]() {
     cef_widg_->LoadUrl(url_edit_->text());
     cef_widg_->setFocus();
   });
@@ -44,7 +45,7 @@ BrowserWidget::BrowserWidget(Cef* cef,
       ":/res/images/fontawesome/repeat.png"));
   refresh_button_->setAutoRaise(true);
   refresh_button_->setDisabled(true);
-  connect(refresh_button_, &QToolButton::clicked, [this](bool) { Refresh(); });
+  connect(refresh_button_, &QToolButton::clicked, [=](bool) { Refresh(); });
 
   stop_button_ = new QToolButton();
   stop_button_->setText("Refresh");
@@ -52,7 +53,7 @@ BrowserWidget::BrowserWidget(Cef* cef,
         Util::CachedIcon(":/res/images/fontawesome/times-circle.png"));
   stop_button_->setAutoRaise(true);
   stop_button_->setVisible(false);
-  connect(stop_button_, &QToolButton::clicked, [this](bool) { Stop(); });
+  connect(stop_button_, &QToolButton::clicked, [=](bool) { Stop(); });
 
   auto top_layout = new QHBoxLayout();
   top_layout->setMargin(0);
@@ -102,7 +103,7 @@ BrowserWidget::BrowserWidget(Cef* cef,
   status_bar_ = new QLabel(this);
   status_bar_->hide();
   status_bar_->resize(300, status_bar_->height());
-  this->UpdateStatusBarLocation();
+  UpdateStatusBarLocation();
 
   connect(this, &BrowserWidget::SuspensionChanged,
           this, &BrowserWidget::ShowAsSuspendedScreenshot);
@@ -129,38 +130,38 @@ void BrowserWidget::FocusBrowser() {
   cef_widg_->setFocus();
 }
 
-Bubble* BrowserWidget::CurrentBubble() {
+Bubble* BrowserWidget::CurrentBubble() const {
   return bubble_;
 }
 
 void BrowserWidget::ChangeCurrentBubble(Bubble* bubble) {
   bubble_ = bubble;
   emit BubbleMaybeChanged();
-  // TODO: test when suspended
+  // TODO(cretz): test when suspended
   RecreateCefWidget(CurrentUrl());
 }
 
-QIcon BrowserWidget::CurrentFavicon() {
+QIcon BrowserWidget::CurrentFavicon() const {
   return current_favicon_;
 }
 
-QString BrowserWidget::CurrentTitle() {
+QString BrowserWidget::CurrentTitle() const {
   return current_title_;
 }
 
-QString BrowserWidget::CurrentUrl() {
+QString BrowserWidget::CurrentUrl() const {
   return cef_widg_->CurrentUrl();
 }
 
-bool BrowserWidget::Loading() {
+bool BrowserWidget::Loading() const {
   return loading_;
 }
 
-bool BrowserWidget::CanGoBack() {
+bool BrowserWidget::CanGoBack() const {
   return can_go_back_;
 }
 
-bool BrowserWidget::CanGoForward() {
+bool BrowserWidget::CanGoForward() const {
   return can_go_forward_;
 }
 
@@ -209,15 +210,15 @@ void BrowserWidget::CloseDevTools() {
   cef_widg_->CloseDevTools();
 }
 
-double BrowserWidget::GetZoomLevel() {
-  return cef_widg_->GetZoomLevel();
+double BrowserWidget::ZoomLevel() const {
+  return cef_widg_->ZoomLevel();
 }
 
 void BrowserWidget::SetZoomLevel(double level) {
   cef_widg_->SetZoomLevel(level);
 }
 
-bool BrowserWidget::Suspended() {
+bool BrowserWidget::Suspended() const {
   return suspended_;
 }
 
@@ -251,7 +252,7 @@ void BrowserWidget::SetSuspended(bool suspend) {
   }
 }
 
-QJsonObject BrowserWidget::DebugDump() {
+QJsonObject BrowserWidget::DebugDump() const {
   return {
     { "loading", loading_ },
     { "rect", Util::DebugWidgetGeom(this) },
@@ -273,11 +274,11 @@ QJsonObject BrowserWidget::DebugDump() {
 }
 
 void BrowserWidget::moveEvent(QMoveEvent*) {
-  this->UpdateStatusBarLocation();
+  UpdateStatusBarLocation();
 }
 
 void BrowserWidget::resizeEvent(QResizeEvent*) {
-  this->UpdateStatusBarLocation();
+  UpdateStatusBarLocation();
 }
 
 void BrowserWidget::RecreateCefWidget(const QString& url) {
@@ -294,16 +295,16 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
           this, &BrowserWidget::BuildContextMenu);
   connect(cef_widg_, &CefWidget::ContextMenuCommand,
           this, &BrowserWidget::HandleContextMenuCommand);
-  connect(cef_widg_, &CefWidget::TitleChanged, [this](const QString& title) {
+  connect(cef_widg_, &CefWidget::TitleChanged, [=](const QString& title) {
     current_title_ = title;
     emit TitleChanged();
   });
-  connect(cef_widg_, &CefWidget::FaviconChanged, [this](const QIcon& icon) {
+  connect(cef_widg_, &CefWidget::FaviconChanged, [=](const QIcon& icon) {
     current_favicon_ = icon;
     emit FaviconChanged();
   });
   connect(cef_widg_, &CefWidget::LoadStateChanged,
-          [this](bool is_loading, bool can_go_back, bool can_go_forward) {
+          [=](bool is_loading, bool can_go_back, bool can_go_forward) {
     loading_ = is_loading;
     can_go_back_ = can_go_back;
     can_go_forward_ = can_go_forward;
@@ -320,9 +321,9 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     emit LoadingStateChanged();
   });
   connect(cef_widg_, &CefWidget::PageOpen,
-          [this](CefHandler::WindowOpenType type,
-                 const QString& url,
-                 bool user_gesture) {
+          [=](CefHandler::WindowOpenType type,
+              const QString& url,
+              bool user_gesture) {
     emit PageOpen(type, url, user_gesture);
   });
   connect(cef_widg_, &CefWidget::DevToolsLoadComplete,
@@ -341,12 +342,12 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     }
   });
   cef_widg_->SetJsDialogCallback(
-        [this](const QString& origin_url,
-               CefJSDialogHandler::JSDialogType dialog_type,
-               const QString& message_text,
-               const QString& default_prompt_text,
-               CefRefPtr<CefJSDialogCallback> callback,
-               bool& suppress_message) {
+        [=](const QString&,
+            CefJSDialogHandler::JSDialogType dialog_type,
+            const QString& message_text,
+            const QString& default_prompt_text,
+            CefRefPtr<CefJSDialogCallback> callback,
+            bool&) {
     emit AboutToShowJSDialog();
     switch (dialog_type) {
       case JSDIALOGTYPE_ALERT:
@@ -375,9 +376,9 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     }
   });
   connect(cef_widg_, &CefWidget::ShowBeforeUnloadDialog,
-          [this](const QString& message_text,
-                 bool is_reload,
-                 CefRefPtr<CefJSDialogCallback> callback) {
+          [=](const QString& message_text,
+              bool,
+              CefRefPtr<CefJSDialogCallback> callback) {
     emit AboutToShowJSDialog();
     auto result = QMessageBox::question(this,
                                         "Leave/Reload Page?",
@@ -389,7 +390,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     }
     callback->Continue(result == QMessageBox::Yes, "");
   });
-  connect(cef_widg_, &CefWidget::StatusChanged, [this](const QString& status) {
+  connect(cef_widg_, &CefWidget::StatusChanged, [=](const QString& status) {
     if (status.isEmpty()) {
       status_bar_->hide();
     } else {
@@ -417,7 +418,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       });
     }
   });
-  connect(cef_widg_, &CefWidget::UrlChanged, [this](const QString& url) {
+  connect(cef_widg_, &CefWidget::UrlChanged, [=](const QString& url) {
     url_edit_->setText(url);
   });
 
@@ -455,7 +456,7 @@ void BrowserWidget::RebuildNavMenu() {
     auto action = nav_menu_->addAction(entry.title);
     auto nav_index = i - current_item_index;
     if (nav_index != 0) {
-      connect(action, &QAction::triggered, [this, nav_index]() {
+      connect(action, &QAction::triggered, [=]() {
         cef_widg_->Go(nav_index);
       });
     } else {

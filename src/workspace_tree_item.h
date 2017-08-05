@@ -7,7 +7,7 @@ namespace doogie {
 
 class WorkspaceTreeItem : public QTreeWidgetItem {
  public:
-  explicit WorkspaceTreeItem();
+  WorkspaceTreeItem();
 
   void AfterAdded();
   void ApplyMenu(QMenu* menu);

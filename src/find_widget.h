@@ -10,8 +10,6 @@ class FindWidget : public QFrame {
 
  public:
   explicit FindWidget(QWidget* parent);
-
- public slots:  // NOLINT(whitespace/indent)
   void FindResult(int count, int index);
 
  signals:

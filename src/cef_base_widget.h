@@ -2,6 +2,7 @@
 #define DOOGIE_CEF_BASE_WIDGET_H_
 
 #include <QtWidgets>
+
 #include "cef.h"
 #include "cef_handler.h"
 
@@ -11,10 +12,10 @@ class CefBaseWidget : public QWidget {
   Q_OBJECT
 
  public:
-  explicit CefBaseWidget(Cef* cef, QWidget* parent = nullptr);
+  explicit CefBaseWidget(const Cef& cef, QWidget* parent = nullptr);
   ~CefBaseWidget();
 
-  const CefWindowInfo& WindowInfo();
+  const CefWindowInfo& WindowInfo() const;
   void ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler);
 
  protected:
@@ -22,7 +23,7 @@ class CefBaseWidget : public QWidget {
   void resizeEvent(QResizeEvent* event) override;
   virtual void UpdateSize();
 
-  Cef* cef_;
+  const Cef& cef_;
   CefWindowInfo window_info_;
 
  private:

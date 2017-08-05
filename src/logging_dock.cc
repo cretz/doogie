@@ -1,4 +1,5 @@
 #include "logging_dock.h"
+
 #include "browser_widget.h"
 
 namespace doogie {
@@ -15,14 +16,14 @@ void LoggingDock::Log(const QString &str) {
         text_edit_->verticalScrollBar()->maximum());
 }
 
-void LoggingDock::LogQtMessage(QtMsgType type,
-                               const QMessageLogContext& ctx,
+void LoggingDock::LogQtMessage(QtMsgType,
+                               const QMessageLogContext&,
                                const QString& str) {
   Log(str);
 }
 
 void LoggingDock::LogWidgetMessage(const QString& str, QWidget* source) {
-  // TODO: waiting on
+  // TODO(cretz): waiting on https://bitbucket.org/chromiumembedded/cef/issues/2154
   auto browser = qobject_cast<BrowserWidget*>(source);
   if (browser) {
     Log(browser->CurrentUrl() + ": " + str);

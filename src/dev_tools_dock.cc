@@ -2,7 +2,7 @@
 
 namespace doogie {
 
-DevToolsDock::DevToolsDock(Cef* cef,
+DevToolsDock::DevToolsDock(const Cef& cef,
                            BrowserStack* browser_stack,
                            QWidget* parent)
     : QDockWidget("Dev Tools", parent),
@@ -18,7 +18,7 @@ DevToolsDock::DevToolsDock(Cef* cef,
   not_there_label->autoFillBackground();
 
   auto open_dev_tools_btn = new QPushButton("Click to open dev tools");
-  connect(open_dev_tools_btn, &QPushButton::clicked, [this](bool) {
+  connect(open_dev_tools_btn, &QPushButton::clicked, [=](bool) {
     ShowDevTools(browser_stack_->CurrentBrowser(), QPoint());
   });
   auto open_layout = new QGridLayout();
@@ -39,7 +39,7 @@ DevToolsDock::DevToolsDock(Cef* cef,
   BrowserChanged(browser_stack->CurrentBrowser());
 }
 
-bool DevToolsDock::DevToolsShowing() {
+bool DevToolsDock::DevToolsShowing() const {
   return tools_stack_->currentIndex() > 1;
 }
 
@@ -67,8 +67,7 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser,
     // We make "this" the context of the connections so we can
     //  disconnect later
     // Need to show that close button
-    connect(browser, &BrowserWidget::DevToolsLoadComplete, this,
-            [this, browser]() {
+    connect(browser, &BrowserWidget::DevToolsLoadComplete, this, [=]() {
       // TODO(cretz): put a unit test around this highly-volatile code
       QString js =
           "Components.dockController._closeButton.setVisible(true);\n"
@@ -80,10 +79,10 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser,
     });
     // On close, remove it
     connect(browser, &BrowserWidget::DevToolsClosed,
-            this, [this, browser]() { DevToolsClosed(browser); });
+            this, [=]() { DevToolsClosed(browser); });
     // On destroy, remove it
     connect(browser, &BrowserWidget::destroyed,
-            this, [this, browser]() { DevToolsClosed(browser); });
+            this, [=]() { DevToolsClosed(browser); });
   }
   browser->ShowDevTools(widg, inspect_at);
   tools_stack_->setCurrentWidget(widg);

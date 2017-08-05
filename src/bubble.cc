@@ -1,4 +1,5 @@
 #include "bubble.h"
+
 #include "util.h"
 
 namespace doogie {
@@ -6,17 +7,17 @@ namespace doogie {
 Bubble::~Bubble() {
 }
 
-QString Bubble::Name() {
+QString Bubble::Name() const {
   return prefs_.value("name").toString("");
 }
 
-QString Bubble::FriendlyName() {
+QString Bubble::FriendlyName() const {
   auto ret = Name();
   if (!ret.isEmpty()) return ret;
   return "(default)";
 }
 
-void Bubble::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
+void Bubble::ApplyCefBrowserSettings(CefBrowserSettings* settings) {
   Profile::Current()->ApplyCefBrowserSettings(settings);
 
   auto browser = prefs_.value("browser").toObject();
@@ -27,30 +28,30 @@ void Bubble::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
     }
   };
 
-  state(settings.application_cache, "applicationCache");
-  state(settings.databases, "databases");
-  state(settings.file_access_from_file_urls, "fileAccessFromFileUrls");
-  state(settings.image_loading, "imageLoading");
-  state(settings.image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
-  state(settings.javascript, "javascript");
-  state(settings.javascript_access_clipboard, "javascriptAccessClipboard");
-  state(settings.javascript_dom_paste, "javvascriptDomPaste");
-  state(settings.javascript_open_windows, "javascriptOpenWindows");
-  state(settings.local_storage, "localStorage");
-  state(settings.plugins, "plugins");
-  state(settings.remote_fonts, "remoteFonts");
-  state(settings.tab_to_links, "tabToLinks");
-  state(settings.text_area_resize, "textAreaResize");
-  state(settings.universal_access_from_file_urls,
+  state(settings->application_cache, "applicationCache");
+  state(settings->databases, "databases");
+  state(settings->file_access_from_file_urls, "fileAccessFromFileUrls");
+  state(settings->image_loading, "imageLoading");
+  state(settings->image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
+  state(settings->javascript, "javascript");
+  state(settings->javascript_access_clipboard, "javascriptAccessClipboard");
+  state(settings->javascript_dom_paste, "javvascriptDomPaste");
+  state(settings->javascript_open_windows, "javascriptOpenWindows");
+  state(settings->local_storage, "localStorage");
+  state(settings->plugins, "plugins");
+  state(settings->remote_fonts, "remoteFonts");
+  state(settings->tab_to_links, "tabToLinks");
+  state(settings->text_area_resize, "textAreaResize");
+  state(settings->universal_access_from_file_urls,
         "universalAccessFromFileUrls");
-  state(settings.web_security, "webSecurity");
-  state(settings.webgl, "webgl");
+  state(settings->web_security, "webSecurity");
+  state(settings->webgl, "webgl");
 }
 
 void Bubble::ApplyCefRequestContextSettings(
-    CefRequestContextSettings& settings) {
+    CefRequestContextSettings* settings) {
   CefSettings global;
-  Profile::Current()->ApplyCefSettings(global);
+  Profile::Current()->ApplyCefSettings(&global);
 
   auto cef = prefs_.value("cef").toObject();
 
@@ -61,41 +62,42 @@ void Bubble::ApplyCefRequestContextSettings(
       cache_path = QDir::toNativeSeparators(QDir::cleanPath(QDir(
           Profile::Current()->Path()).filePath(cache_path)));
     }
-    CefString(&settings.cache_path) = cache_path.toStdString();
+    CefString(&settings->cache_path) = cache_path.toStdString();
   } else {
-    CefString(&settings.cache_path) = CefString(&global.cache_path).ToString();
+    CefString(&settings->cache_path) =
+        CefString(&global.cache_path).ToString();
   }
 
   if (cef.contains("enableNetSecurityExpiration")) {
-    settings.enable_net_security_expiration =
+    settings->enable_net_security_expiration =
         cef["enableNetSecurityExpiration"].toBool() ? 1 : 0;
   } else {
-    settings.enable_net_security_expiration =
+    settings->enable_net_security_expiration =
         global.enable_net_security_expiration;
   }
 
   if (cef.contains("persistUserPreferences")) {
-    settings.persist_user_preferences =
+    settings->persist_user_preferences =
         cef["persistUserPreferences"].toBool() ? 1 : 0;
   } else {
-    settings.persist_user_preferences = global.persist_user_preferences;
+    settings->persist_user_preferences = global.persist_user_preferences;
   }
 
-  // TODO: Due to a CEF bug, we cannot have user preferences persisted if we
-  //  have a cache path. This is due to the fact that the pref JSON is created
-  //  on the wrong thread.
+  // TODO(cretz): Due to a CEF bug, we cannot have user preferences persisted
+  //  if we have a cache path. This is due to the fact that the pref JSON is
+  //  created on the wrong thread.
   // See: https://bitbucket.org/chromiumembedded/cef/issues/2233
-  if (settings.cache_path.length > 0 &&
-      settings.persist_user_preferences == 1) {
+  if (settings->cache_path.length > 0 &&
+      settings->persist_user_preferences == 1) {
     qCritical() << "Unable to have cache path and user prefs set "
                    "for a bubble due to internal bug.";
-    settings.persist_user_preferences = 0;
+    settings->persist_user_preferences = 0;
   }
 }
 
 CefRefPtr<CefRequestContext> Bubble::CreateCefRequestContext() {
   CefRequestContextSettings settings;
-  ApplyCefRequestContextSettings(settings);
+  ApplyCefRequestContextSettings(&settings);
   return CefRequestContext::CreateContext(settings, nullptr);
 }
 
@@ -126,7 +128,6 @@ void Bubble::InvalidateIcon() {
 
 Bubble::Bubble(QJsonObject prefs, QObject* parent)
   : QObject(parent), prefs_(prefs) {
-
 }
 
 }  // namespace doogie

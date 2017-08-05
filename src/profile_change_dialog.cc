@@ -1,4 +1,5 @@
 #include "profile_change_dialog.h"
+
 #include "profile.h"
 
 namespace doogie {
@@ -16,7 +17,7 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   selector_->setInsertPolicy(QComboBox::NoInsert);
   // Show all last ten but the current
   auto found_in_mem = false;
-  for (auto const& other_path : Profile::LastTenProfilePaths()) {
+  for (auto other_path : Profile::LastTenProfilePaths()) {
     if (other_path != profile->Path()) {
       if (other_path == Profile::kInMemoryPath) found_in_mem = true;
       selector_->addItem(Profile::FriendlyName(other_path), other_path);
@@ -30,7 +31,7 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   selector_->lineEdit()->setPlaceholderText("Get or Create Profile...");
   selector_->setCurrentIndex(-1);
   connect(selector_, static_cast<void(QComboBox::*)(int)>(
-            &QComboBox::currentIndexChanged), [this, profile](int index) {
+            &QComboBox::currentIndexChanged), [=](int index) {
     // If they clicked the last index, we pop open a file dialog
     if (index == selector_->count() - 1) {
       auto open_dir = QDir(profile->Path());
@@ -56,16 +57,15 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   auto restart = new QPushButton("Restart Doogie With Profile");
   restart->setEnabled(false);
   auto cancel = new QPushButton("Cancel");
-  connect(selector_, &QComboBox::editTextChanged,
-          [this, restart, launch](const QString& text) {
+  connect(selector_, &QComboBox::editTextChanged, [=](const QString& text) {
     restart->setEnabled(!text.isEmpty());
     launch->setEnabled(!text.isEmpty());
   });
-  connect(launch, &QPushButton::clicked, [this]() {
+  connect(launch, &QPushButton::clicked, [=]() {
     needs_restart_ = false;
     accept();
   });
-  connect(restart, &QPushButton::clicked, [this]() {
+  connect(restart, &QPushButton::clicked, [=]() {
     needs_restart_ = true;
     accept();
   });
@@ -80,11 +80,11 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   setSizeGripEnabled(false);
 }
 
-bool ProfileChangeDialog::NeedsRestart() {
+bool ProfileChangeDialog::NeedsRestart() const {
   return needs_restart_;
 }
 
-QString ProfileChangeDialog::ChosenPath() {
+QString ProfileChangeDialog::ChosenPath() const {
   if (selector_->currentData().isValid()) {
     return selector_->currentData().toString();
   }

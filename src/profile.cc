@@ -1,14 +1,15 @@
 #include "profile.h"
+
+#include "action_manager.h"
 #include "bubble.h"
 #include "util.h"
-#include "action_manager.h"
 
 namespace doogie {
 
 const QString Profile::kInMemoryPath = "<in-mem>";
-Profile* Profile::current_ = nullptr;
 const QString Profile::kAppDataPath = QDir::toNativeSeparators(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+Profile* Profile::current_ = nullptr;
 QList<Profile::BrowserSetting> Profile::browser_settings_ = {};
 
 Profile* Profile::Current() {
@@ -83,7 +84,7 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
   // The profile can be specified via command line parameter --doogie-profile
   QCommandLineParser parser;
   parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
-  // TODO: For now am I ok that there is no unicode?
+  // TODO(cretz): For now am I ok that there is no unicode?
   QCommandLineOption noProfileOption("doogie-no-profile");
   parser.addOption(noProfileOption);
   QCommandLineOption profileOption("doogie-profile");
@@ -287,23 +288,23 @@ QKeySequence Profile::KeySequenceOrEmpty(const QString& str) {
   return seq;
 }
 
-QString Profile::FriendlyName() {
+QString Profile::FriendlyName() const {
   return FriendlyName(path_);
 }
 
-QString Profile::Path() {
+QString Profile::Path() const {
   return path_;
 }
 
-bool Profile::InMemory() {
+bool Profile::InMemory() const {
   return path_ == kInMemoryPath;
 }
 
-void Profile::ApplyCefSettings(CefSettings& settings) {
-  settings.no_sandbox = true;
+void Profile::ApplyCefSettings(CefSettings* settings) {
+  settings->no_sandbox = true;
   // Enable remote debugging on debug version
 #ifdef QT_DEBUG
-  settings.remote_debugging_port = 1989;
+  settings->remote_debugging_port = 1989;
 #endif
 
   auto cef = prefs_.value("cef").toObject();
@@ -322,19 +323,19 @@ void Profile::ApplyCefSettings(CefSettings& settings) {
       cache_path = QDir::cleanPath(QDir(path_).filePath(cache_path));
     }
   }
-  CefString(&settings.cache_path) = cache_path.toStdString();
+  CefString(&settings->cache_path) = cache_path.toStdString();
 
   if (cef.value("enableNetSecurityExpiration").toBool()) {
-    settings.enable_net_security_expiration = 1;
+    settings->enable_net_security_expiration = 1;
   }
 
   // We default persist_user_preferences to true
   if (cef.value("persistUserPreferences").toBool(true)) {
-    settings.persist_user_preferences = 1;
+    settings->persist_user_preferences = 1;
   }
 
   if (cef.contains("userAgent")) {
-    CefString(&settings.user_agent) =
+    CefString(&settings->user_agent) =
         prefs_.value("userAgent").toString().toStdString();
   }
 
@@ -353,10 +354,10 @@ void Profile::ApplyCefSettings(CefSettings& settings) {
       user_data_path = QDir::cleanPath(QDir(path_).filePath(user_data_path));
     }
   }
-  CefString(&settings.user_data_path) = user_data_path.toStdString();
+  CefString(&settings->user_data_path) = user_data_path.toStdString();
 }
 
-void Profile::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
+void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) {
   auto browser = prefs_.value("browser").toObject();
 
   auto state = [&browser](cef_state_t& state, const QString& field) {
@@ -365,35 +366,35 @@ void Profile::ApplyCefBrowserSettings(CefBrowserSettings& settings) {
     }
   };
 
-  state(settings.application_cache, "applicationCache");
-  state(settings.databases, "databases");
-  state(settings.file_access_from_file_urls, "fileAccessFromFileUrls");
-  state(settings.image_loading, "imageLoading");
-  state(settings.image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
-  state(settings.javascript, "javascript");
-  state(settings.javascript_access_clipboard, "javascriptAccessClipboard");
-  state(settings.javascript_dom_paste, "javascriptDomPaste");
-  state(settings.javascript_open_windows, "javascriptOpenWindows");
-  state(settings.local_storage, "localStorage");
-  state(settings.plugins, "plugins");
-  state(settings.remote_fonts, "remoteFonts");
-  state(settings.tab_to_links, "tabToLinks");
-  state(settings.text_area_resize, "textAreaResize");
-  state(settings.universal_access_from_file_urls,
+  state(settings->application_cache, "applicationCache");
+  state(settings->databases, "databases");
+  state(settings->file_access_from_file_urls, "fileAccessFromFileUrls");
+  state(settings->image_loading, "imageLoading");
+  state(settings->image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
+  state(settings->javascript, "javascript");
+  state(settings->javascript_access_clipboard, "javascriptAccessClipboard");
+  state(settings->javascript_dom_paste, "javascriptDomPaste");
+  state(settings->javascript_open_windows, "javascriptOpenWindows");
+  state(settings->local_storage, "localStorage");
+  state(settings->plugins, "plugins");
+  state(settings->remote_fonts, "remoteFonts");
+  state(settings->tab_to_links, "tabToLinks");
+  state(settings->text_area_resize, "textAreaResize");
+  state(settings->universal_access_from_file_urls,
         "universalAccessFromFileUrls");
-  state(settings.web_security, "webSecurity");
-  state(settings.webgl, "webgl");
+  state(settings->web_security, "webSecurity");
+  state(settings->webgl, "webgl");
 }
 
-const QList<Bubble*> Profile::Bubbles() {
+const QList<Bubble*> Profile::Bubbles() const {
   return bubbles_;
 }
 
-Bubble* Profile::DefaultBubble() {
+Bubble* Profile::DefaultBubble() const {
   return bubbles_.first();
 }
 
-Bubble* Profile::BubbleByName(const QString& name) {
+Bubble* Profile::BubbleByName(const QString& name) const {
   for (const auto& bubble : bubbles_) {
     if (bubble->Name() == name) {
       return bubble;

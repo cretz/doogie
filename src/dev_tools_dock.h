@@ -2,6 +2,7 @@
 #define DOOGIE_DEV_TOOLS_DOCK_H_
 
 #include <QtWidgets>
+
 #include "browser_stack.h"
 #include "browser_widget.h"
 
@@ -9,14 +10,14 @@ namespace doogie {
 
 class DevToolsDock : public QDockWidget {
   Q_OBJECT
+
  public:
-  explicit DevToolsDock(Cef* cef,
+  explicit DevToolsDock(const Cef& cef,
                         BrowserStack* browser_stack,
                         QWidget* parent = nullptr);
 
-  bool DevToolsShowing();
+  bool DevToolsShowing() const;
 
- public slots:  // NOLINT(whitespace/indent)
   void BrowserChanged(BrowserWidget* browser);
   void ShowDevTools(BrowserWidget* browser, const QPoint& inspect_at);
   void CloseDevTools(BrowserWidget* browser);
@@ -27,7 +28,7 @@ class DevToolsDock : public QDockWidget {
  private:
   void DevToolsClosed(BrowserWidget* browser);
 
-  Cef* cef_;
+  const Cef& cef_;
   BrowserStack* browser_stack_;
   QStackedWidget* tools_stack_;
   QHash<BrowserWidget*, QWidget*> tools_widgets_;

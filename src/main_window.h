@@ -2,12 +2,13 @@
 #define DOOGIE_MAIN_WINDOW_H_
 
 #include <QtWidgets>
+
+#include "browser_stack.h"
 #include "cef.h"
 #include "cef_widget.h"
-#include "page_tree_dock.h"
 #include "dev_tools_dock.h"
 #include "logging_dock.h"
-#include "browser_stack.h"
+#include "page_tree_dock.h"
 
 namespace doogie {
 
@@ -15,10 +16,10 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
-  explicit MainWindow(Cef* cef, QWidget* parent = nullptr);
+  explicit MainWindow(const Cef& cef, QWidget* parent = nullptr);
   ~MainWindow();
 
-  QJsonObject DebugDump();
+  QJsonObject DebugDump() const;
 
  protected:
   void closeEvent(QCloseEvent* event) override;
@@ -28,15 +29,15 @@ class MainWindow : public QMainWindow {
   void timerEvent(QTimerEvent* event) override;
 
  private:
+  static void LogQtMessage(QtMsgType type,
+                           const QMessageLogContext& ctx,
+                           const QString& str);
   void SetupActions();
   void ShowDevTools(BrowserWidget* browser,
                     const QPoint& inspect_at,
                     bool force_open);
-  static void LogQtMessage(QtMsgType type,
-                           const QMessageLogContext& ctx,
-                           const QString& str);
 
-  Cef* cef_;
+  const Cef& cef_;
   BrowserStack* browser_stack_;
   PageTreeDock* page_tree_dock_;
   DevToolsDock* dev_tools_dock_;

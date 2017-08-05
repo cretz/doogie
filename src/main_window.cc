@@ -1,16 +1,17 @@
 #include "main_window.h"
-#include "browser_stack.h"
-#include "util.h"
+
 #include "action_manager.h"
+#include "browser_stack.h"
 #include "profile.h"
-#include "profile_settings_dialog.h"
 #include "profile_change_dialog.h"
+#include "profile_settings_dialog.h"
+#include "util.h"
 
 namespace doogie {
 
 MainWindow* MainWindow::instance_ = nullptr;
 
-MainWindow::MainWindow(Cef* cef, QWidget* parent)
+MainWindow::MainWindow(const Cef& cef, QWidget* parent)
     : QMainWindow(parent), cef_(cef) {
   if (instance_ == nullptr) instance_ = this;
 
@@ -28,14 +29,14 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
 
   browser_stack_ = new BrowserStack(cef, this);
   connect(browser_stack_, &BrowserStack::ShowDevToolsRequest,
-          [this](BrowserWidget* browser, const QPoint& inspect_at) {
+          [=](BrowserWidget* browser, const QPoint& inspect_at) {
     ShowDevTools(browser, inspect_at, true);
   });
   setCentralWidget(browser_stack_);
   // If we're trying to close and one was cancelled, we're no
   //  longer trying to close
   connect(browser_stack_, &BrowserStack::BrowserCloseCancelled,
-          [this](BrowserWidget*) {
+          [=](BrowserWidget*) {
     attempting_to_close_ = false;
     launch_with_profile_on_close = "";
   });
@@ -45,7 +46,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
   // If we're attempting to close and the stack becomes empty,
   //  try the close again
-  connect(page_tree_dock_, &PageTreeDock::TreeEmpty, [this]() {
+  connect(page_tree_dock_, &PageTreeDock::TreeEmpty, [=]() {
     if (attempting_to_close_) {
       attempting_to_close_ = false;
       this->close();
@@ -63,7 +64,7 @@ MainWindow::MainWindow(Cef* cef, QWidget* parent)
   addDockWidget(Qt::BottomDockWidgetArea, logging_dock_);
   qInstallMessageHandler(MainWindow::LogQtMessage);
 
-  resizeDocks({dev_tools_dock_, logging_dock_}, {300, 300}, Qt::Vertical);
+  resizeDocks({ dev_tools_dock_, logging_dock_ }, { 300, 300 }, Qt::Vertical);
 
   // We choose for verticle windows to occupy the corners
   setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);
@@ -84,14 +85,14 @@ MainWindow::~MainWindow() {
   instance_ = nullptr;
 }
 
-QJsonObject MainWindow::DebugDump() {
+QJsonObject MainWindow::DebugDump() const {
   QJsonObject menus;
   auto common_height = 0;
-  for (const auto& menu : menuBar()->findChildren<QMenu*>()) {
+  for (auto menu : menuBar()->findChildren<QMenu*>()) {
     if (!menu->title().isEmpty()) {
       auto menu_rect = menuBar()->actionGeometry(menu->menuAction());
       QJsonObject items;
-      for (const auto& action : menu->actions()) {
+      for (auto action : menu->actions()) {
         if (!action->text().isEmpty()) {
           auto action_rect = menu->actionGeometry(action);
           action_rect.moveTop(action_rect.top() + menu_rect.height());
@@ -109,9 +110,9 @@ QJsonObject MainWindow::DebugDump() {
         { "items", items }
       });
     }
-  };
+  }
   return {
-    { "windowTitle", this->windowTitle() },
+    { "windowTitle", windowTitle() },
     { "rect", Util::DebugWidgetGeom(this) },
     { "pageTree", page_tree_dock_->DebugDump() },
     { "menu", QJsonObject({
@@ -144,7 +145,7 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 }
 
 void MainWindow::dropEvent(QDropEvent* event) {
-  for (const auto& url : event->mimeData()->urls()) {
+  for (auto url : event->mimeData()->urls()) {
     page_tree_dock_->NewPage(url.url(), true, false);
   }
 }
@@ -161,16 +162,24 @@ void MainWindow::keyPressEvent(QKeyEvent* event) {
 }
 
 void MainWindow::timerEvent(QTimerEvent*) {
-  cef_->Tick();
+  cef_.Tick();
+}
+
+void MainWindow::LogQtMessage(QtMsgType type,
+                              const QMessageLogContext& ctx,
+                              const QString& str) {
+  // We accept the lack of thread safety here
+  auto inst = MainWindow::instance_;
+  if (inst) inst->logging_dock_->LogQtMessage(type, ctx, str);
 }
 
 void MainWindow::SetupActions() {
   // Actions
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
-  connect(profile_settings, &QAction::triggered, [this]() {
+  connect(profile_settings, &QAction::triggered, [=]() {
     QSet<QString> in_use_names;
-    for (const auto& browser : browser_stack_->Browsers()) {
+    for (auto browser : browser_stack_->Browsers()) {
       in_use_names.insert(browser->CurrentBubble()->Name());
     }
     ProfileSettingsDialog dialog(Profile::Current(), in_use_names, this);
@@ -183,7 +192,7 @@ void MainWindow::SetupActions() {
               Profile::Current()->FriendlyName() + "'");
   profile_settings->setEnabled(!Profile::Current()->InMemory());
   connect(ActionManager::Action(ActionManager::ChangeProfile),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     ProfileChangeDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
       if (dialog.NeedsRestart()) {
@@ -195,11 +204,11 @@ void MainWindow::SetupActions() {
     }
   });
   connect(ActionManager::Action(ActionManager::ToggleDevTools),
-          &QAction::triggered, [this]() {
+          &QAction::triggered, [=]() {
     ShowDevTools(browser_stack_->CurrentBrowser(), QPoint(), false);
   });
   auto logs_action = ActionManager::Action(ActionManager::LogsWindow);
-  connect(logs_action, &QAction::triggered, [this]() {
+  connect(logs_action, &QAction::triggered, [=]() {
     logging_dock_->setVisible(!logging_dock_->isVisible());
   });
   logs_action->setCheckable(true);
@@ -264,14 +273,6 @@ void MainWindow::ShowDevTools(BrowserWidget* browser,
       dev_tools_dock_->close();
     }
   }
-}
-
-void MainWindow::LogQtMessage(QtMsgType type,
-                              const QMessageLogContext& ctx,
-                              const QString& str) {
-  // We accept the lack of thread safety here
-  auto inst = MainWindow::instance_;
-  if (inst) inst->logging_dock_->LogQtMessage(type, ctx, str);
 }
 
 }  // namespace doogie

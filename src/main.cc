@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationName("Doogie");
   doogie::ActionManager::CreateInstance(&app);
 
-  doogie::MainWindow win(&cef);
+  doogie::MainWindow win(cef);
   win.show();
   win.activateWindow();
   win.raise();

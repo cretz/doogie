@@ -10,8 +10,8 @@ class ProfileChangeDialog : public QDialog {
 
  public:
   explicit ProfileChangeDialog(QWidget* parent = nullptr);
-  bool NeedsRestart();
-  QString ChosenPath();
+  bool NeedsRestart() const;
+  QString ChosenPath() const;
   void done(int r) override;
 
  private:

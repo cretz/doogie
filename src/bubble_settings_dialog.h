@@ -2,6 +2,7 @@
 #define DOOGIE_BUBBLE_SETTINGS_DIALOG_H_
 
 #include <QtWidgets>
+
 #include "bubble.h"
 
 namespace doogie {
@@ -13,7 +14,6 @@ class BubbleSettingsDialog : public QDialog {
   explicit BubbleSettingsDialog(Bubble* bubble,
                                 QStringList invalid_names,
                                 QWidget* parent = nullptr);
-
   static Bubble* NewBubble(QWidget* parent = nullptr);
 
  protected:

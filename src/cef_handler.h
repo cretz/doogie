@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <vector>
+
 #include "cef.h"
 
 namespace doogie {
@@ -136,17 +137,18 @@ class CefHandler :
                   CefEventHandle os_event) override;
 
   // Life span handler overrides...
-  bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
-                     CefRefPtr<CefFrame> frame,
-                     const CefString& target_url,
-                     const CefString& target_frame_name,
-                     CefLifeSpanHandler::WindowOpenDisposition target_disposition,
-                     bool user_gesture,
-                     const CefPopupFeatures& popupFeatures,
-                     CefWindowInfo& windowInfo,
-                     CefRefPtr<CefClient>& client,
-                     CefBrowserSettings& settings,
-                     bool* no_javascript_access) override;
+  bool OnBeforePopup(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      const CefString& target_url,
+      const CefString& target_frame_name,
+      CefLifeSpanHandler::WindowOpenDisposition target_disposition,
+      bool user_gesture,
+      const CefPopupFeatures& popupFeatures,
+      CefWindowInfo& windowInfo,
+      CefRefPtr<CefClient>& client,
+      CefBrowserSettings& settings,  // NOLINT(runtime/references)
+      bool* no_javascript_access) override;
   bool DoClose(CefRefPtr<CefBrowser> browser) override;
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
 
@@ -164,11 +166,12 @@ class CefHandler :
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefRequest> request,
                       bool is_redirect) override;
-  bool OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
-                        CefRefPtr<CefFrame> frame,
-                        const CefString& target_url,
-                        CefRequestHandler::WindowOpenDisposition target_disposition,  // NOLINT(whitespace/line_length)
-                        bool user_gesture) override;
+  bool OnOpenURLFromTab(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      const CefString& target_url,
+      CefRequestHandler::WindowOpenDisposition target_disposition,
+      bool user_gesture) override;
 
  signals:
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
@@ -208,6 +211,6 @@ class CefHandler :
   IMPLEMENT_REFCOUNTING(CefHandler)
 };
 
-}  // namespace doogie)
+}  // namespace doogie
 
 #endif  // DOOGIE_CEF_HANDLER_H_

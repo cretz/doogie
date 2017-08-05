@@ -2,9 +2,10 @@
 #define DOOGIE_BROWSER_WIDGET_H_
 
 #include <QtWidgets>
+
+#include "bubble.h"
 #include "cef_widget.h"
 #include "find_widget.h"
-#include "bubble.h"
 
 namespace doogie {
 
@@ -23,7 +24,7 @@ class BrowserWidget : public QWidget {
   };
   Q_ENUM(ContextMenuCommand)
 
-  explicit BrowserWidget(Cef* cef,
+  explicit BrowserWidget(const Cef& cef,
                          Bubble* bubble,
                          const QString& url = "",
                          QWidget* parent = nullptr);
@@ -32,14 +33,14 @@ class BrowserWidget : public QWidget {
   void TryClose();
   void FocusUrlEdit();
   void FocusBrowser();
-  Bubble* CurrentBubble();
+  Bubble* CurrentBubble() const;
   void ChangeCurrentBubble(Bubble* bubble);
-  QIcon CurrentFavicon();
-  QString CurrentTitle();
-  QString CurrentUrl();
-  bool Loading();
-  bool CanGoBack();
-  bool CanGoForward();
+  QIcon CurrentFavicon() const;
+  QString CurrentTitle() const;
+  QString CurrentUrl() const;
+  bool Loading() const;
+  bool CanGoBack() const;
+  bool CanGoForward() const;
 
   void Refresh();
   void Stop();
@@ -53,13 +54,13 @@ class BrowserWidget : public QWidget {
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
 
-  double GetZoomLevel();
+  double ZoomLevel() const;
   void SetZoomLevel(double level);
 
-  bool Suspended();
+  bool Suspended() const;
   void SetSuspended(bool suspend);
 
-  QJsonObject DebugDump();
+  QJsonObject DebugDump() const;
 
  signals:
   void TitleChanged();
@@ -92,7 +93,7 @@ class BrowserWidget : public QWidget {
                                 int command_id,
                                 CefContextMenuHandler::EventFlags event_flags);
 
-  Cef* cef_;
+  const Cef& cef_;
   Bubble* bubble_;
   QToolButton* back_button_ = nullptr;
   QToolButton* forward_button_ = nullptr;

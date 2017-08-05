@@ -12,14 +12,13 @@ DebugMetaServer::DebugMetaServer(MainWindow* window) : QObject(window) {
     qFatal("Unable to open web socket server");
     return;
   }
-  connect(server, &QWebSocketServer::newConnection, [this, server, window]() {
+  connect(server, &QWebSocketServer::newConnection, [=]() {
     auto socket = server->nextPendingConnection();
     connect(socket, &QWebSocket::disconnected,
             socket, &QWebSocket::deleteLater);
     connect(server, &QWebSocketServer::destroyed,
             socket, &QWebSocket::deleteLater);
-    connect(socket, &QWebSocket::textMessageReceived,
-            [this, socket, window](const QString& msg) {
+    connect(socket, &QWebSocket::textMessageReceived, [=](const QString& msg) {
       QJsonObject obj;
       if (msg == "dump") {
         obj = window->DebugDump();

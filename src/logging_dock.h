@@ -10,8 +10,6 @@ class LoggingDock : public QDockWidget {
 
  public:
   explicit LoggingDock(QWidget* parent = nullptr);
-
- public slots:  // NOLINT(whitespace/indent)
   void Log(const QString& str);
   void LogQtMessage(QtMsgType type,
                     const QMessageLogContext& ctx,

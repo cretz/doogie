@@ -2,7 +2,7 @@
 
 namespace doogie {
 
-CefBaseWidget::CefBaseWidget(Cef* cef, QWidget*  parent)
+CefBaseWidget::CefBaseWidget(const Cef& cef, QWidget*  parent)
     : QWidget(parent), cef_(cef) {
   InitWindowInfo();
 }
@@ -10,7 +10,7 @@ CefBaseWidget::CefBaseWidget(Cef* cef, QWidget*  parent)
 CefBaseWidget::~CefBaseWidget() {
 }
 
-const CefWindowInfo& CefBaseWidget::WindowInfo() {
+const CefWindowInfo& CefBaseWidget::WindowInfo() const {
   return window_info_;
 }
 

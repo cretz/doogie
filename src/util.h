@@ -14,8 +14,8 @@ class Util {
   static QPixmap* CachedPixmapColorOverlay(const QString& res_name,
                                            const QColor& color);
 
-  static QJsonObject DebugWidgetGeom(QWidget* widg);
-  static QJsonObject DebugWidgetGeom(QWidget* widg, const QRect& rect);
+  static QJsonObject DebugWidgetGeom(const QWidget* widg);
+  static QJsonObject DebugWidgetGeom(const QWidget* widg, const QRect& rect);
   static QJsonObject DebugRect(const QPoint& top_left, const QSize& size);
 };
 

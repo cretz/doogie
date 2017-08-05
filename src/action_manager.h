@@ -71,16 +71,16 @@ class ActionManager : public QObject {
   static void CreateInstance(QApplication* app);
   static QAction* Action(int type);
   static QList<QKeySequence> DefaultShortcuts(int type);
-  static void registerAction(int type, QAction* action);
-  static void registerAction(int type, const QString& text);
+  static void RegisterAction(int type, QAction* action);
+  static void RegisterAction(int type, const QString& text);
 
  private:
-  explicit ActionManager(QObject *parent = nullptr);
+  explicit ActionManager(QObject* parent = nullptr);
   void CreateActions();
 
+  static ActionManager* instance_;
   QHash<int, QAction*> actions_;
   QHash<int, QList<QKeySequence>> default_shortcuts_;
-  static ActionManager* instance_;
 };
 
 }  // namespace doogie

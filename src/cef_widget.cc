@@ -1,9 +1,10 @@
 #include "cef_widget.h"
+
 #include <string>
 
 namespace doogie {
 
-CefWidget::CefWidget(Cef* cef,
+CefWidget::CefWidget(const Cef& cef,
                      Bubble* bubble,
                      const QString& url,
                      QWidget* parent)
@@ -22,8 +23,7 @@ CefWidget::CefWidget(Cef* cef,
           this, &CefWidget::StatusChanged);
   connect(handler_, &CefHandler::Closed,
           this, &CefWidget::Closed);
-  connect(handler_, &CefHandler::FaviconUrlChanged,
-          [this](const QString& url) {
+  connect(handler_, &CefHandler::FaviconUrlChanged, [=](const QString& url) {
     static const auto favicon_sig =
         QMetaMethod::fromSignal(&CefWidget::FaviconChanged);
     if (this->isSignalConnected(favicon_sig) && browser_) {
@@ -36,7 +36,7 @@ CefWidget::CefWidget(Cef* cef,
             new CefWidget::FaviconDownloadCallback(this));
     }
   });
-  connect(handler_, &CefHandler::FocusObtained, [this]() {
+  connect(handler_, &CefHandler::FocusObtained, [=]() {
     setFocus();
   });
   connect(handler_, &CefHandler::LoadStateChanged,
@@ -44,8 +44,8 @@ CefWidget::CefWidget(Cef* cef,
   connect(handler_, &CefHandler::PageOpen,
           this, &CefWidget::PageOpen);
   connect(handler_, &CefHandler::FindResult,
-          [this](int, int count, const CefRect&,
-          int active_match_ordinal, bool) {
+          [=](int, int count, const CefRect&,
+              int active_match_ordinal, bool) {
     FindResult(count, active_match_ordinal);
   });
   connect(handler_, &CefHandler::ShowBeforeUnloadDialog,
@@ -60,7 +60,16 @@ CefWidget::~CefWidget() {
   }
 }
 
-QPointer<QWidget> CefWidget::OverrideWidget() {
+std::vector<CefWidget::NavEntry> CefWidget::NavEntries() const {
+  CefRefPtr<CefWidget::NavEntryVisitor> visitor =
+      new CefWidget::NavEntryVisitor;
+  if (browser_) {
+    browser_->GetHost()->GetNavigationEntries(visitor, false);
+  }
+  return visitor->Entries();
+}
+
+QPointer<QWidget> CefWidget::OverrideWidget() const {
   return override_widget_;
 }
 
@@ -70,7 +79,7 @@ void CefWidget::LoadUrl(const QString& url) {
   }
 }
 
-QString CefWidget::CurrentUrl() {
+QString CefWidget::CurrentUrl() const {
   if (browser_) {
     return QString::fromStdString(
           browser_->GetMainFrame()->GetURL().ToString());
@@ -146,14 +155,14 @@ void CefWidget::ShowDevTools(CefBaseWidget* widg,
       dev_tools_handler_ = CefRefPtr<CefHandler>(new CefHandler);
       widg->ForwardKeyboardEventsFrom(dev_tools_handler_);
       connect(dev_tools_handler_, &CefHandler::AfterCreated,
-              [this](CefRefPtr<CefBrowser> b) {
+              [=](CefRefPtr<CefBrowser> b) {
         dev_tools_browser_ = b;
       });
       connect(dev_tools_handler_, &CefHandler::LoadEnd,
-              [this](CefRefPtr<CefFrame> frame, int) {
+              [=](CefRefPtr<CefFrame> frame, int) {
         if (frame->IsMain()) emit DevToolsLoadComplete();
       });
-      connect(dev_tools_handler_, &CefHandler::Closed, [this]() {
+      connect(dev_tools_handler_, &CefHandler::Closed, [=]() {
         CloseDevTools();
       });
     }
@@ -182,7 +191,7 @@ void CefWidget::CloseDevTools() {
   }
 }
 
-double CefWidget::GetZoomLevel() {
+double CefWidget::ZoomLevel() const {
   if (browser_) {
     return browser_->GetHost()->GetZoomLevel();
   }
@@ -197,15 +206,6 @@ void CefWidget::SetZoomLevel(double level) {
 
 void CefWidget::SetJsDialogCallback(CefHandler::JsDialogCallback callback) {
   handler_->SetJsDialogCallback(callback);
-}
-
-std::vector<CefWidget::NavEntry> CefWidget::NavEntries() {
-  CefRefPtr<CefWidget::NavEntryVisitor> visitor =
-      new CefWidget::NavEntryVisitor;
-  if (browser_) {
-    browser_->GetHost()->GetNavigationEntries(visitor, false);
-  }
-  return visitor->Entries();
 }
 
 void CefWidget::focusInEvent(QFocusEvent* event) {

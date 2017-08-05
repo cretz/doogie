@@ -1,4 +1,5 @@
 #include "find_widget.h"
+
 #include "util.h"
 
 namespace doogie {
@@ -38,31 +39,30 @@ FindWidget::FindWidget(QWidget* parent) : QFrame(parent) {
         Util::CachedIcon(":/res/images/fontawesome/times.png"), "");
   close->setToolTip("Close");
   close->setFlat(true);
-  connect(close, &QPushButton::clicked, [this]() {
+  connect(close, &QPushButton::clicked, [=]() {
     hide();
   });
   layout->addWidget(close);
 
   setLayout(layout);
 
-  connect(find_text_, &QLineEdit::textEdited,
-          [this, match_case](const QString&) {
+  connect(find_text_, &QLineEdit::textEdited, [=](const QString&) {
     if (find_text_->text().isEmpty()) UpdateFindResults(0, 0, false);
     emit AttemptFind(find_text_->text(), true, match_case->isChecked(), false);
   });
-  connect(find_text_, &QLineEdit::returnPressed, [this, match_case]() {
+  connect(find_text_, &QLineEdit::returnPressed, [=]() {
     auto forward = !QApplication::keyboardModifiers().
         testFlag(Qt::ShiftModifier);
     emit AttemptFind(find_text_->text(), forward,
                      match_case->isChecked(), unchanged_means_continue_);
     unchanged_means_continue_ = true;
   });
-  connect(find_prev, &QPushButton::clicked, [this, match_case]() {
+  connect(find_prev, &QPushButton::clicked, [=]() {
     emit AttemptFind(find_text_->text(), false, match_case->isChecked(),
                      unchanged_means_continue_);
     unchanged_means_continue_ = true;
   });
-  connect(find_next, &QPushButton::clicked, [this, match_case]() {
+  connect(find_next, &QPushButton::clicked, [=]() {
     emit AttemptFind(find_text_->text(), true, match_case->isChecked(),
                      unchanged_means_continue_);
     unchanged_means_continue_ = true;

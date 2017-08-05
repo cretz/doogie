@@ -2,6 +2,7 @@
 #define DOOGIE_CEF_APP_HANDLER_H_
 
 #include <QtWidgets>
+
 #include "cef_base.h"
 
 namespace doogie {
@@ -25,11 +26,12 @@ class CefAppHandler :
   }
 
   // Render process handler overrides...
-  bool OnBeforeNavigation(CefRefPtr<CefBrowser> browser,
-                          CefRefPtr<CefFrame> frame,
-                          CefRefPtr<CefRequest> request,
-                          CefRenderProcessHandler::NavigationType navigation_type,
-                          bool is_redirect) override;
+  bool OnBeforeNavigation(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request,
+      CefRenderProcessHandler::NavigationType navigation_type,
+      bool is_redirect) override;
 
   void SetBeforeNavCallback(
       std::function<bool(CefRefPtr<CefBrowser>,

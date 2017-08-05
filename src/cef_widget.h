@@ -3,9 +3,10 @@
 
 #include <QtWidgets>
 #include <vector>
+
+#include "bubble.h"
 #include "cef_base_widget.h"
 #include "cef_handler.h"
-#include "bubble.h"
 
 namespace doogie {
 
@@ -18,18 +19,18 @@ class CefWidget : public CefBaseWidget {
     QString title;
     bool current;
   };
-  std::vector<NavEntry> NavEntries();
 
-  explicit CefWidget(Cef* cef,
+  explicit CefWidget(const Cef& cef,
                      Bubble* bubble,
                      const QString& url = "",
                      QWidget* parent = nullptr);
   ~CefWidget();
 
+  std::vector<NavEntry> NavEntries() const;
   // If result is non-null, it needs to replace this widget
-  QPointer<QWidget> OverrideWidget();
+  QPointer<QWidget> OverrideWidget() const;
   void LoadUrl(const QString& url);
-  QString CurrentUrl();
+  QString CurrentUrl() const;
   void TryClose();
 
   // Basically just calls history.go
@@ -50,7 +51,7 @@ class CefWidget : public CefBaseWidget {
   void ExecDevToolsJs(const QString& js);
   void CloseDevTools();
 
-  double GetZoomLevel();
+  double ZoomLevel() const;
   void SetZoomLevel(double level);
 
   void SetJsDialogCallback(CefHandler::JsDialogCallback callback);

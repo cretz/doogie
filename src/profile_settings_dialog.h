@@ -2,19 +2,21 @@
 #define DOOGIE_PROFILE_SETTINGS_DIALOG_H_
 
 #include <QtWidgets>
-#include "profile.h"
+
 #include "bubble.h"
+#include "profile.h"
 
 namespace doogie {
 
 class ProfileSettingsDialog : public QDialog {
   Q_OBJECT
+
  public:
   explicit ProfileSettingsDialog(Profile* profile,
                                  QSet<QString> in_use_bubble_names,
                                  QWidget* parent = nullptr);
   ~ProfileSettingsDialog();
-  bool NeedsRestart();
+  bool NeedsRestart() const;
   void done(int r) override;
 
  protected:

@@ -1,4 +1,5 @@
 #include "page_tree_dock.h"
+
 #include "util.h"
 
 namespace doogie {
@@ -23,11 +24,11 @@ void PageTreeDock::NewPage(const QString &url,
                  make_current);
 }
 
-bool PageTreeDock::HasOpenPages() {
+bool PageTreeDock::HasOpenPages() const {
   return tree_->topLevelItemCount() > 0;
 }
 
-QJsonObject PageTreeDock::DebugDump() {
+QJsonObject PageTreeDock::DebugDump() const {
   return tree_->DebugDump();
 }
 

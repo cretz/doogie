@@ -2,6 +2,7 @@
 #define DOOGIE_PROFILE_H_
 
 #include <QtWidgets>
+
 #include "cef.h"
 
 namespace doogie {
@@ -18,6 +19,8 @@ class Profile : public QObject {
     QString desc;
     QString field;
   };
+
+  static const QString kInMemoryPath;
 
   static Profile* Current();
   // False on failure
@@ -38,31 +41,30 @@ class Profile : public QObject {
   static QStringList LastTenProfilePaths();
   static QKeySequence KeySequenceOrEmpty(const QString& str);
 
-  QString FriendlyName();
-  QString Path();
-  bool InMemory();
+  QString FriendlyName() const;
+  QString Path() const;
+  bool InMemory() const;
 
-  void ApplyCefSettings(CefSettings& settings);
-  void ApplyCefBrowserSettings(CefBrowserSettings& settings);
+  void ApplyCefSettings(CefSettings* settings);
+  void ApplyCefBrowserSettings(CefBrowserSettings* settings);
 
-  const QList<Bubble*> Bubbles();
-  Bubble* DefaultBubble();
-  Bubble* BubbleByName(const QString& name);
+  const QList<Bubble*> Bubbles() const;
+  Bubble* DefaultBubble() const;
+  Bubble* BubbleByName(const QString& name) const;
   void AddBubble(Bubble* bubble);
   bool SavePrefs();
 
   void ApplyActionShortcuts();
 
-  static const QString kInMemoryPath;
-
  private:
+  static const QString kAppDataPath;
+
   explicit Profile(const QString& path,
                    QJsonObject prefs,
                    QObject* parent = nullptr);
   static void SetCurrent(Profile* profile);
 
   static Profile* current_;
-  static const QString kAppDataPath;
   static QList<BrowserSetting> browser_settings_;
   QString path_;
   QJsonObject prefs_;

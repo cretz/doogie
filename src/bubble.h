@@ -2,6 +2,7 @@
 #define DOOGIE_BUBBLE_H_
 
 #include <QtWidgets>
+
 #include "cef.h"
 #include "profile.h"
 
@@ -15,10 +16,10 @@ class Bubble : public QObject {
 
  public:
   ~Bubble();
-  QString Name();
-  QString FriendlyName();
-  void ApplyCefBrowserSettings(CefBrowserSettings& settings);
-  void ApplyCefRequestContextSettings(CefRequestContextSettings& settings);
+  QString Name() const;
+  QString FriendlyName() const;
+  void ApplyCefBrowserSettings(CefBrowserSettings* settings);
+  void ApplyCefRequestContextSettings(CefRequestContextSettings* settings);
   CefRefPtr<CefRequestContext> CreateCefRequestContext();
   QIcon Icon();
   void InvalidateIcon();

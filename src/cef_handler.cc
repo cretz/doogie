@@ -60,8 +60,7 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> browser) {
   emit FocusObtained();
 }
 
-bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser> browser,
-                            FocusSource source) {
+bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser>, FocusSource) {
   return false;
 }
 
@@ -107,17 +106,18 @@ bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,
   return true;
 }
 
-bool CefHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
-                               CefRefPtr<CefFrame> frame,
-                               const CefString& target_url,
-                               const CefString& target_frame_name,
-                               CefLifeSpanHandler::WindowOpenDisposition target_disposition,
-                               bool user_gesture,
-                               const CefPopupFeatures& popupFeatures,
-                               CefWindowInfo& windowInfo,
-                               CefRefPtr<CefClient>& client,
-                               CefBrowserSettings& settings,
-                               bool* no_javascript_access) {
+bool CefHandler::OnBeforePopup(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    const CefString& target_url,
+    const CefString&,
+    CefLifeSpanHandler::WindowOpenDisposition target_disposition,
+    bool user_gesture,
+    const CefPopupFeatures&,
+    CefWindowInfo&,
+    CefRefPtr<CefClient>&,
+    CefBrowserSettings&,
+    bool*) {
   if (popup_as_page_open_) {
     emit PageOpen(static_cast<WindowOpenType>(target_disposition),
                   QString::fromStdString(target_url.ToString()),
@@ -154,15 +154,16 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,
-                                bool is_redirect) {
+                                bool) {
   return false;
 }
 
-bool CefHandler::OnOpenURLFromTab(CefRefPtr<CefBrowser> browser,
-                                  CefRefPtr<CefFrame> frame,
-                                  const CefString& target_url,
-                                  CefRequestHandler::WindowOpenDisposition target_disposition,  // NOLINT(whitespace/line_length)
-                                  bool user_gesture) {
+bool CefHandler::OnOpenURLFromTab(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    const CefString& target_url,
+    CefRequestHandler::WindowOpenDisposition target_disposition,
+    bool user_gesture) {
   emit PageOpen(static_cast<WindowOpenType>(target_disposition),
                QString::fromStdString(target_url.ToString()),
                user_gesture);

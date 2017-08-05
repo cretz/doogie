@@ -2,6 +2,7 @@
 #define DOOGIE_PAGE_TREE_DOCK_H_
 
 #include <QtWidgets>
+
 #include "page_tree.h"
 
 namespace doogie {
@@ -14,15 +15,15 @@ class PageTreeDock : public QDockWidget {
                         QWidget* parent = nullptr);
 
   void NewPage(const QString &url, bool top_level, bool make_current);
-  bool HasOpenPages();
+  bool HasOpenPages() const;
 
-  QJsonObject DebugDump();
-
- private:
-  PageTree* tree_;
+  QJsonObject DebugDump() const;
 
  signals:
   void TreeEmpty();
+
+ private:
+  PageTree* tree_;
 };
 
 }  // namespace doogie
