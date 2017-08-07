@@ -10,11 +10,7 @@ const QString Profile::kInMemoryPath = "<in-mem>";
 const QString Profile::kAppDataPath = QDir::toNativeSeparators(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 Profile* Profile::current_ = nullptr;
-QList<Profile::BrowserSetting> Profile::browser_settings_ = {};
-
-Profile* Profile::Current() {
-  return current_;
-}
+QList<Profile::BrowserSetting> Profile::possible_browser_settings_ = {};
 
 bool Profile::CreateOrLoadProfile(const QString& path, bool set_current) {
   if (path == kInMemoryPath) return CreateProfile(path, set_current);
@@ -95,7 +91,8 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
   for (int i = 0; i < argc; i++) {
     args.append(QString::fromLocal8Bit(argv[i]));
   }
-  parser.process(args);
+  // We don't care if it's not successful
+  parser.parse(args);
   if (parser.isSet(noProfileOption)) {
     profile_path = kInMemoryPath;
   } else if (parser.isSet(profileOption)) {
@@ -197,8 +194,8 @@ QString Profile::FriendlyName(const QString& path) {
 
 QList<Profile::BrowserSetting> Profile::PossibleBrowserSettings() {
   // We know this is not thread safe; fine w/ us
-  if (browser_settings_.isEmpty()) {
-    browser_settings_.append({
+  if (possible_browser_settings_.isEmpty()) {
+    possible_browser_settings_.append({
       Profile::BrowserSetting {
         "Application Cache?",
         "Controls whether the application cache can be used.",
@@ -271,98 +268,123 @@ QList<Profile::BrowserSetting> Profile::PossibleBrowserSettings() {
         "webgl" }
     });
   }
-  return browser_settings_;
+  return possible_browser_settings_;
 }
 
 QStringList Profile::LastTenProfilePaths() {
   return QSettings("cretz", "Doogie").value("profile/lastTen").toStringList();
 }
 
-QKeySequence Profile::KeySequenceOrEmpty(const QString& str) {
-  if (str.isEmpty()) return QKeySequence();
-  auto seq = QKeySequence::fromString(str);
-  if (seq.isEmpty()) return QKeySequence();
-  for (int i = 0; i < seq.count(); i++) {
-    if (seq[i] == Qt::Key_unknown) return QKeySequence();
+Profile::Profile(const QString& path, const QJsonObject& obj)
+    : path_(QDir::toNativeSeparators(path)) {
+  cache_path_ = obj["cachePath"].toString();
+  enable_net_sec_ = obj["enableNetSecurityExpiration"].toBool(false);
+  // Default is true
+  persist_user_prefs_ = obj["persistUserPreferences"].toBool(true);
+  user_agent_ = obj["userAgent"].toString();
+  user_data_path_ = obj["userDataPath"].toString();
+  for (auto setting : PossibleBrowserSettings()) {
+    if (obj.contains(setting.field)) {
+      browser_settings_[setting.field] = obj[setting.field].toBool();
+    }
   }
-  return seq;
+  QSet<QString> already_seen_names;
+  for (auto bubble_json : obj["bubbles"].toArray()) {
+    Bubble bubble(bubble_json.toObject());
+    if (already_seen_names.contains(bubble.Name())) {
+      qWarning() << "Duplicate bubble name: " << bubble.Name();
+    } else {
+      bubbles_.append(bubble);
+    }
+  }
+  // If this is empty, we must have a single do-nothing bubble
+  if (bubbles_.isEmpty()) {
+    bubbles_.append(Bubble(QJsonObject()));
+  }
+  // Shortcuts can be key names or numbers
+  auto shortcuts_obj = obj["shortcuts"].toObject();
+  for (auto key : shortcuts_obj.keys()) {
+    auto type = ActionManager::StringToType(key);
+    if (type != -1) {
+      QList<QKeySequence> seqs;
+      for (auto val : shortcuts_obj[key].toArray()) {
+        auto seq = Util::KeySequenceOrEmpty(val.toString());
+        if (!seq.isEmpty()) seqs.append(seq);
+      }
+      shortcuts_[type] = seqs;
+    }
+  }
 }
 
-QString Profile::FriendlyName() const {
-  return FriendlyName(path_);
+void Profile::CopySettingsFrom(const Profile& profile) {
+  cache_path_ = profile.cache_path_;
+  enable_net_sec_ = profile.enable_net_sec_;
+  persist_user_prefs_ = profile.persist_user_prefs_;
+  user_agent_ = profile.user_agent_;
+  user_data_path_ = profile.user_data_path_;
+  browser_settings_ = profile.browser_settings_;
+  bubbles_ = profile.bubbles_;
+  shortcuts_ = profile.shortcuts_;
 }
 
-QString Profile::Path() const {
-  return path_;
+int Profile::BubbleIndexFromName(const QString& name) const {
+  for (int i = 0; i < bubbles_.size(); i++) {
+    if (bubbles_[i].Name() == name) return i;
+  }
+  return -1;
 }
 
-bool Profile::InMemory() const {
-  return path_ == kInMemoryPath;
-}
-
-void Profile::ApplyCefSettings(CefSettings* settings) {
+void Profile::ApplyCefSettings(CefSettings* settings) const {
   settings->no_sandbox = true;
   // Enable remote debugging on debug version
 #ifdef QT_DEBUG
   settings->remote_debugging_port = 1989;
 #endif
 
-  auto cef = prefs_.value("cef").toObject();
-
-  QString cache_path;
-  if (path_ == kInMemoryPath) {
-    // Do nothing to cache path, leave it alone
-    cache_path = "";
-  } else if (!cef.contains("cachePath")) {
-    // Default is path/cache
-    cache_path = QDir(path_).filePath("cache");
-  } else {
-    cache_path = cef.value("cachePath").toString("");
-    if (!cache_path.isEmpty()) {
+  QString cache_path = "";
+  if (!InMemory()) {
+    if (cache_path_.isNull()) {
+      // Default is path/cache
+      cache_path = QDir::toNativeSeparators(QDir(path_).filePath("cache"));
+    } else if (!cache_path_.isEmpty()) {
       // Qualify it with the dir (but can still be absolute)
-      cache_path = QDir::cleanPath(QDir(path_).filePath(cache_path));
+      cache_path = QDir::toNativeSeparators(
+          QDir::cleanPath(QDir(path_).filePath(cache_path_)));
     }
   }
   CefString(&settings->cache_path) = cache_path.toStdString();
 
-  if (cef.value("enableNetSecurityExpiration").toBool()) {
+  if (enable_net_sec_) {
     settings->enable_net_security_expiration = 1;
   }
 
-  // We default persist_user_preferences to true
-  if (cef.value("persistUserPreferences").toBool(true)) {
+  if (persist_user_prefs_) {
     settings->persist_user_preferences = 1;
   }
 
-  if (cef.contains("userAgent")) {
-    CefString(&settings->user_agent) =
-        prefs_.value("userAgent").toString().toStdString();
+  if (!user_agent_.isEmpty()) {
+    CefString(&settings->user_agent) = user_agent_.toStdString();
   }
 
   // Default user data path to our own
-  QString user_data_path;
-  if (path_ == kInMemoryPath) {
-    // Do nothing to user data path, leave it alone
-    user_data_path = "";
-  } else if (!cef.contains("userDataPath")) {
-    // Default is path/cache
-    user_data_path = QDir(path_).filePath("user_data");
-  } else {
-    user_data_path = cef.value("userDataPath").toString("");
-    if (!user_data_path.isEmpty()) {
+  QString user_data_path = "";
+  if (!InMemory()) {
+    if (user_data_path_.isNull()) {
+      user_data_path = QDir::toNativeSeparators(
+            QDir(path_).filePath("user_data"));
+    } else if (!user_data_path_.isEmpty()) {
       // Qualify it with the dir (but can still be absolute)
-      user_data_path = QDir::cleanPath(QDir(path_).filePath(user_data_path));
+      user_data_path = QDir::toNativeSeparators(
+            QDir::cleanPath(QDir(path_).filePath(user_data_path_)));
     }
   }
   CefString(&settings->user_data_path) = user_data_path.toStdString();
 }
 
-void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) {
-  auto browser = prefs_.value("browser").toObject();
-
-  auto state = [&browser](cef_state_t& state, const QString& field) {
-    if (browser.contains(field)) {
-      state = browser.value(field).toBool() ? STATE_ENABLED : STATE_DISABLED;
+void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) const {
+  auto state = [=](cef_state_t& state, const QString& field) {
+    if (browser_settings_.contains(field)) {
+      state = browser_settings_[field] ? STATE_ENABLED : STATE_DISABLED;
     }
   };
 
@@ -386,85 +408,86 @@ void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) {
   state(settings->webgl, "webgl");
 }
 
-const QList<Bubble*> Profile::Bubbles() const {
-  return bubbles_;
-}
-
-Bubble* Profile::DefaultBubble() const {
-  return bubbles_.first();
-}
-
-Bubble* Profile::BubbleByName(const QString& name) const {
-  for (const auto& bubble : bubbles_) {
-    if (bubble->Name() == name) {
-      return bubble;
-    }
+void Profile::ApplyActionShortcuts() const {
+  // Go over every action and set shortcut or default
+  auto actions = ActionManager::Actions();
+  for (auto type : actions.keys()) {
+    actions[type]->setShortcuts(
+        shortcuts_.value(type, ActionManager::DefaultShortcuts(type)));
   }
-  return nullptr;
 }
 
-void Profile::AddBubble(Bubble* bubble) {
-  bubbles_.append(bubble);
+QJsonObject Profile::ToJson() const {
+  QJsonObject ret;
+  if (!cache_path_.isNull()) ret["cachePath"] = cache_path_;
+  if (enable_net_sec_) ret["enableNetSecurityExpiration"] = true;
+  if (!persist_user_prefs_) ret["persistUserPreferences"] = false;
+  if (!user_agent_.isEmpty()) ret["userAgent"] = user_agent_;
+  if (!user_data_path_.isNull()) ret["userDataPath"] = user_data_path_;
+  for (auto setting_field : browser_settings_.keys()) {
+    ret[setting_field] = browser_settings_[setting_field];
+  }
+  QJsonArray bubbles;
+  for (const auto bubble : bubbles_) {
+    bubbles.append(bubble.ToJson());
+  }
+  // If it's a single-bubble w/ an empty object, we don't add it
+  if (bubbles.size() > 1 || !bubbles.first().toObject().isEmpty()) {
+    ret["bubbles"] = bubbles;
+  }
+  QJsonObject shortcuts;
+  for (auto type : shortcuts_.keys()) {
+    QJsonArray seqs;
+    for (auto seq : shortcuts_[type]) {
+      seqs.append(seq.toString());
+    }
+    shortcuts[ActionManager::TypeToString(type)] = seqs;
+  }
+  if (!shortcuts.isEmpty()) ret["shortcuts"] = shortcuts;
+  return ret;
 }
 
-bool Profile::SavePrefs() {
+bool Profile::SavePrefs() const {
   // In memory saves nothing...
   if (InMemory()) return true;
-  // Put all bubbles back
-  QJsonArray arr;
-  for (const auto& bubble : bubbles_) {
-    arr.append(bubble->prefs_);
-  }
-  prefs_["bubbles"] = arr;
 
   QFile file(QDir(path_).filePath("settings.doogie.json"));
   qDebug() << "Saving profile prefs to " << file.fileName();
   if (!file.open(QIODevice::WriteOnly)) {
     return false;
   }
-  if (file.write(QJsonDocument(prefs_).
+  if (file.write(QJsonDocument(ToJson()).
                  toJson(QJsonDocument::Indented)) == -1) {
     return false;
   }
   return true;
 }
 
-void Profile::ApplyActionShortcuts() {
-  // Go over all actions, do what the prefs or the default if
-  // no prefs
-  auto action_meta = QMetaEnum::fromType<ActionManager::Type>();
-  auto prefs = prefs_.value("shortcuts").toObject();
-  for (int i = 0; i < action_meta.keyCount(); i++) {
-    auto action = ActionManager::Action(action_meta.value(i));
-    if (action) {
-      auto seqs = ActionManager::DefaultShortcuts(action_meta.value(i));
-      if (prefs.contains(action_meta.key(i))) {
-        seqs.clear();
-        for (auto& pref : prefs[action_meta.key(i)].toArray()) {
-          auto seq = KeySequenceOrEmpty(pref.toString());
-          if (!seq.isEmpty()) seqs.append(seq);
-        }
-      }
-      action->setShortcuts(seqs);
-    }
-  }
+bool Profile::RequiresRestartIfChangedTo(const Profile& other) const {
+  return cache_path_ != other.cache_path_ ||
+      cache_path_.isNull() != other.cache_path_.isNull() ||
+      enable_net_sec_ != other.enable_net_sec_ ||
+      persist_user_prefs_ != other.persist_user_prefs_ ||
+      user_agent_ != other.user_agent_ ||
+      user_data_path_ != other.user_data_path_ ||
+      user_data_path_.isNull() != other.user_data_path_.isNull();
 }
 
-Profile::Profile(const QString& path, QJsonObject prefs, QObject* parent)
-    : QObject(parent), path_(path), prefs_(prefs) {
-  for (const auto& item : prefs.value("bubbles").toArray()) {
-    bubbles_.append(new Bubble(item.toObject(), this));
-  }
-  // If there are no bubbles, add an empty one
-  if (bubbles_.isEmpty()) {
-    bubbles_.append(new Bubble(QJsonObject(), this));
-  }
+bool Profile::operator==(const Profile& other) const {
+  return cache_path_ == other.cache_path_ &&
+      cache_path_.isNull() == other.cache_path_.isNull() &&
+      enable_net_sec_ == other.enable_net_sec_ &&
+      persist_user_prefs_ == other.persist_user_prefs_ &&
+      user_agent_ == other.user_agent_ &&
+      user_data_path_ == other.user_data_path_ &&
+      user_data_path_.isNull() == other.user_data_path_.isNull() &&
+      browser_settings_ == other.browser_settings_ &&
+      bubbles_ == other.bubbles_ &&
+      shortcuts_ == other.shortcuts_;
 }
 
 void Profile::SetCurrent(Profile* profile) {
-  if (current_) {
-    delete current_;
-  }
+  if (current_) delete current_;
   current_ = profile;
   QSettings settings("cretz", "Doogie");
   settings.setValue("profile/lastLoaded", profile->path_);

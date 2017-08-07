@@ -31,7 +31,7 @@ class PageTreeItem : public QTreeWidgetItem {
 
   QList<PageTreeItem*> Siblings() const;
 
-  void SetCurrentBubbleIfDifferent(Bubble* bubble);
+  void SetCurrentBubbleIfDifferent(const Bubble& bubble);
 
  private:
   void ApplyFavicon();

@@ -3,16 +3,14 @@
 
 #include <QtWidgets>
 
+#include "action_manager.h"
+#include "bubble.h"
 #include "cef/cef.h"
+#include "util.h"
 
 namespace doogie {
 
-class Bubble;
-class ProfileSettingsDialog;
-
-class Profile : public QObject {
-  Q_OBJECT
-
+class Profile {
  public:
   struct BrowserSetting {
     QString name;
@@ -22,7 +20,7 @@ class Profile : public QObject {
 
   static const QString kInMemoryPath;
 
-  static Profile* Current();
+  static Profile* Current() { return current_; }
   // False on failure
   static bool CreateOrLoadProfile(const QString& path,
                                   bool set_current = true);
@@ -38,39 +36,85 @@ class Profile : public QObject {
 
   static QString FriendlyName(const QString& path);
   static QList<BrowserSetting> PossibleBrowserSettings();
+
   static QStringList LastTenProfilePaths();
-  static QKeySequence KeySequenceOrEmpty(const QString& str);
 
-  QString FriendlyName() const;
-  QString Path() const;
-  bool InMemory() const;
+  Profile(const QString& path = kInMemoryPath,
+          const QJsonObject& obj = QJsonObject());
 
-  void ApplyCefSettings(CefSettings* settings);
-  void ApplyCefBrowserSettings(CefBrowserSettings* settings);
+  void CopySettingsFrom(const Profile& profile);
 
-  const QList<Bubble*> Bubbles() const;
-  Bubble* DefaultBubble() const;
-  Bubble* BubbleByName(const QString& name) const;
-  void AddBubble(Bubble* bubble);
-  bool SavePrefs();
+  QString Path() const { return path_; }
+  QString FriendlyName() const { return FriendlyName(path_); }
+  bool InMemory() const { return path_ == kInMemoryPath; }
 
-  void ApplyActionShortcuts();
+  // Null means default, empty means no cache
+  QString CachePath() const { return cache_path_; }
+  void SetCachePath(const QString& cache_path) { cache_path_ = cache_path; }
+  bool EnableNetSec() { return enable_net_sec_; }
+  void SetEnableNetSec(bool enabled) { enable_net_sec_ = enabled; }
+  bool PersistUserPrefs() { return persist_user_prefs_; }
+  void SetPersistUserPrefs(bool enabled) { persist_user_prefs_ = enabled; }
+  QString UserAgent() const { return user_agent_; }
+  void SetUserAgent(const QString& user_agent) { user_agent_ = user_agent; }
+  // Null means Doogie default, empty means platform default
+  QString UserDataPath() const { return user_data_path_; }
+  void SetUserDataPath(const QString& path) { user_data_path_ = path; }
+  Util::SettingState GetBrowserSetting(const QString& field) const {
+    if (!browser_settings_.contains(field)) return Util::Default;
+    return browser_settings_[field] ? Util::Enabled : Util::Disabled;
+  }
+  void SetBrowserSetting(const QString& field, Util::SettingState state) {
+    if (state == Util::Default) {
+      browser_settings_.remove(field);
+    } else {
+      browser_settings_[field] = state == Util::Enabled;
+    }
+  }
+  const QList<Bubble> Bubbles() const { return bubbles_; }
+  // Note, this will reuse bubble instances of the same name
+  void SetBubbles(QList<Bubble> bubbles) { bubbles_ = bubbles; }
+  const Bubble& DefaultBubble() const { return bubbles_.first(); }
+  int BubbleIndexFromName(const QString& name) const;
+
+  // Keyed by action type
+  const QHash<int, QList<QKeySequence>> Shortcuts() const {
+    return shortcuts_;
+  }
+  void SetShortcuts(QHash<int, QList<QKeySequence>> shortcuts) {
+    shortcuts_ = shortcuts;
+  }
+
+  void ApplyCefSettings(CefSettings* settings) const;
+  void ApplyCefBrowserSettings(CefBrowserSettings* settings) const;
+
+  void ApplyActionShortcuts() const;
+
+  QJsonObject ToJson() const;
+  bool SavePrefs() const;
+
+  bool RequiresRestartIfChangedTo(const Profile& other) const;
+  bool operator==(const Profile& other) const;
+  bool operator!=(const Profile& other) const { return !operator==(other); }
 
  private:
   static const QString kAppDataPath;
 
-  explicit Profile(const QString& path,
-                   QJsonObject prefs,
-                   QObject* parent = nullptr);
   static void SetCurrent(Profile* profile);
 
   static Profile* current_;
-  static QList<BrowserSetting> browser_settings_;
-  QString path_;
-  QJsonObject prefs_;
-  QList<Bubble*> bubbles_;
+  static QList<BrowserSetting> possible_browser_settings_;
 
-  friend class ProfileSettingsDialog;
+
+  QString path_;
+  QString cache_path_;
+  bool enable_net_sec_;
+  bool persist_user_prefs_;
+  QString user_agent_;
+  QString user_data_path_;
+  QHash<QString, bool> browser_settings_;
+  QList<Bubble> bubbles_;
+  QHash<int, QList<QKeySequence>> shortcuts_;
 };
 \
 }  // namespace doogie

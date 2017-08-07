@@ -21,7 +21,7 @@ class CefWidget : public CefBaseWidget {
   };
 
   explicit CefWidget(const Cef& cef,
-                     Bubble* bubble,
+                     const Bubble& bubble,
                      const QString& url = "",
                      QWidget* parent = nullptr);
   ~CefWidget();
@@ -118,9 +118,8 @@ class CefWidget : public CefBaseWidget {
     IMPLEMENT_REFCOUNTING(NavEntryVisitor)
   };
 
-  void InitBrowser(const QString& url);
+  void InitBrowser(const Bubble& bubble, const QString& url);
 
-  Bubble* bubble_;
   CefRefPtr<CefHandler> handler_;
   CefRefPtr<CefBrowser> browser_;
   CefRefPtr<CefHandler> dev_tools_handler_;

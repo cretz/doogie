@@ -13,16 +13,55 @@
   <hr />
   Frame:<br />
   <iframe src="hello-world.html">No frame</iframe>
+  <hr />
+  The title can be set with ?title
   <script>
-    // Extract certain URL params to do certain things
     const url = new URL(window.location.href)
-    for (const key of url.searchParams.keys()) {
-      switch (key) {
-        case 'title':
-          document.title = url.searchParams.get(key)
-          break
-      }
+    if (url.searchParams.has('title')) document.title = url.searchParams.get('title')
+  </script>
+  <hr />
+  A notification can be sent with ?notify
+  <script>
+    if (url.searchParams.has('notify')) {
+      const perm = Notification.permission === 'granted' ?
+          Promise.resolve(Notification.permission) : Notification.requestPermission()
+      perm.then(perm => {
+        if (perm === 'granted') new Notification(url.searchParams.get('notify'))
+      })
     }
   </script>
+  <hr />
+  Your location if ?location is set: <span id="location-info" />
+  <script>
+    if (url.searchParams.has('location')) {
+      console.log(navigator.geolocation)
+      navigator.geolocation.getCurrentPosition(pos => {
+        const elem = document.getElementById('location-info')
+        elem.innerText = `Lat: ${pos.coords.latitude}, Lng: ${pos.coords.longitude}`
+      })
+    }
+  </script>
+  <hr />
+  Microphone ID w/ ?mic: <span id="microphone-id" />
+  <script>
+    if (url.searchParams.has('mic')) {
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => document.getElementById('microphone-id').innerText = stream.id)
+    }
+  </script>
+  <hr />
+  Click <a href="#" onclick="document.body.webkitRequestFullScreen(); return false">here</a> to request full screen
+  <hr />
+  Click <a href="#" onclick="document.body.requestPointerLock(); return false">here</a> to request pointer lock
+  <hr />
+  Click <a id="flashReq" href="#">here</a> to show flash video
+  <div id="flashVid"></div>
+  <script>
+    document.getElementById('flashReq').onclick = () => {
+      document.getElementById('flashVid').innerHTML = '<embed src="http://wwwimages.adobe.com/www.adobe.com/swf/software/flash/about/mini_FMA_about_01.swf">'
+      return false
+    }
+  </script>
+
 </body>
 </html>

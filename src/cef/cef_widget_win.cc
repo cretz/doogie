@@ -7,15 +7,15 @@
 
 namespace doogie {
 
-void CefWidget::InitBrowser(const QString& url) {
+void CefWidget::InitBrowser(const Bubble& bubble, const QString& url) {
   CefBrowserSettings settings;
-  bubble_->ApplyCefBrowserSettings(&settings);
+  bubble.ApplyCefBrowserSettings(&settings);
   browser_ = CefBrowserHost::CreateBrowserSync(
         window_info_,
         handler_,
         CefString(url.toStdString()),
         settings,
-        bubble_->CreateCefRequestContext());
+        bubble.CreateCefRequestContext());
 }
 
 void CefWidget::UpdateSize() {

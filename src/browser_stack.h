@@ -13,7 +13,7 @@ class BrowserStack : public QStackedWidget {
 
  public:
   explicit BrowserStack(const Cef& cef, QWidget* parent = nullptr);
-  BrowserWidget* NewBrowser(Bubble* bubble,
+  BrowserWidget* NewBrowser(const Bubble& bubble,
                             const QString& url);
   BrowserWidget* CurrentBrowser() const;
   QList<BrowserWidget*> Browsers() const;

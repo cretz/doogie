@@ -5,7 +5,7 @@
 namespace doogie {
 
 BrowserWidget::BrowserWidget(const Cef& cef,
-                             Bubble* bubble,
+                             const Bubble& bubble,
                              const QString& url,
                              QWidget* parent)
     : QWidget(parent), cef_(cef), bubble_(bubble) {
@@ -130,11 +130,11 @@ void BrowserWidget::FocusBrowser() {
   cef_widg_->setFocus();
 }
 
-Bubble* BrowserWidget::CurrentBubble() const {
+const Bubble& BrowserWidget::CurrentBubble() const {
   return bubble_;
 }
 
-void BrowserWidget::ChangeCurrentBubble(Bubble* bubble) {
+void BrowserWidget::ChangeCurrentBubble(const Bubble& bubble) {
   bubble_ = bubble;
   emit BubbleMaybeChanged();
   // TODO(cretz): test when suspended

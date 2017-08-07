@@ -12,6 +12,10 @@ void ActionManager::CreateInstance(QApplication* app) {
   new ActionManager(app);
 }
 
+const QMap<int, QAction*> ActionManager::Actions() {
+  return instance_->actions_;
+}
+
 QAction* ActionManager::Action(int type) {
   return instance_->actions_[type];
 }
@@ -27,6 +31,23 @@ void ActionManager::RegisterAction(int type, QAction* action) {
 
 void ActionManager::RegisterAction(int type, const QString& text) {
   ActionManager::RegisterAction(type, new QAction(text));
+}
+
+QString ActionManager::TypeToString(int type) {
+  const auto meta = QMetaEnum::fromType<Type>();
+  auto str = meta.valueToKey(type);
+  return str ? QString(str) : QString::number(type);
+}
+
+int ActionManager::StringToType(const QString& str) {
+  const auto meta = QMetaEnum::fromType<Type>();
+  auto type = meta.keyToValue(str.toUtf8().constData());
+  if (type == -1) {
+    bool ok;
+    type = str.toInt(&ok);
+    if (!ok) type = -1;
+  }
+  return type;
 }
 
 ActionManager::ActionManager(QObject* parent) : QObject(parent) {

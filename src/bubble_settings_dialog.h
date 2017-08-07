@@ -11,29 +11,34 @@ class BubbleSettingsDialog : public QDialog {
   Q_OBJECT
 
  public:
-  explicit BubbleSettingsDialog(Bubble* bubble,
-                                QStringList invalid_names,
-                                QWidget* parent = nullptr);
-  static Bubble* NewBubble(QWidget* parent = nullptr);
+  // This saves the profile/bubble on success and returns the name
+  // or null on failure
+  static QString NewBubble(QWidget* parent = nullptr);
+  // This does not save anything and just updates the reference
+  static bool UpdateBubble(Bubble* bubble,
+                           QSet<QString> invalid_names,
+                           QWidget* parent = nullptr);
+
+  void done(int r) override;
 
  protected:
   void closeEvent(QCloseEvent* event) override;
+  void keyPressEvent(QKeyEvent* event) override;
 
  private:
+  explicit BubbleSettingsDialog(Bubble* bubble,
+                                QSet<QString> invalid_names,
+                                QWidget* parent = nullptr);
   QLayoutItem* CreateNameSection();
   QLayoutItem* CreateIconSection();
   QLayoutItem* CreateSettingsSection();
-  void CheckSettingsChanged();
 
-  Bubble* bubble_;
-  QJsonObject orig_prefs_;
-  QStringList invalid_names_;
-  QPushButton* ok_;
-  QPushButton* cancel_;
-  bool settings_changed_;
+  Bubble* orig_bubble_;
+  Bubble bubble_;
+  QSet<QString> invalid_names_;
 
  signals:
-  void SettingsChangedUpdated();
+  void Changed();
 };
 
 }  // namespace doogie

@@ -58,8 +58,8 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     auto label = qobject_cast<QLabel*>(
           treeWidget()->itemWidget(this, kBubbleIconColumn));
     if (label) {
-      label->setPixmap(browser_->CurrentBubble()->Icon().pixmap(16, 16));
-      label->setToolTip("Bubble: " + browser_->CurrentBubble()->FriendlyName());
+      label->setPixmap(browser_->CurrentBubble().Icon().pixmap(16, 16));
+      label->setToolTip("Bubble: " + browser_->CurrentBubble().FriendlyName());
     }
   });
 }
@@ -86,8 +86,8 @@ void PageTreeItem::AfterAdded() {
   auto label = new QLabel;
   label->setFixedWidth(16);
   label->setAlignment(Qt::AlignCenter);
-  label->setPixmap(browser_->CurrentBubble()->Icon().pixmap(16, 16));
-  label->setToolTip("Bubble: " + browser_->CurrentBubble()->FriendlyName());
+  label->setPixmap(browser_->CurrentBubble().Icon().pixmap(16, 16));
+  label->setToolTip("Bubble: " + browser_->CurrentBubble().FriendlyName());
   tree->setItemWidget(this, kBubbleIconColumn, label);
   label->setContextMenuPolicy(Qt::CustomContextMenu);
   tree->connect(label, &QLabel::customContextMenuRequested, [=]() {
@@ -205,9 +205,9 @@ QList<PageTreeItem*> PageTreeItem::Siblings() const {
   return ret;
 }
 
-void PageTreeItem::SetCurrentBubbleIfDifferent(Bubble *bubble) {
+void PageTreeItem::SetCurrentBubbleIfDifferent(const Bubble& bubble) {
   // Only change if the name is different
-  if (bubble->Name() != browser_->CurrentBubble()->Name()) {
+  if (bubble.Name() != browser_->CurrentBubble().Name()) {
     browser_->ChangeCurrentBubble(bubble);
   }
 }

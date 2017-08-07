@@ -7,6 +7,12 @@ namespace doogie {
 
 class Util {
  public:
+  enum SettingState {
+    Default,
+    Enabled,
+    Disabled
+  };
+
   static QPixmap* CachedPixmap(const QString& res_name);
   static QIcon CachedIcon(const QString& res_name);
   static QIcon CachedIconLighterDisabled(const QString& res_name);
@@ -17,6 +23,8 @@ class Util {
   static QJsonObject DebugWidgetGeom(const QWidget* widg);
   static QJsonObject DebugWidgetGeom(const QWidget* widg, const QRect& rect);
   static QJsonObject DebugRect(const QPoint& top_left, const QSize& size);
+
+  static QKeySequence KeySequenceOrEmpty(const QString& str);
 };
 
 }  // namespace doogie

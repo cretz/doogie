@@ -25,7 +25,7 @@ class BrowserWidget : public QWidget {
   Q_ENUM(ContextMenuCommand)
 
   explicit BrowserWidget(const Cef& cef,
-                         Bubble* bubble,
+                         const Bubble& bubble,
                          const QString& url = "",
                          QWidget* parent = nullptr);
 
@@ -33,8 +33,8 @@ class BrowserWidget : public QWidget {
   void TryClose();
   void FocusUrlEdit();
   void FocusBrowser();
-  Bubble* CurrentBubble() const;
-  void ChangeCurrentBubble(Bubble* bubble);
+  const Bubble& CurrentBubble() const;
+  void ChangeCurrentBubble(const Bubble& bubble);
   QIcon CurrentFavicon() const;
   QString CurrentTitle() const;
   QString CurrentUrl() const;
@@ -94,7 +94,7 @@ class BrowserWidget : public QWidget {
                                 CefContextMenuHandler::EventFlags event_flags);
 
   const Cef& cef_;
-  Bubble* bubble_;
+  Bubble bubble_;
   QToolButton* back_button_ = nullptr;
   QToolButton* forward_button_ = nullptr;
   QMenu* nav_menu_ = nullptr;

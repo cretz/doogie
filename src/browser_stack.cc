@@ -13,7 +13,8 @@ BrowserStack::BrowserStack(const Cef& cef, QWidget* parent)
   SetupActions();
 }
 
-BrowserWidget* BrowserStack::NewBrowser(Bubble* bubble, const QString& url) {
+BrowserWidget* BrowserStack::NewBrowser(const Bubble& bubble,
+                                        const QString& url) {
   auto widg = new BrowserWidget(cef_, bubble, "");
   connect(widg, &BrowserWidget::LoadingStateChanged, [=]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();

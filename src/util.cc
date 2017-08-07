@@ -75,4 +75,14 @@ QJsonObject Util::DebugRect(const QPoint& top_left, const QSize& size) {
   };
 }
 
+QKeySequence Util::KeySequenceOrEmpty(const QString& str) {
+  if (str.isEmpty()) return QKeySequence();
+  auto seq = QKeySequence::fromString(str);
+  if (seq.isEmpty()) return QKeySequence();
+  for (int i = 0; i < seq.count(); i++) {
+    if (seq[i] == Qt::Key_unknown) return QKeySequence();
+  }
+  return seq;
+}
+
 }  // namespace doogie

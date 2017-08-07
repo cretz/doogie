@@ -69,17 +69,22 @@ class ActionManager : public QObject {
 
   static ActionManager* Instance();
   static void CreateInstance(QApplication* app);
+  static const QMap<int, QAction*> Actions();
   static QAction* Action(int type);
   static QList<QKeySequence> DefaultShortcuts(int type);
   static void RegisterAction(int type, QAction* action);
   static void RegisterAction(int type, const QString& text);
+  // If unknown, just converts int to string
+  static QString TypeToString(int type);
+  // If not found, will attempt to convert to int. If unsuccessful, return -1.
+  static int StringToType(const QString& str);
 
  private:
   explicit ActionManager(QObject* parent = nullptr);
   void CreateActions();
 
   static ActionManager* instance_;
-  QHash<int, QAction*> actions_;
+  QMap<int, QAction*> actions_;
   QHash<int, QList<QKeySequence>> default_shortcuts_;
 };
 

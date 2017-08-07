@@ -4,6 +4,7 @@
 
 #include "action_manager.h"
 #include "bubble_settings_dialog.h"
+#include "profile.h"
 #include "workspace_tree_item.h"
 
 namespace doogie {
@@ -116,12 +117,9 @@ PageTreeItem* PageTree::CurrentItem() const {
 PageTreeItem* PageTree::NewPage(const QString &url,
                                 PageTreeItem* parent,
                                 bool make_current) {
-  Bubble* bubble;
-  if (parent) {
-    bubble = parent->Browser()->CurrentBubble();
-  } else {
-    bubble = Profile::Current()->DefaultBubble();
-  }
+  auto bubble = parent ?
+        parent->Browser()->CurrentBubble() :
+        Profile::Current()->DefaultBubble();
   auto browser = browser_stack_->NewBrowser(bubble, url);
   return AddBrowser(browser, parent, make_current);
 }
@@ -132,7 +130,7 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   // that one as checked and unable to be selected
   QString common_bubble_name;
   for (auto item : apply_to_items) {
-    auto bubble_name = item->Browser()->CurrentBubble()->Name();
+    auto bubble_name = item->Browser()->CurrentBubble().Name();
     if (common_bubble_name.isNull()) {
       common_bubble_name = bubble_name;
     } else if (common_bubble_name != bubble_name) {
@@ -140,9 +138,9 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
       break;
     }
   }
-  for (auto bubble : Profile::Current()->Bubbles()) {
-    auto action = menu->addAction(bubble->Icon(), bubble->FriendlyName());
-    if (!common_bubble_name.isNull() && common_bubble_name == bubble->Name()) {
+  for (auto& bubble : Profile::Current()->Bubbles()) {
+    auto action = menu->addAction(bubble.Icon(), bubble.FriendlyName());
+    if (!common_bubble_name.isNull() && common_bubble_name == bubble.Name()) {
       action->setCheckable(true);
       action->setChecked(true);
       action->setDisabled(true);
@@ -156,8 +154,10 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   }
   menu->addSeparator();
   menu->addAction("New Bubble...", [=]() {
-    auto bubble = BubbleSettingsDialog::NewBubble();
-    if (bubble) {
+    auto bubble_name = BubbleSettingsDialog::NewBubble();
+    if (!bubble_name.isNull()) {
+      auto bubble = Profile::Current()->
+          Bubbles()[Profile::Current()->BubbleIndexFromName(bubble_name)];
       for (auto item : apply_to_items) {
         item->SetCurrentBubbleIfDifferent(bubble);
       }

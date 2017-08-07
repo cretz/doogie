@@ -5,10 +5,10 @@
 namespace doogie {
 
 CefWidget::CefWidget(const Cef& cef,
-                     Bubble* bubble,
+                     const Bubble& bubble,
                      const QString& url,
                      QWidget* parent)
-    : CefBaseWidget(cef, parent), bubble_(bubble) {
+    : CefBaseWidget(cef, parent) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
   connect(handler_, &CefHandler::PreContextMenu,
@@ -51,7 +51,7 @@ CefWidget::CefWidget(const Cef& cef,
   connect(handler_, &CefHandler::ShowBeforeUnloadDialog,
           this, &CefWidget::ShowBeforeUnloadDialog);
 
-  InitBrowser(url);
+  InitBrowser(bubble, url);
 }
 
 CefWidget::~CefWidget() {
