@@ -3,6 +3,7 @@
 #include "action_manager.h"
 #include "cef/cef.h"
 #include "main_window.h"
+#include "profile.h"
 
 #ifdef QT_DEBUG
 #include "debug_meta_server.h"
@@ -15,6 +16,7 @@ int main(int argc, char* argv[]) {
   QApplication app(argc, argv);
   QCoreApplication::setOrganizationName("cretz");
   QCoreApplication::setApplicationName("Doogie");
+  doogie::Profile::Current()->Init();
   doogie::ActionManager::CreateInstance(&app);
 
   doogie::MainWindow win(cef);

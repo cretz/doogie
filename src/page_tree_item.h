@@ -4,6 +4,8 @@
 #include <QtWidgets>
 
 #include "browser_widget.h"
+#include "workspace.h"
+#include "workspace_tree_item.h"
 
 namespace doogie {
 
@@ -12,13 +14,17 @@ class PageTreeItem : public QTreeWidgetItem {
   static const int kBubbleIconColumn = 1;
   static const int kCloseButtonColumn = 2;
 
-  explicit PageTreeItem(QPointer<BrowserWidget> browser);
+  explicit PageTreeItem(QPointer<BrowserWidget> browser,
+                        const Workspace::WorkspacePage& workspace_page);
   ~PageTreeItem();
   QPointer<BrowserWidget> Browser() const;
   QToolButton* CloseButton() const;
   void AfterAdded();
 
-  PageTreeItem* Parent() const { return static_cast<PageTreeItem*>(parent()); }
+  PageTreeItem* Parent() const;
+  const Workspace::WorkspacePage& WorkspacePage() const {
+    return workspace_page_;
+  }
 
   QJsonObject DebugDump() const;
 
@@ -33,12 +39,22 @@ class PageTreeItem : public QTreeWidgetItem {
 
   void SetCurrentBubbleIfDifferent(const Bubble& bubble);
 
+  void SetPersistNextCloseToWorkspace(bool persist) {
+    persist_next_close_to_workspace_ = persist;
+  }
+
+  WorkspaceTreeItem* WorkspaceItem();
+
+  void CollapseStateChanged();
+
  private:
   void ApplyFavicon();
 
   QPointer<BrowserWidget> browser_;
+  Workspace::WorkspacePage workspace_page_;
   QToolButton* close_button_ = nullptr;
   QMetaObject::Connection loading_icon_frame_conn_;
+  bool persist_next_close_to_workspace_ = true;
 };
 
 }  // namespace doogie

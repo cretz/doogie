@@ -29,6 +29,12 @@ Bubble::Bubble(const QJsonObject& obj) {
   }
 }
 
+void Bubble::Init() {
+  // This had to be deferred because of:
+  //  "Must construct a QGuiApplication before a QPixmap"
+  RebuildIcon();
+}
+
 void Bubble::CopySettingsFrom(const Bubble& other) {
   name_ = other.name_;
   // We move the icon too even though it's not a setting
@@ -134,7 +140,7 @@ CefRefPtr<CefRequestContext> Bubble::CreateCefRequestContext() const {
 QJsonObject Bubble::ToJson() const {
   QJsonObject obj;
   if (!name_.isEmpty()) obj["name"] = name_;
-  if (!icon_path_.isEmpty()) obj["iconPath"] = icon_path_;
+  if (!icon_path_.isNull()) obj["iconPath"] = icon_path_;
   if (icon_color_.isValid()) obj["iconColor"] = icon_color_.name();
   if (!cache_path_.isNull()) obj["cachePath"] = cache_path_;
   if (enable_net_sec_ != Util::Default) {
@@ -152,6 +158,7 @@ QJsonObject Bubble::ToJson() const {
 bool Bubble::operator==(const Bubble& other) const {
   return name_ == other.name_ &&
       icon_path_ == other.icon_path_ &&
+      icon_path_.isNull() == other.icon_path_.isNull() &&
       icon_color_ == other.icon_color_ &&
       cache_path_ == other.cache_path_ &&
       cache_path_.isNull() == other.cache_path_.isNull() &&

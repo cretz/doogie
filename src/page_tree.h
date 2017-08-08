@@ -6,6 +6,7 @@
 #include "browser_stack.h"
 #include "browser_widget.h"
 #include "page_tree_item.h"
+#include "workspace.h"
 #include "workspace_tree_item.h"
 
 namespace doogie {
@@ -23,8 +24,25 @@ class PageTree : public QTreeWidget {
   PageTreeItem* NewPage(const QString& url,
                         PageTreeItem* parent,
                         bool make_current);
+  PageTreeItem* NewPage(Workspace::WorkspacePage& page,
+                        PageTreeItem* parent,
+                        bool make_current);
   void ApplyBubbleSelectMenu(QMenu* menu,
                              QList<PageTreeItem*> apply_to_items);
+
+  void ApplyRecentWorkspacesMenu(QMenu* menu);
+  void ApplyWorkspaceMenu(QMenu* menu,
+                          const Workspace& workspace,
+                          WorkspaceTreeItem* item);
+  WorkspaceTreeItem* OpenWorkspace(Workspace& workspace);
+
+  const Workspace& ImplicitWorkspace() const { return implicit_workspace_; }
+  bool HasImplicitWorkspace() const { return has_implicit_workspace_; }
+
+  // Does not persist anything about the close, expected to be
+  // called on app close
+  void CloseAllWorkspaces();
+
   QJsonObject DebugDump() const;
 
  protected:
@@ -56,16 +74,25 @@ class PageTree : public QTreeWidget {
   PageTreeItem* AsPageTreeItem(QTreeWidgetItem* item) const;
   WorkspaceTreeItem* AsWorkspaceTreeItem(QTreeWidgetItem* item) const;
   void SetupActions();
+  void SetupInitialWorkspaces();
   PageTreeItem* AddBrowser(QPointer<BrowserWidget> browser,
+                           Workspace::WorkspacePage& page,
                            PageTreeItem* parent,
                            bool make_current);
-  void CloseItem(PageTreeItem* item);
-  void CloseItemsInReverseOrder(QList<PageTreeItem*> items);
+  void CloseWorkspace(WorkspaceTreeItem* item, bool send_close_event = true);
+  void CloseItem(PageTreeItem* item, bool workspace_persist = true);
+  void CloseItemsInReverseOrder(QList<PageTreeItem*> items,
+                                bool workspace_persist = true);
   void DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent = nullptr);
   QList<PageTreeItem*> Items();
   QList<PageTreeItem*> SelectedItems();
   QList<PageTreeItem*> SelectedItemsOnlyHighestLevel();
   QList<PageTreeItem*> SameHostPages(PageTreeItem* to_comp);
+  QList<Workspace> Workspaces() const;
+  const Workspace& WorkspaceToAddUnder() const;
+  WorkspaceTreeItem* WorkspaceTreeItemToAddUnder() const;
+  void MakeWorkspaceExplicitIfPossible();
+  void MakeWorkspaceImplicitIfPossible();
 
   BrowserStack* browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;
@@ -75,12 +102,17 @@ class PageTree : public QTreeWidget {
   QPoint rubber_band_origin_;
   QItemSelection rubber_band_orig_selected_;
 
+  Workspace implicit_workspace_;
+  bool has_implicit_workspace_ = false;
+
  signals:
   void ItemClose(PageTreeItem* item);
   void ItemClosePress(PageTreeItem* item);
   void ItemCloseRelease(PageTreeItem* item);
   void ItemDestroyed(PageTreeItem* item);
   void TreeEmpty();
+  void WorkspaceImplicitnessChanged();
+  void WorkspaceClosed(qlonglong id);
 };
 
 }  // namespace doogie

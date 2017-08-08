@@ -12,6 +12,9 @@ class Bubble {
  public:
   explicit Bubble(const QJsonObject& obj = QJsonObject());
 
+  // Must be called after Application is constructed
+  void Init();
+
   void CopySettingsFrom(const Bubble& other);
 
   QString Name() const { return name_; }
@@ -26,14 +29,14 @@ class Bubble {
   void SetIconPath(const QString& path) {
     if (path != icon_path_ || path.isNull() != icon_path_.isNull()) {
       icon_path_ = path;
-      emit RebuildIcon();
+      RebuildIcon();
     }
   }
   QColor IconColor() const { return icon_color_; }
   void SetIconColor(const QColor& color) {
     if (color != icon_color_) {
       icon_color_ = color;
-      emit RebuildIcon();
+      RebuildIcon();
     }
   }
 

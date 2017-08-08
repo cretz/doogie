@@ -106,6 +106,10 @@ void ActionManager::CreateActions() {
   RegisterAction(FocusAddressBar, "Focus Address Bar");
   RegisterAction(FocusBrowser, "Focus Browser");
 
+  RegisterAction(NewWorkspace, "New Workspace");
+  RegisterAction(ManageWorkspaces, "Manage Workspaces");
+  RegisterAction(OpenWorkspace, "Open Workspace");
+
   // Default shortcuts
   auto shortcuts = [=](ActionManager::Type type, const QString& shortcuts) {
     default_shortcuts_[type] = QKeySequence::listFromString(shortcuts);

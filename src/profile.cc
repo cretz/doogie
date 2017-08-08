@@ -1,8 +1,11 @@
 #include "profile.h"
 
+#include <QtSql>
+
 #include "action_manager.h"
 #include "bubble.h"
 #include "util.h"
+#include "workspace.h"
 
 namespace doogie {
 
@@ -25,7 +28,7 @@ bool Profile::CreateOrLoadProfile(const QString& path, bool set_current) {
 bool Profile::CreateProfile(const QString& path, bool set_current) {
   // If the path is in-mem (or empty), it is a special case of mem-only
   if (path.isEmpty() || path == kInMemoryPath) {
-    if (set_current) SetCurrent(new Profile(path, QJsonObject()));
+    if (set_current) return SetCurrent(new Profile(path, QJsonObject()));
     return true;
   }
   auto abs_path = QDir::toNativeSeparators(
@@ -43,7 +46,7 @@ bool Profile::CreateProfile(const QString& path, bool set_current) {
   if (!profile->SavePrefs()) {
     return false;
   }
-  if (set_current) SetCurrent(profile);
+  if (set_current) return SetCurrent(profile);
   return true;
 }
 
@@ -69,7 +72,7 @@ bool Profile::LoadProfile(const QString& path, bool set_current) {
   if (!profile->SavePrefs()) {
     return false;
   }
-  if (set_current) SetCurrent(profile);
+  if (set_current) return SetCurrent(profile);
   return true;
 }
 
@@ -314,6 +317,20 @@ Profile::Profile(const QString& path, const QJsonObject& obj)
       shortcuts_[type] = seqs;
     }
   }
+  // String list to longlong
+  for (auto workspace_id : obj["openWorkspaceIds"].toArray()) {
+    if (workspace_id.isString()) {
+      auto ok = false;
+      auto id = workspace_id.toString().toLongLong(&ok);
+      if (ok) open_workspace_ids_.append(id);
+    }
+  }
+}
+
+void Profile::Init() {
+  for (auto& bubble : bubbles_) {
+    bubble.Init();
+  }
 }
 
 void Profile::CopySettingsFrom(const Profile& profile) {
@@ -325,6 +342,7 @@ void Profile::CopySettingsFrom(const Profile& profile) {
   browser_settings_ = profile.browser_settings_;
   bubbles_ = profile.bubbles_;
   shortcuts_ = profile.shortcuts_;
+  open_workspace_ids_ = profile.open_workspace_ids_;
 }
 
 int Profile::BubbleIndexFromName(const QString& name) const {
@@ -444,6 +462,11 @@ QJsonObject Profile::ToJson() const {
     shortcuts[ActionManager::TypeToString(type)] = seqs;
   }
   if (!shortcuts.isEmpty()) ret["shortcuts"] = shortcuts;
+  QJsonArray open_workspace_ids;
+  for (auto id : open_workspace_ids_) {
+    open_workspace_ids.append(QString::number(id));
+  }
+  ret["openWorkspaceIds"] = open_workspace_ids;
   return ret;
 }
 
@@ -454,10 +477,14 @@ bool Profile::SavePrefs() const {
   QFile file(QDir(path_).filePath("settings.doogie.json"));
   qDebug() << "Saving profile prefs to " << file.fileName();
   if (!file.open(QIODevice::WriteOnly)) {
+    qCritical() << "Unable to open "<<
+                   file.fileName() << " to save profile at";
     return false;
   }
   if (file.write(QJsonDocument(ToJson()).
-                 toJson(QJsonDocument::Indented)) == -1) {
+                 toJson(QJsonDocument::Indented)) == -1) {\
+    qCritical() << "Unable to write JSON to "<<
+                   file.fileName() << " to save profile";
     return false;
   }
   return true;
@@ -483,18 +510,38 @@ bool Profile::operator==(const Profile& other) const {
       user_data_path_.isNull() == other.user_data_path_.isNull() &&
       browser_settings_ == other.browser_settings_ &&
       bubbles_ == other.bubbles_ &&
-      shortcuts_ == other.shortcuts_;
+      shortcuts_ == other.shortcuts_ &&
+      open_workspace_ids_ == other.open_workspace_ids_;
 }
 
-void Profile::SetCurrent(Profile* profile) {
+bool Profile::SetCurrent(Profile* profile) {
   if (current_) delete current_;
   current_ = profile;
+
+  // We want to try to open a sqlite DB
+  auto db = QSqlDatabase::addDatabase("QSQLITE");
+  if (profile->InMemory()) {
+    db.setDatabaseName(":memory:");
+  } else {
+    db.setDatabaseName(QDir::toNativeSeparators(
+        QDir(profile->Path()).filePath("doogie.db")));
+  }
+  if (!db.open()) {
+    qCritical() << "Unable to open doogie.db";
+    return false;
+  }
+  if (!Workspace::EnsureDatabaseSchema()) {
+    qCritical() << "Unable to ensure workspace tables are created";
+    return false;
+  }
+
   QSettings settings("cretz", "Doogie");
   settings.setValue("profile/lastLoaded", profile->path_);
   auto prev = settings.value("profile/lastTen").toStringList();
   prev.removeAll(profile->path_);
   prev.prepend(profile->path_);
   settings.setValue("profile/lastTen", prev);
+  return true;
 }
 
 }  // namespace doogie

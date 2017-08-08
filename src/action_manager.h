@@ -63,6 +63,10 @@ class ActionManager : public QObject {
     FocusAddressBar,
     FocusBrowser,
 
+    NewWorkspace,
+    ManageWorkspaces,
+    OpenWorkspace,
+
     UserAction = 10000
   };
   Q_ENUM(Type)

@@ -11,6 +11,16 @@ PageTreeDock::PageTreeDock(BrowserStack* browser_stack, QWidget* parent)
 
   // Create tree
   tree_ = new PageTree(browser_stack, this);
+  auto update_title = [=]() {
+    if (tree_->HasImplicitWorkspace()) {
+      setWindowTitle(QString("Pages - Workspace: ") +
+                     tree_->ImplicitWorkspace().FriendlyName());
+    } else {
+      setWindowTitle("Pages");
+    }
+  };
+  update_title();
+  connect(tree_, &PageTree::WorkspaceImplicitnessChanged, update_title);
   connect(tree_, &PageTree::TreeEmpty, this, &PageTreeDock::TreeEmpty);
   setFocusProxy(tree_);
   setWidget(tree_);
@@ -24,12 +34,16 @@ void PageTreeDock::NewPage(const QString &url,
                  make_current);
 }
 
-bool PageTreeDock::HasOpenPages() const {
+bool PageTreeDock::HasTopLevelItems() const {
   return tree_->topLevelItemCount() > 0;
 }
 
 QJsonObject PageTreeDock::DebugDump() const {
   return tree_->DebugDump();
+}
+
+void PageTreeDock::CloseAllWorkspaces() {
+  tree_->CloseAllWorkspaces();
 }
 
 }  // namespace doogie

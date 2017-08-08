@@ -15,7 +15,9 @@ class PageTreeDock : public QDockWidget {
                         QWidget* parent = nullptr);
 
   void NewPage(const QString &url, bool top_level, bool make_current);
-  bool HasOpenPages() const;
+  bool HasTopLevelItems() const;
+
+  void CloseAllWorkspaces();
 
   QJsonObject DebugDump() const;
 

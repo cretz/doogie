@@ -7,6 +7,7 @@
 #include "bubble.h"
 #include "cef/cef.h"
 #include "util.h"
+#include "workspace.h"
 
 namespace doogie {
 
@@ -41,6 +42,9 @@ class Profile {
 
   Profile(const QString& path = kInMemoryPath,
           const QJsonObject& obj = QJsonObject());
+
+  // Must be called after Application is constructed
+  void Init();
 
   void CopySettingsFrom(const Profile& profile);
 
@@ -85,6 +89,16 @@ class Profile {
     shortcuts_ = shortcuts;
   }
 
+  const QList<qlonglong> OpenWorkspaceIds() const {
+    return open_workspace_ids_;
+  }
+  void SetOpenWorkspaceIds(QList<qlonglong> open_workspace_ids) {
+    open_workspace_ids_ = open_workspace_ids;
+  }
+
+  // TODO(cretz): IsOpenElsewhere - check PID on QSharedMemory and if
+  //  still open, this returns true
+
   void ApplyCefSettings(CefSettings* settings) const;
   void ApplyCefBrowserSettings(CefBrowserSettings* settings) const;
 
@@ -100,11 +114,10 @@ class Profile {
  private:
   static const QString kAppDataPath;
 
-  static void SetCurrent(Profile* profile);
+  static bool SetCurrent(Profile* profile);
 
   static Profile* current_;
   static QList<BrowserSetting> possible_browser_settings_;
-
 
   QString path_;
   QString cache_path_;
@@ -115,6 +128,7 @@ class Profile {
   QHash<QString, bool> browser_settings_;
   QList<Bubble> bubbles_;
   QHash<int, QList<QKeySequence>> shortcuts_;
+  QList<qlonglong> open_workspace_ids_;
 };
 \
 }  // namespace doogie

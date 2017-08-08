@@ -1,5 +1,5 @@
 
-QT += core gui widgets
+QT += core gui widgets sql
 TARGET = doogie
 TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
@@ -28,7 +28,10 @@ SOURCES += \
     profile_change_dialog.cc \
     profile_settings_dialog.cc \
     settings_widget.cc \
+    sql.cc \
     util.cc \
+    workspace.cc \
+    workspace_dialog.cc \
     workspace_tree_item.cc
 
 HEADERS += \
@@ -48,7 +51,10 @@ HEADERS += \
     profile_change_dialog.h \
     profile_settings_dialog.h \
     settings_widget.h \
+    sql.h \
     util.h \
+    workspace.h \
+    workspace_dialog.h \
     workspace_tree_item.h
 
 RESOURCES += \

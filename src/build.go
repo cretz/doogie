@@ -423,6 +423,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	qtDlls := []string{
 		"Qt5Core.dll",
 		"Qt5Gui.dll",
+		"Qt5Sql.dll",
 		"Qt5Widgets.dll",
 	}
 	// Debug libs are d.dll

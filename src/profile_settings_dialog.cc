@@ -229,7 +229,8 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
   connect(user_data_path_open, &QToolButton::clicked, [=]() {
     auto existing = user_data_path_edit->text();
     if (existing.isEmpty()) {
-      existing = QSettings().value("profileSettings/userDataPathOpen").toString();
+      existing =
+          QSettings().value("profileSettings/userDataPathOpen").toString();
     }
     if (existing.isEmpty()) existing = Profile::Current()->Path();
     auto dir = QFileDialog::getExistingDirectory(this,

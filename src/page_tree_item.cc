@@ -2,11 +2,16 @@
 
 #include "page_tree.h"
 #include "util.h"
+#include "workspace_tree_item.h"
 
 namespace doogie {
 
-PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
-    : QTreeWidgetItem(PageTree::kPageItemType), browser_(browser) {
+PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
+                           const Workspace::WorkspacePage& workspace_page)
+    : QTreeWidgetItem(PageTree::kPageItemType),
+      browser_(browser),
+      workspace_page_(workspace_page) {
+  if (!workspace_page_.Exists()) workspace_page_.Save();
   setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled |
            Qt::ItemIsDropEnabled | Qt::ItemIsEnabled);
   // Connect title and favicon change
@@ -15,12 +20,22 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
     if (browser_) {
       setText(0, browser_->CurrentTitle());
       setToolTip(0, browser_->CurrentTitle());
+      workspace_page_.SetTitle(browser_->CurrentTitle());
+      workspace_page_.Save();
     }
   });
-  browser->connect(browser, &BrowserWidget::LoadingStateChanged,
-                   [=]() { ApplyFavicon(); });
-  browser->connect(browser, &BrowserWidget::FaviconChanged,
-                   [=]() { ApplyFavicon(); });
+  browser->connect(browser, &BrowserWidget::LoadingStateChanged, [=]() {
+    ApplyFavicon();
+    if (browser_->CurrentUrl() != workspace_page_.Url()) {
+      workspace_page_.SetUrl(browser_->CurrentUrl());
+      workspace_page_.Save();
+    }
+  });
+  browser->connect(browser, &BrowserWidget::FaviconChanged, [=]() {
+    ApplyFavicon();
+    workspace_page_.SetIcon(browser_->CurrentFavicon());
+    workspace_page_.Save();
+  });
   browser->connect(browser, &BrowserWidget::destroyed, [=]() {
     // Move all the children up
     if (parent()) {
@@ -29,14 +44,22 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
       treeWidget()->insertTopLevelItems(
             treeWidget()->indexOfTopLevelItem(this), takeChildren());
     }
+    if (persist_next_close_to_workspace_) {
+      workspace_page_.Delete();
+    }
+    auto workspace_item = WorkspaceItem();
     delete this;
+    if (workspace_item) workspace_item->ChildCloseCompleted();
   });
   browser->connect(browser, &BrowserWidget::AboutToShowJSDialog,
                    [=]() {
     treeWidget()->setCurrentItem(this);
   });
   browser->connect(browser, &BrowserWidget::CloseCancelled, [=]() {
+    persist_next_close_to_workspace_ = true;
     close_button_->setChecked(false);
+    auto workspace_item = WorkspaceItem();
+    if (workspace_item) workspace_item->ChildCloseCancelled();
   });
   browser->connect(browser, &BrowserWidget::SuspensionChanged, [=]() {
     auto palette = QGuiApplication::palette();
@@ -53,6 +76,8 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
       setForeground(0, palette.brush(QPalette::Active, QPalette::Text));
       // Icon change should happen on load
     }
+    workspace_page_.SetSuspended(browser_->Suspended());
+    workspace_page_.Save();
   });
   browser->connect(browser, &BrowserWidget::BubbleMaybeChanged, [=]() {
     auto label = qobject_cast<QLabel*>(
@@ -61,6 +86,8 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser)
       label->setPixmap(browser_->CurrentBubble().Icon().pixmap(16, 16));
       label->setToolTip("Bubble: " + browser_->CurrentBubble().FriendlyName());
     }
+    workspace_page_.SetBubble(browser_->CurrentBubble().Name());
+    workspace_page_.Save();
   });
 }
 
@@ -122,6 +149,11 @@ void PageTreeItem::AfterAdded() {
   for (int i = 0; i < childCount(); i++) {
     static_cast<PageTreeItem*>(child(i))->AfterAdded();
   }
+}
+
+PageTreeItem* PageTreeItem::Parent() const {
+  if (type() != PageTree::kPageItemType) return nullptr;
+  return static_cast<PageTreeItem*>(parent());
 }
 
 QJsonObject PageTreeItem::DebugDump() const {
@@ -209,6 +241,22 @@ void PageTreeItem::SetCurrentBubbleIfDifferent(const Bubble& bubble) {
   // Only change if the name is different
   if (bubble.Name() != browser_->CurrentBubble().Name()) {
     browser_->ChangeCurrentBubble(bubble);
+  }
+}
+
+WorkspaceTreeItem* PageTreeItem::WorkspaceItem() {
+  auto par = parent();
+  if (!par) return nullptr;
+  if (par->type() == PageTree::kPageItemType) {
+    return static_cast<PageTreeItem*>(par)->WorkspaceItem();
+  }
+  return static_cast<WorkspaceTreeItem*>(par);
+}
+
+void PageTreeItem::CollapseStateChanged() {
+  if (isExpanded() != workspace_page_.Expanded()) {
+    workspace_page_.SetExpanded(isExpanded());
+    workspace_page_.Save();
   }
 }
 

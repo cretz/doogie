@@ -49,7 +49,9 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   connect(page_tree_dock_, &PageTreeDock::TreeEmpty, [=]() {
     if (attempting_to_close_) {
       attempting_to_close_ = false;
-      this->close();
+      // We have to defer this because closeEvent will not be called
+      // again inside of itself
+      QTimer::singleShot(0, [=]() { close(); });
     }
   });
 
@@ -124,9 +126,9 @@ QJsonObject MainWindow::DebugDump() const {
 
 void MainWindow::closeEvent(QCloseEvent* event) {
   // We only let close go through if there are no open pages
-  if (page_tree_dock_->HasOpenPages()) {
+  if (page_tree_dock_->HasTopLevelItems()) {
     attempting_to_close_ = true;
-    ActionManager::Action(ActionManager::CloseAllPages)->trigger();
+    page_tree_dock_->CloseAllWorkspaces();
     event->ignore();
     return;
   }
