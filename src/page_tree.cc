@@ -65,6 +65,8 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
       auto new_font = page_item->font(0);
       new_font.setBold(true);
       page_item->setFont(0, new_font);
+      // Put the focus in the browser
+      if (page_item->Browser()) page_item->Browser()->FocusBrowser();
     } else {
       // As a special case, we need to set something as current
       // so we do it here. We try previous, but otherwise, we'll just
@@ -226,7 +228,7 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   }
   menu->addSeparator();
   menu->addAction("New Bubble...", [=]() {
-    auto bubble_name = BubbleSettingsDialog::NewBubble();
+    auto bubble_name = BubbleSettingsDialog::NewBubble(window());
     if (!bubble_name.isNull()) {
       auto bubble = Profile::Current()->
           Bubbles()[Profile::Current()->BubbleIndexFromName(bubble_name)];
@@ -252,30 +254,7 @@ void PageTree::ApplyWorkspaceMenu(QMenu* menu,
                                   const Workspace& workspace,
                                   WorkspaceTreeItem* item) {
   menu->addAction("Change name", [=]() {
-    if (item) {
-      editItem(item);
-    } else {
-      bool failed_try_again;
-      do {
-        failed_try_again = false;
-        auto new_name = QInputDialog::getText(
-              nullptr, "New Workspace Name",
-              "Workspace Name:", QLineEdit::Normal,
-              workspace.Name());
-        if (!new_name.isNull() && new_name != workspace.Name()) {
-          if (Workspace::NameInUse(new_name)) {
-            QMessageBox::critical(nullptr,
-                                  "Invalid Name",
-                                  "Name already in use by another workspace");
-            failed_try_again = true;
-          } else {
-            implicit_workspace_.SetName(new_name);
-            implicit_workspace_.Save();
-            emit WorkspaceImplicitnessChanged();
-          }
-        }
-      } while (failed_try_again);
-    }
+    EditWorkspaceName(item);
   });
   auto ids = Profile::Current()->OpenWorkspaceIds();
   auto curr_index = ids.indexOf(workspace.Id());
@@ -406,9 +385,53 @@ void PageTree::WorkspaceAboutToDestroy(WorkspaceTreeItem* item) {
   if (!currentItem() || !indexFromItem(currentItem()).isValid() ||
       AsPageTreeItem(currentItem())->CurrentWorkspace().Id() ==
             item->CurrentWorkspace().Id()) {
-    auto new_curr_item = itemAbove(item);
-    if (!new_curr_item) new_curr_item = itemBelow(item);
-    setCurrentItem(new_curr_item);
+    SetCurrentClosestTo(item);
+  }
+}
+
+void PageTree::SetCurrentClosestTo(QTreeWidgetItem* item) {
+  // We'll try everything above, then everything below
+  QTreeWidgetItem* new_curr = itemAbove(item);
+  while (new_curr && new_curr->type() != kPageItemType) {
+    new_curr = itemAbove(new_curr);
+  }
+  if (!new_curr) {
+    new_curr = itemBelow(item);
+    while (new_curr && new_curr->type() != kPageItemType) {
+      new_curr = itemBelow(new_curr);
+    }
+  }
+  setCurrentItem(new_curr);
+}
+
+void PageTree::EditWorkspaceName(WorkspaceTreeItem* item) {
+  if (item) {
+    // Due to focusing issues, we defer this
+    QTimer::singleShot(0, [=]() {
+      setFocus();
+      editItem(item);
+    });
+  } else {
+    bool failed_try_again;
+    do {
+      failed_try_again = false;
+      auto new_name = QInputDialog::getText(
+            nullptr, "New Workspace Name",
+            "Workspace Name:", QLineEdit::Normal,
+            implicit_workspace_.Name());
+      if (!new_name.isNull() && new_name != implicit_workspace_.Name()) {
+        if (Workspace::NameInUse(new_name)) {
+          QMessageBox::critical(nullptr,
+                                "Invalid Name",
+                                "Name already in use by another workspace");
+          failed_try_again = true;
+        } else {
+          implicit_workspace_.SetName(new_name);
+          implicit_workspace_.Save();
+          emit WorkspaceImplicitnessChanged();
+        }
+      }
+    } while (failed_try_again);
   }
 }
 
@@ -1053,7 +1076,7 @@ void PageTree::SetupActions() {
     workspace.SetName(Workspace::NextUnusedWorkspaceName());
     workspace.Save();
     auto item = OpenWorkspace(workspace);
-    editItem(item);
+    EditWorkspaceName(item);
   });
   connect(ActionManager::Action(ActionManager::ManageWorkspaces),
           &QAction::triggered, [=]() {
@@ -1280,6 +1303,8 @@ void PageTree::MakeWorkspaceExplicitIfPossible() {
   insertTopLevelItem(0, item);
   while (auto child = AsPageTreeItem(takeTopLevelItem(1))) {
     item->addChild(child);
+    // We have to re-set the expansion here
+    child->setExpanded(child->WorkspacePage().Expanded());
     child->AfterAdded();
   }
   // This needs to be expanded

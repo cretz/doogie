@@ -37,6 +37,10 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
     workspace_page_.Save();
   });
   browser->connect(browser, &BrowserWidget::destroyed, [=]() {
+    // If I was current, set the new current as either the prev or next
+    if (treeWidget() && treeWidget()->currentItem() == this) {
+      static_cast<PageTree*>(treeWidget())->SetCurrentClosestTo(this);
+    }
     // Move all the children up
     if (parent()) {
       parent()->insertChildren(parent()->indexOfChild(this), takeChildren());

@@ -263,12 +263,12 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
   auto cache_path_edit = new QLineEdit;
   cache_path_edit->setPlaceholderText("Same as profile");
   cache_path_edit->setText(cache_path);
-  cache_path_edit->setEnabled(!cache_path_disabled->isEnabled());
+  cache_path_edit->setEnabled(!cache_path_disabled->isChecked());
   cache_path_layout->addWidget(cache_path_edit, 1);
   auto cache_path_open = new QToolButton();
   cache_path_open->setAutoRaise(true);
   cache_path_open->setText("...");
-  cache_path_open->setEnabled(!cache_path_disabled->isEnabled());
+  cache_path_open->setEnabled(!cache_path_disabled->isChecked());
   cache_path_layout->addWidget(cache_path_open);
   auto cache_path_widg = new QWidget;
   cache_path_widg->setLayout(cache_path_layout);

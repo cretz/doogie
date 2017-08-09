@@ -45,6 +45,10 @@ class PageTree : public QTreeWidget {
 
   void WorkspaceAboutToDestroy(WorkspaceTreeItem* item);
 
+  void SetCurrentClosestTo(QTreeWidgetItem* item);
+
+  void EditWorkspaceName(WorkspaceTreeItem* item);
+
   QJsonObject DebugDump() const;
 
  protected:

@@ -44,7 +44,7 @@ void WorkspaceTreeItem::TextChanged() {
       QMessageBox::critical(nullptr,
                             "Invalid Name",
                             "Name already in use by another workspace");
-      treeWidget()->editItem(this);
+      setText(0, workspace_.Name());
       return;
     }
     workspace_.SetName(text(0));
