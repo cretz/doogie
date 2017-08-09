@@ -11,6 +11,12 @@ WorkspaceTreeItem::WorkspaceTreeItem(const Workspace& workspace)
   setText(0, workspace.FriendlyName());
 }
 
+WorkspaceTreeItem::~WorkspaceTreeItem() {
+  if (delete_workspace_on_destroy_not_cancelled_) {
+    workspace_.Delete();
+  }
+}
+
 void WorkspaceTreeItem::AfterAdded() {
   auto menu_button = new QToolButton;
   menu_button->setIcon(
@@ -49,15 +55,17 @@ void WorkspaceTreeItem::TextChanged() {
 void WorkspaceTreeItem::ChildCloseCancelled() {
   close_on_empty_not_cancelled_ = false;
   send_close_event_not_cancelled_ = true;
+  delete_workspace_on_destroy_not_cancelled_ = false;
 }
 
 void WorkspaceTreeItem::ChildCloseCompleted() {
   if (close_on_empty_not_cancelled_ && childCount() == 0) {
-    if (send_close_event_not_cancelled_) {
-      auto tree = static_cast<PageTree*>(treeWidget());
-      emit tree->WorkspaceClosed(workspace_.Id());
-    }
+    auto tree = static_cast<PageTree*>(treeWidget());
+    auto id = workspace_.Id();
+    auto send_not_cancelled = send_close_event_not_cancelled_;
+    tree->WorkspaceAboutToDestroy(this);
     delete this;
+    if (send_not_cancelled) emit tree->WorkspaceClosed(id);
   }
 }
 

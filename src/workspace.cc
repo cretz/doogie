@@ -211,11 +211,22 @@ bool Workspace::Save() {
 
 bool Workspace::Delete() {
   if (id_ < 0) return false;
+  // Delete children first
+  QSqlDatabase::database().transaction();
   QSqlQuery query;
   auto ok = Sql::ExecParam(query,
-                           "DELETE FROM workspace WHERE id = ?",
+                           "DELETE FROM workspace_page WHERE workspace_id = ?",
                            { id_ });
-  if (!ok) return false;
+  if (ok) {
+    ok = Sql::ExecParam(query,
+                       "DELETE FROM workspace WHERE id = ?",
+                        { id_ });
+  }
+  if (!ok) {
+    QSqlDatabase::database().rollback();
+    return false;
+  }
+  QSqlDatabase::database().commit();
   id_ = -1;
   return true;
 }
@@ -253,7 +264,7 @@ void Workspace::FromRecord(const QSqlRecord& record) {
   if (record.isEmpty()) return;
   id_ = record.value("id").toLongLong();
   name_ = record.value("name").toString();
-  last_opened_ = record.value("name").toLongLong();
+  last_opened_ = record.value("last_opened").toLongLong();
 }
 
 }  // namespace doogie

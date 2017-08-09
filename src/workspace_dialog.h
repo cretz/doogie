@@ -13,8 +13,8 @@ class WorkspaceDialog : public QDialog {
 
   Workspace SelectedWorkspace() const { return selected_workspace_; }
 
-  int execOpen();
-  int execManage();
+  int execOpen(QList<Workspace> open_workspaces);
+  int execManage(QList<Workspace> open_workspaces);
 
  private:
   Workspace selected_workspace_;

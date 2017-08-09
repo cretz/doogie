@@ -43,6 +43,7 @@ class PageTreeItem : public QTreeWidgetItem {
     persist_next_close_to_workspace_ = persist;
   }
 
+  const Workspace& CurrentWorkspace();
   WorkspaceTreeItem* WorkspaceItem();
 
   void CollapseStateChanged();

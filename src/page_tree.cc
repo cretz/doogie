@@ -42,21 +42,21 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   // Each time one is selected, we need to make sure to show that on the stack
   connect(this, &QTreeWidget::currentItemChanged,
           [=](QTreeWidgetItem* current, QTreeWidgetItem* previous) {
+    // Deactivate previous
+    if (previous && previous->type() == kPageItemType) {
+      auto old_font = previous->font(0);
+      old_font.setBold(false);
+      previous->setFont(0, old_font);
+    }
     // Before anything, if current is a workspace item, we don't support
     //  "current" so put it back
     if (current && current->type() == kWorkspaceItemType) {
-      if (!previous || previous->type() != kWorkspaceItemType) {
+      if (previous && previous->type() == kPageItemType) {
         setCurrentItem(previous);
       } else {
         setCurrentItem(nullptr);
       }
       return;
-    }
-    // Deactivate previous
-    if (previous) {
-      auto old_font = previous->font(0);
-      old_font.setBold(false);
-      previous->setFont(0, old_font);
     }
     // Sometimes current isn't set or isn't in the tree anymore
     if (current && indexFromItem(current).isValid()) {
@@ -129,6 +129,8 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     list.removeAll(id);
     Profile::Current()->SetOpenWorkspaceIds(list);
     Profile::Current()->SavePrefs();
+    // Make the current one implicit if necessary
+    MakeWorkspaceImplicitIfPossible();
   });
 
   connect(this, &PageTree::itemCollapsed, [=](QTreeWidgetItem* item) {
@@ -239,8 +241,9 @@ void PageTree::ApplyRecentWorkspacesMenu(QMenu* menu) {
   QSet<qlonglong> exclude;
   for (auto& workspace : Workspaces()) exclude.insert(workspace.Id());
   for (auto& workspace : Workspace::RecentWorkspaces(exclude, 10)) {
-    menu->addAction(workspace.FriendlyName(), [=, &workspace]() {
-      OpenWorkspace(workspace);
+    auto id = workspace.Id();
+    menu->addAction(workspace.FriendlyName(), [=]() {
+      OpenWorkspace(Workspace(id));
     });
   }
 }
@@ -252,31 +255,84 @@ void PageTree::ApplyWorkspaceMenu(QMenu* menu,
     if (item) {
       editItem(item);
     } else {
-      // TODO
+      bool failed_try_again;
+      do {
+        failed_try_again = false;
+        auto new_name = QInputDialog::getText(
+              nullptr, "New Workspace Name",
+              "Workspace Name:", QLineEdit::Normal,
+              workspace.Name());
+        if (!new_name.isNull() && new_name != workspace.Name()) {
+          if (Workspace::NameInUse(new_name)) {
+            QMessageBox::critical(nullptr,
+                                  "Invalid Name",
+                                  "Name already in use by another workspace");
+            failed_try_again = true;
+          } else {
+            implicit_workspace_.SetName(new_name);
+            implicit_workspace_.Save();
+            emit WorkspaceImplicitnessChanged();
+          }
+        }
+      } while (failed_try_again);
     }
   });
+  auto ids = Profile::Current()->OpenWorkspaceIds();
+  auto curr_index = ids.indexOf(workspace.Id());
   menu->addAction("Move Up", [=]() {
-    // TODO
-  })->setEnabled(item);
+    auto item = takeTopLevelItem(curr_index);
+    auto expanded = item->isExpanded();
+    insertTopLevelItem(curr_index - 1, item);
+    item->setExpanded(expanded);
+    auto ids = Profile::Current()->OpenWorkspaceIds();
+    ids.removeAll(workspace.Id());
+    ids.insert(curr_index - 1, workspace.Id());
+    Profile::Current()->SetOpenWorkspaceIds(ids);
+    Profile::Current()->SavePrefs();
+  })->setEnabled(item && curr_index > 0);
   menu->addAction("Move Down", [=]() {
-    // TODO
-  })->setEnabled(item);
+    auto item = takeTopLevelItem(curr_index);
+    auto expanded = item->isExpanded();
+    insertTopLevelItem(curr_index + 1, item);
+    item->setExpanded(expanded);
+    auto ids = Profile::Current()->OpenWorkspaceIds();
+    ids.removeAll(workspace.Id());
+    ids.insert(curr_index + 1, workspace.Id());
+    Profile::Current()->SetOpenWorkspaceIds(ids);
+    Profile::Current()->SavePrefs();
+  })->setEnabled(item && curr_index < ids.length() - 1);
   menu->addSeparator();
   menu->addAction("Close", [=]() {
-    // TODO
+    CloseWorkspace(item);
   })->setEnabled(item);
   menu->addAction("Close and Delete", [=]() {
-    // TODO
+    auto res = QMessageBox::question(
+          nullptr, "Delete Workspace?",
+          QString("Are you sure you want to delete workspace '%1'").arg(
+            workspace.FriendlyName()));
+    if (res == QMessageBox::Yes) {
+      item->SetDeleteWorkspaceOnDestroyNotCancelled(true);
+      CloseWorkspace(item);
+    }
   })->setEnabled(item);
   menu->addSeparator();
   menu->addAction("Close Other Workspaces", [=]() {
-    // TODO
+    // Collect all top level items that are not this one
+    QList<WorkspaceTreeItem*> other;
+    for (int i = 0; i < topLevelItemCount(); i++) {
+      auto item = AsWorkspaceTreeItem(topLevelItem(i));
+      if (item->CurrentWorkspace().Id() != workspace.Id()) {
+        other.append(item);
+      }
+    }
+    for (auto item : other) {
+      CloseWorkspace(item);
+    }
   })->setEnabled(item);
 }
 
 WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace& workspace) {
-  auto had_nothing = topLevelItemCount() == 0;
-  if (!had_nothing) MakeWorkspaceExplicitIfPossible();
+  MakeWorkspaceExplicitIfPossible();
 
   // Mark as opened
   workspace.SetLastOpened(QDateTime::currentMSecsSinceEpoch());
@@ -301,13 +357,30 @@ WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace& workspace) {
       [=, &items_by_page_id, &add_children_of](qlonglong id) {
     auto parent = items_by_page_id.value(id);
     for (auto child : children_by_parent_id[id]) {
+      auto expanded = child.Expanded();
       items_by_page_id[child.Id()] = NewPage(child, parent, false);
       add_children_of(child.Id());
+      items_by_page_id[child.Id()]->setExpanded(expanded);
     }
   };
   add_children_of(-1);
   // Expand by default
   item->setExpanded(true);
+
+  // If there is nothing current, set it as  child of this or just any
+  // we can find
+  if (!currentItem()) {
+    if (item->childCount() > 0) {
+      setCurrentItem(item->child(0));
+    } else {
+      // This is heavy, but who cares
+      for (auto item : Items()) {
+        setCurrentItem(item);
+        break;
+      }
+    }
+  }
+
   return item;
 }
 
@@ -321,6 +394,21 @@ void PageTree::CloseAllWorkspaces() {
   for (int i = topLevelItemCount() - 1; i >= 0; i--) {
     // Don't send event
     CloseWorkspace(AsWorkspaceTreeItem(topLevelItem(i)), false);
+  }
+  // If the top one was made implicit in the meantime,
+  // we have to try and close the items again
+  if (has_implicit_workspace_) CloseItemsInReverseOrder(Items(), false);
+}
+
+void PageTree::WorkspaceAboutToDestroy(WorkspaceTreeItem* item) {
+  // If current item is empty or no longer valid, we try to set the
+  // current item as the one above us
+  if (!currentItem() || !indexFromItem(currentItem()).isValid() ||
+      AsPageTreeItem(currentItem())->CurrentWorkspace().Id() ==
+            item->CurrentWorkspace().Id()) {
+    auto new_curr_item = itemAbove(item);
+    if (!new_curr_item) new_curr_item = itemBelow(item);
+    setCurrentItem(new_curr_item);
   }
 }
 
@@ -386,9 +474,7 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
       CloseItem(affected);
     });
     sub->addAction("Close Tree", [=]() {
-      // We collapse everything here to force children to close
-      affected->CollapseSelfAndChildren();
-      CloseItem(affected);
+      CloseItem(affected, true, true);
     });
     sub->addAction("Close Same-Host Pages", [=]() {
       CloseItemsInReverseOrder(SameHostPages(affected));
@@ -496,6 +582,8 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
       }
     }
   });
+  wks_menu->addAction(ActionManager::Action(
+      ActionManager::ManageWorkspaces));
 
   // The workspace will be the implicit one or the one the pointer is in
   Workspace workspace = implicit_workspace_;
@@ -552,8 +640,8 @@ void PageTree::drawRow(QPainter* painter,
 }
 
 void PageTree::dropEvent(QDropEvent* event) {
-  // Due to bad internal Qt logic, we reset the current here
   if (event->source() == this) {
+    // Due to bad internal Qt logic, we reset the current here
     auto current = currentItem();
     QTreeWidget::dropEvent(event);
     setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
@@ -707,6 +795,18 @@ void PageTree::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void PageTree::rowsInserted(const QModelIndex& parent, int start, int end) {
+  // As a special case, if we do not have an implicit workspace and rows are
+  // inserted at the top level, we want the workspace above them to add to
+  if (!has_implicit_workspace_ && !parent.isValid() &&
+      topLevelItem(start)->type() == kPageItemType) {
+    // Take all of the items and re-insert them under their workspace item
+    auto workspace_item = AsWorkspaceTreeItem(topLevelItem(start - 1));
+    if (!workspace_item) workspace_item = WorkspaceTreeItemToAddUnder();
+    for (int i = start; i <= end; i++) {
+      workspace_item->addChild(takeTopLevelItem(start));
+    }
+    return;
+  }
   // We have to override this to re-add the child widget due to how row
   // movement occurs.
   // Ref: https://stackoverflow.com/questions/25559221/qtreewidgetitem-issue-items-set-using-setwidgetitem-are-dispearring-after-movin
@@ -821,9 +921,7 @@ void PageTree::SetupActions() {
   });
   connect(ActionManager::Action(ActionManager::CloseTree),
           &QAction::triggered, [=]() {
-    // Collapse to force child close
-    CurrentItem()->CollapseSelfAndChildren();
-    CloseItem(CurrentItem());
+    CloseItem(CurrentItem(), true, true);
   });
   connect(ActionManager::Action(ActionManager::CloseSameHostPages),
           &QAction::triggered, [=]() {
@@ -884,9 +982,7 @@ void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::CloseSelectedTrees),
           &QAction::triggered, [=]() {
     for (auto item : SelectedItemsOnlyHighestLevel()) {
-      // We always collapse to kill everything
-      item->CollapseSelfAndChildren();
-      CloseItem(item);
+      CloseItem(item, true, true);
     }
   });
   connect(ActionManager::Action(ActionManager::CloseNonSelectedPages),
@@ -961,12 +1057,12 @@ void PageTree::SetupActions() {
   });
   connect(ActionManager::Action(ActionManager::ManageWorkspaces),
           &QAction::triggered, [=]() {
-    WorkspaceDialog().execManage();
+    WorkspaceDialog(window()).execManage(Workspaces());
   });
   connect(ActionManager::Action(ActionManager::OpenWorkspace),
           &QAction::triggered, [=]() {
-    WorkspaceDialog dialog;
-    if (dialog.execOpen() == QDialog::Accepted) {
+    WorkspaceDialog dialog(window());
+    if (dialog.execOpen(Workspaces()) == QDialog::Accepted) {
       OpenWorkspace(dialog.SelectedWorkspace());
     }
   });
@@ -1054,31 +1150,34 @@ void PageTree::CloseWorkspace(WorkspaceTreeItem* item, bool send_close_event) {
   if (!item) return;
   // If it's empty, just destroy it
   if (item->childCount() == 0) {
-    if (send_close_event) emit WorkspaceClosed(item->CurrentWorkspace().Id());
+    auto id = item->CurrentWorkspace().Id();
+    WorkspaceAboutToDestroy(item);
     delete item;
+    if (send_close_event) emit WorkspaceClosed(id);
     return;
   }
-  // Otherwise, try to expand and close all children in reverse
+  // Otherwise, try to collapse and close all children in reverse
   item->SetCloseOnEmptyNotCancelled(true);
   item->SetSendCloseEventNotCancelled(send_close_event);
   for (int i = item->childCount() - 1; i >= 0; i--) {
     auto child = AsPageTreeItem(item->child(i));
-    child->ExpandSelfAndChildren();
-    CloseItem(child, false);
+    CloseItem(child, false, true);
   }
 }
 
-void PageTree::CloseItem(PageTreeItem* item, bool workspace_persist) {
+void PageTree::CloseItem(PageTreeItem* item,
+                         bool workspace_persist,
+                         bool force_close_children) {
   // Eagerly skip this if the item ain't a thing anymore
   if (!item) return;
   item->SetPersistNextCloseToWorkspace(workspace_persist);
-  // We only close children if we're not expanded.
-  if (!item->isExpanded()) {
+  // We only close children if we're not expanded unless we're foreced
+  if (force_close_children || !item->isExpanded()) {
     // Close backwards up the list
     for (int i = item->childCount() - 1; i >= 0; i--) {
       auto child = AsPageTreeItem(item->child(i));
       child->SetPersistNextCloseToWorkspace(workspace_persist);
-      CloseItem(child, workspace_persist);
+      CloseItem(child, workspace_persist, force_close_children);
     }
   }
   // Now we can close myself
@@ -1175,26 +1274,24 @@ WorkspaceTreeItem* PageTree::WorkspaceTreeItemToAddUnder() const {
 
 void PageTree::MakeWorkspaceExplicitIfPossible() {
   if (!has_implicit_workspace_) return;
+  auto current = currentItem();
   has_implicit_workspace_ = false;
-  // Take all the top level items and add under a fresh workspace item
-  QList<PageTreeItem*> items;
-  while (auto item = takeTopLevelItem(0)) {
-    items.append(AsPageTreeItem(item));
-  }
   auto item = new WorkspaceTreeItem(implicit_workspace_);
-  addTopLevelItem(item);
-  item->AfterAdded();
-  for (auto new_child : items) {
-    item->addChild(new_child);
-    new_child->AfterAdded();
+  insertTopLevelItem(0, item);
+  while (auto child = AsPageTreeItem(takeTopLevelItem(1))) {
+    item->addChild(child);
+    child->AfterAdded();
   }
   // This needs to be expanded
   item->setExpanded(true);
+  // Reset the current item
+  setCurrentItem(current);
   emit WorkspaceImplicitnessChanged();
 }
 
 void PageTree::MakeWorkspaceImplicitIfPossible() {
   if (has_implicit_workspace_ || topLevelItemCount() != 1) return;
+  auto current = currentItem();
   has_implicit_workspace_ = true;
   auto item = AsWorkspaceTreeItem(takeTopLevelItem(0));
   implicit_workspace_ = item->CurrentWorkspace();
@@ -1204,6 +1301,8 @@ void PageTree::MakeWorkspaceImplicitIfPossible() {
     child->setExpanded(child->WorkspacePage().Expanded());
     child->AfterAdded();
   }
+  // Reset the current item
+  setCurrentItem(current);
   emit WorkspaceImplicitnessChanged();
 }
 

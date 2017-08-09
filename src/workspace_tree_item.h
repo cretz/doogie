@@ -10,6 +10,7 @@ namespace doogie {
 class WorkspaceTreeItem : public QTreeWidgetItem {
  public:
   WorkspaceTreeItem(const Workspace& workspace);
+  ~WorkspaceTreeItem();
 
   const Workspace& CurrentWorkspace() const { return workspace_; }
 
@@ -29,10 +30,17 @@ class WorkspaceTreeItem : public QTreeWidgetItem {
     send_close_event_not_cancelled_ = send_close_event_not_cancelled;
   }
 
+  void SetDeleteWorkspaceOnDestroyNotCancelled(
+      bool delete_workspace_on_destroy_not_cancelled) {
+    delete_workspace_on_destroy_not_cancelled_ =
+        delete_workspace_on_destroy_not_cancelled;
+  }
+
  private:
   Workspace workspace_;
   bool close_on_empty_not_cancelled_ = false;
   bool send_close_event_not_cancelled_ = true;
+  bool delete_workspace_on_destroy_not_cancelled_ = false;
 };
 
 }  // namespace doogie

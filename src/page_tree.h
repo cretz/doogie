@@ -43,6 +43,8 @@ class PageTree : public QTreeWidget {
   // called on app close
   void CloseAllWorkspaces();
 
+  void WorkspaceAboutToDestroy(WorkspaceTreeItem* item);
+
   QJsonObject DebugDump() const;
 
  protected:
@@ -80,7 +82,9 @@ class PageTree : public QTreeWidget {
                            PageTreeItem* parent,
                            bool make_current);
   void CloseWorkspace(WorkspaceTreeItem* item, bool send_close_event = true);
-  void CloseItem(PageTreeItem* item, bool workspace_persist = true);
+  void CloseItem(PageTreeItem* item,
+                 bool workspace_persist = true,
+                 bool force_close_children = false);
   void CloseItemsInReverseOrder(QList<PageTreeItem*> items,
                                 bool workspace_persist = true);
   void DuplicateTree(PageTreeItem* item, PageTreeItem* to_parent = nullptr);

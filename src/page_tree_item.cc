@@ -106,6 +106,16 @@ QToolButton* PageTreeItem::CloseButton() const {
 }
 
 void PageTreeItem::AfterAdded() {
+  // We need to update the workspace and parent if necessary
+  auto workspace = CurrentWorkspace();
+  auto par = Parent();
+  if (workspace.Id() != workspace_page_.WorkspaceId() ||
+      workspace_page_.ParentId() != (par ? par->WorkspacePage().Id() : -1)) {
+    workspace_page_.SetWorkspaceId(workspace.Id());
+    workspace_page_.SetParentId(par ? par->WorkspacePage().Id() : -1);
+    workspace_page_.Save();
+  }
+
   auto tree = static_cast<PageTree*>(treeWidget());
   ApplyFavicon();
 
@@ -152,8 +162,10 @@ void PageTreeItem::AfterAdded() {
 }
 
 PageTreeItem* PageTreeItem::Parent() const {
-  if (type() != PageTree::kPageItemType) return nullptr;
-  return static_cast<PageTreeItem*>(parent());
+  if (parent() && parent()->type() == PageTree::kPageItemType) {
+    return static_cast<PageTreeItem*>(parent());
+  }
+  return nullptr;
 }
 
 QJsonObject PageTreeItem::DebugDump() const {
@@ -242,6 +254,12 @@ void PageTreeItem::SetCurrentBubbleIfDifferent(const Bubble& bubble) {
   if (bubble.Name() != browser_->CurrentBubble().Name()) {
     browser_->ChangeCurrentBubble(bubble);
   }
+}
+
+const Workspace& PageTreeItem::CurrentWorkspace() {
+  auto item = WorkspaceItem();
+  if (item) return item->CurrentWorkspace();
+  return static_cast<PageTree*>(treeWidget())->ImplicitWorkspace();
 }
 
 WorkspaceTreeItem* PageTreeItem::WorkspaceItem() {
