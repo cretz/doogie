@@ -25,6 +25,8 @@ class Util {
   static QJsonObject DebugRect(const QPoint& top_left, const QSize& size);
 
   static QKeySequence KeySequenceOrEmpty(const QString& str);
+
+  static quint64 HashString(const QString& str);
 };
 
 }  // namespace doogie

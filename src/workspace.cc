@@ -99,36 +99,6 @@ void Workspace::WorkspacePage::FromRecord(const QSqlRecord& record) {
   expanded_ = record.value("expanded").toBool();
 }
 
-bool Workspace::EnsureDatabaseSchema() {
-  // For now, this is good enough compared to migrations
-  auto sqls = QStringList({
-      "CREATE TABLE IF NOT EXISTS workspace ("
-      "  id INTEGER PRIMARY KEY NOT NULL,"
-      "  name TEXT NOT NULL UNIQUE,"
-      "  last_opened INTEGER NOT NULL"
-      ");",
-      "CREATE TABLE IF NOT EXISTS workspace_page ("
-      "  id INTEGER PRIMARY KEY NOT NULL,"
-      "  workspace_id INTEGER NOT NULL,"
-      "  parent_id INTEGER,"
-      "  pos INTEGER NOT NULL,"
-      "  icon BLOB,"
-      "  title TEXT,"
-      "  url TEXT,"
-      "  bubble TEXT,"
-      "  suspended BOOLEAN,"
-      "  expanded BOOLEAN,"
-      "  FOREIGN KEY(workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,"
-      "  FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE"
-      ");"
-  });
-  QSqlQuery query;
-  for (auto sql : sqls) {
-    if (!Sql::Exec(query, sql)) return false;
-  }
-  return true;
-}
-
 QList<Workspace> Workspace::Workspaces() {
   QList<Workspace> ret;
   QSqlQuery query;

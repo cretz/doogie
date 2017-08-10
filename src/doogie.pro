@@ -21,6 +21,7 @@ SOURCES += \
     logging_dock.cc \
     main.cc \
     main_window.cc \
+    page_index.cc \
     page_tree.cc \
     page_tree_dock.cc \
     page_tree_item.cc \
@@ -44,6 +45,7 @@ HEADERS += \
     find_widget.h \
     logging_dock.h \
     main_window.h \
+    page_index.h \
     page_tree.h \
     page_tree_dock.h \
     page_tree_item.h \

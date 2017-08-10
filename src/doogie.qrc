@@ -11,5 +11,7 @@
         <file>images/fontawesome/repeat.png</file>
         <file>images/fontawesome/times.png</file>
         <file>images/fontawesome/times-circle.png</file>
+
+        <file>schema.sql</file>
     </qresource>
 </RCC>

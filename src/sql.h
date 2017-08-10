@@ -8,6 +8,8 @@ namespace doogie {
 
 class Sql {
  public:
+  static bool EnsureDatabaseSchema();
+
   static QSqlRecord ExecSingleParam(QSqlQuery& query,
                                     const QString& sql,
                                     QVariantList params);

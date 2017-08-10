@@ -5,6 +5,20 @@ namespace doogie {
 const QLoggingCategory Sql::kLoggingCat(
     "sql", Sql::kLoggingEnabled ? QtDebugMsg : QtInfoMsg);
 
+bool Sql::EnsureDatabaseSchema() {
+  QFile file(":/res/schema.sql");
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    qCritical() << "Unable to read schema resource";
+    return false;
+  }
+  auto schema = QString::fromUtf8(file.readAll());
+  QSqlQuery query;
+  for (auto stmt : schema.split("\n\n")) {
+    if (!Exec(query, stmt)) return false;
+  }
+  return true;
+}
+
 QSqlRecord Sql::ExecSingleParam(QSqlQuery& query,
                                 const QString& sql,
                                 QVariantList params) {

@@ -63,8 +63,6 @@ class Workspace {
     bool expanded_ = false;
   };
 
-  static bool EnsureDatabaseSchema();
-
   // Ordered by name
   static QList<Workspace> Workspaces();
   // Ordered by last opened desc

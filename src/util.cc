@@ -85,4 +85,13 @@ QKeySequence Util::KeySequenceOrEmpty(const QString& str) {
   return seq;
 }
 
+quint64 Util::HashString(const QString& str) {
+  // FNV-1a 64 bit
+  quint64 hash = 14695981039346656037ull;
+  for (auto byte : str.toLatin1()) {
+    hash = (hash ^ byte) * 109951162821ull;
+  }
+  return hash;
+}
+
 }  // namespace doogie

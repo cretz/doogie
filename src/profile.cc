@@ -4,6 +4,7 @@
 
 #include "action_manager.h"
 #include "bubble.h"
+#include "sql.h"
 #include "util.h"
 #include "workspace.h"
 
@@ -530,8 +531,8 @@ bool Profile::SetCurrent(Profile* profile) {
     qCritical() << "Unable to open doogie.db";
     return false;
   }
-  if (!Workspace::EnsureDatabaseSchema()) {
-    qCritical() << "Unable to ensure workspace tables are created";
+  if (!Sql::EnsureDatabaseSchema()) {
+    qCritical() << "Unable to ensure schema is created";
     return false;
   }
 
