@@ -246,7 +246,7 @@ func buildCefWindows() error {
 		return fmt.Errorf("Unable to read VC proj file: %v", err)
 	}
 	// First one is debug, second is release
-	projXml = bytes.Replace(projXml, []byte("<RuntimeLibrary>MultiThreaded</RuntimeLibrary>"),
+	projXml = bytes.Replace(projXml, []byte("<RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>"),
 		[]byte("<RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>"), 1)
 	projXml = bytes.Replace(projXml, []byte("<RuntimeLibrary>MultiThreaded</RuntimeLibrary>"),
 		[]byte("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>"), 1)

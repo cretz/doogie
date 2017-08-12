@@ -33,6 +33,10 @@ class PageIndex {
                         const QString& title,
                         const QString& favicon_url,
                         const QIcon& favicon);
+  static bool UpdateTitle(const QString& url, const QString& title);
+  static bool UpdateFavicon(const QString& url,
+                            const QString& favicon_url,
+                            const QIcon& favicon);
 
   static QIcon CachedFavicon(const QString& url);
 

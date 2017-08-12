@@ -67,7 +67,6 @@ void Bubble::ApplyCefBrowserSettings(CefBrowserSettings* settings,
   state(settings->javascript, "javascript");
   state(settings->javascript_access_clipboard, "javascriptAccessClipboard");
   state(settings->javascript_dom_paste, "javvascriptDomPaste");
-  state(settings->javascript_open_windows, "javascriptOpenWindows");
   state(settings->local_storage, "localStorage");
   state(settings->plugins, "plugins");
   state(settings->remote_fonts, "remoteFonts");

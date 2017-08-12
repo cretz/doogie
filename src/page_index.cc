@@ -31,7 +31,7 @@ QList<PageIndex::AutocompletePage> PageIndex::AutocompleteSuggest(
       "    ap.id = apf.rowid "
       "  LEFT JOIN favicon f "
       "    ON f.id = ap.favicon_id "
-      "ORDER BY apf.frecency "
+      "ORDER BY apf.frecency DESC "
       "LIMIT %2").arg(to_search, count);
   if (!Sql::Exec(query, sql)) return ret;
   while (query.next()) {
@@ -72,7 +72,7 @@ bool PageIndex::MarkVisit(const QString& url,
       "  frecency = ? + ((visit_count + 1) * ?) "
       "WHERE url_hash = ? AND url = ? ",
       { schemeless_url, title, favicon_id, curr_secs,
-        curr_secs, kVisitTimeWorthSeconds, url, hash });
+        curr_secs, kVisitTimeWorthSeconds, hash, url });
   if (!ok) return false;
   if (query.numRowsAffected() > 0) return true;
   // Try an insert
@@ -84,6 +84,26 @@ bool PageIndex::MarkVisit(const QString& url,
     ") VALUES (?, ?, ?, ?, ?, ?, ?, ?) ",
     { url, hash, schemeless_url, title, favicon_id,
       curr_secs, 1, curr_secs + kVisitTimeWorthSeconds });
+}
+
+bool PageIndex::UpdateTitle(const QString& url, const QString& title) {
+  QSqlQuery query;
+  return Sql::ExecParam(
+      query,
+      "UPDATE autocomplete_page SET title = ? "
+      "WHERE url_hash = ? and url = ?",
+      { title, Util::HashString(url), url });
+}
+
+bool PageIndex::UpdateFavicon(const QString& url,
+                              const QString& favicon_url,
+                              const QIcon& favicon) {
+  QSqlQuery query;
+  return Sql::ExecParam(
+      query,
+      "UPDATE autocomplete_page SET favicon_id = ? "
+      "WHERE url_hash = ? AND url = ?",
+      { FaviconId(favicon_url, favicon), Util::HashString(url), url });
 }
 
 QIcon PageIndex::CachedFavicon(const QString& url) {
@@ -125,8 +145,6 @@ void PageIndex::DoExpiration() {
 
 QVariant PageIndex::FaviconId(const QString& url, const QIcon& favicon) {
   if (url.isEmpty() || favicon.isNull()) return QVariant(QVariant::LongLong);
-  // Grab the ID from just the URL. Then use the platform cache key to
-  // help us know if it needs to be updated.
   auto hash = Util::HashString(url);
   QSqlQuery query;
   auto icon_bytes = [=]() -> QByteArray {
@@ -137,32 +155,22 @@ QVariant PageIndex::FaviconId(const QString& url, const QIcon& favicon) {
   };
   auto record = Sql::ExecSingleParam(
       query,
-      "SELECT id, data_key "
+      "SELECT id "
       "FROM favicon "
       "WHERE url_hash = ? AND url = ?",
       { hash, url });
   if (query.lastError().isValid()) return QVariant(QVariant::LongLong);
-  if (!record.isEmpty()) {
-    // It's there...but is it current?
-    if (favicon.cacheKey() != record.value("data_key").toLongLong()) {
-      // Nope, update it (ignore err)
-      Sql::ExecParam(
-          query,
-          "UPDATE favicon SET "
-          "  data_key = ?, "
-          "  data = ? "
-          "WHERE id = ?",
-          { favicon.cacheKey(), icon_bytes(), record.value("id") });
-    }
-    return record.value("id");
-  }
+  if (!record.isEmpty()) return record.value("id");
   // Not there, insert
+  QBuffer buffer;
+  buffer.open(QIODevice::WriteOnly);
+  favicon.pixmap(16, 16).save(&buffer, "PNG");
   auto ok = Sql::ExecParam(
       query,
       "INSERT INTO favicon ( "
-      "  url, url_hash, data_key, data "
-      ") VALUES (?, ?, ?, ?)",
-      { url, hash, favicon.cacheKey(), icon_bytes() });
+      "  url, url_hash, data "
+      ") VALUES (?, ?, ?)",
+      { url, hash, buffer.data() });
   if (!ok) return QVariant(QVariant::LongLong);
   return query.lastInsertId();
 }

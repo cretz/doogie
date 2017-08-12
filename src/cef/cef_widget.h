@@ -33,6 +33,8 @@ class CefWidget : public CefBaseWidget {
   QString CurrentUrl() const;
   void TryClose();
 
+  void LoadFaviconIcon(const QString& url);
+
   // Basically just calls history.go
   void Go(int num);
   void Refresh(bool ignore_cache);
@@ -66,10 +68,11 @@ class CefWidget : public CefBaseWidget {
   void UrlChanged(const QString& url);
   void TitleChanged(const QString& title);
   void StatusChanged(const QString& status);
-  void FaviconChanged(const QIcon& icon);
+  void FaviconChanged(const QString& url, const QIcon& icon);
   void LoadStateChanged(bool is_loading,
                         bool can_go_back,
                         bool can_go_forward);
+  void LoadStart(CefLoadHandler::TransitionType transition_type);
   void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,
                 bool user_gesture);

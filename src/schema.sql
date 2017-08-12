@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS favicon (
   id INTEGER PRIMARY KEY NOT NULL,
   url TEXT NOT NULL,
   url_hash INTEGER NOT NULL,
-  data_key INTEGER NOT NULL,
   data BLOB NOT NULL
 );
 
@@ -56,7 +55,7 @@ CREATE INDEX IF NOT EXISTS autocomplete_page_url_hash_idx
   ON autocomplete_page(url_hash);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS autocomplete_page_fts USING FTS5(
-  schemaless_url,
+  schemeless_url,
   title,
   frecency UNINDEXED,
   content=autocomplete_page,
@@ -67,20 +66,20 @@ CREATE VIRTUAL TABLE IF NOT EXISTS autocomplete_page_fts USING FTS5(
 
 CREATE TRIGGER IF NOT EXISTS autocomplete_page_trig_ai
 AFTER INSERT ON autocomplete_page BEGIN
-  INSERT INTO autocomplete_page_fts(rowid, schemaless_url, title, frecency)
-    VALUES (new.id, new.schemaless_url, new.title, new.frecency);
+  INSERT INTO autocomplete_page_fts(rowid, schemeless_url, title, frecency)
+    VALUES (new.id, new.schemeless_url, new.title, new.frecency);
 END;
 
 CREATE TRIGGER IF NOT EXISTS autocomplete_page_trig_ad
 AFTER DELETE ON autocomplete_page BEGIN
-  INSERT INTO autocomplete_page_fts(autocomplete_page_fts, rowid, schemaless_url, title, frecency)
-    VALUES ('delete', old.id, old.schemaless_url, old.title, old.frecency);
+  INSERT INTO autocomplete_page_fts(autocomplete_page_fts, rowid, schemeless_url, title, frecency)
+    VALUES ('delete', old.id, old.schemeless_url, old.title, old.frecency);
 END;
 
 CREATE TRIGGER IF NOT EXISTS autocomplete_page_trig_au
 AFTER UPDATE ON autocomplete_page BEGIN
-  INSERT INTO autocomplete_page_fts(autocomplete_page_fts, rowid, schemaless_url, title, frecency)
-    VALUES ('delete', old.id, old.schemaless_url, old.title, old.frecency);
-  INSERT INTO autocomplete_page_fts(rowid, schemaless_url, title, frecency)
-    VALUES (new.id, new.schemaless_url, new.title, new.frecency);
+  INSERT INTO autocomplete_page_fts(autocomplete_page_fts, rowid, schemeless_url, title, frecency)
+    VALUES ('delete', old.id, old.schemeless_url, old.title, old.frecency);
+  INSERT INTO autocomplete_page_fts(rowid, schemeless_url, title, frecency)
+    VALUES (new.id, new.schemeless_url, new.title, new.frecency);
 END;

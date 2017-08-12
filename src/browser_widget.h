@@ -104,6 +104,7 @@ class BrowserWidget : public QWidget {
   CefWidget* cef_widg_ = nullptr;
   FindWidget* find_widg_ = nullptr;
   QLabel* status_bar_ = nullptr;
+  QString current_favicon_url_;
   QIcon current_favicon_;
   QString current_title_;
   bool loading_ = false;

@@ -160,6 +160,9 @@ class CefHandler :
   void OnLoadEnd(CefRefPtr<CefBrowser> browser,
                  CefRefPtr<CefFrame> frame,
                  int httpStatusCode) override;
+  void OnLoadStart(CefRefPtr<CefBrowser> browser,
+                   CefRefPtr<CefFrame> frame,
+                   TransitionType transition_type);
 
   // Request handler overrides...
   bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
@@ -201,6 +204,7 @@ class CefHandler :
                         bool can_go_forward);
   void LoadEnd(CefRefPtr<CefFrame> frame,
                int httpStatusCode);
+  void LoadStart(CefLoadHandler::TransitionType transition_type);
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
   void BrowserLog(const QString& str);
 

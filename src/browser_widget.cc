@@ -1,5 +1,6 @@
 #include "browser_widget.h"
 
+#include "page_index.h"
 #include "util.h"
 
 namespace doogie {
@@ -298,10 +299,14 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
   connect(cef_widg_, &CefWidget::TitleChanged, [=](const QString& title) {
     current_title_ = title;
     emit TitleChanged();
+    PageIndex::UpdateTitle(CurrentUrl(), title);
   });
-  connect(cef_widg_, &CefWidget::FaviconChanged, [=](const QIcon& icon) {
+  connect(cef_widg_, &CefWidget::FaviconChanged,
+          [=](const QString& url, const QIcon& icon) {
+    current_favicon_url_ = url;
     current_favicon_ = icon;
     emit FaviconChanged();
+    PageIndex::UpdateFavicon(CurrentUrl(), url, icon);
   });
   connect(cef_widg_, &CefWidget::LoadStateChanged,
           [=](bool is_loading, bool can_go_back, bool can_go_forward) {
@@ -319,6 +324,13 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       emit SuspensionChanged();
     }
     emit LoadingStateChanged();
+  });
+  connect(cef_widg_, &CefWidget::LoadStart,
+          [=](CefLoadHandler::TransitionType transition_type) {
+    // Only manual and link transition types do we mark visits
+    if (transition_type == TT_LINK || transition_type == TT_EXPLICIT) {
+      PageIndex::MarkVisit(CurrentUrl(), "", "", QIcon());
+    }
   });
   connect(cef_widg_, &CefWidget::PageOpen,
           [=](CefHandler::WindowOpenType type,

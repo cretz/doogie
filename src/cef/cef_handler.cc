@@ -151,6 +151,12 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
   emit LoadEnd(frame, http_status_code);
 }
 
+void CefHandler::OnLoadStart(CefRefPtr<CefBrowser> browser,
+                             CefRefPtr<CefFrame> frame,
+                             TransitionType transition_type) {
+  if (frame->IsMain()) emit LoadStart(transition_type);
+}
+
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,

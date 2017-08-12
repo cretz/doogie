@@ -415,7 +415,6 @@ void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) const {
   state(settings->javascript, "javascript");
   state(settings->javascript_access_clipboard, "javascriptAccessClipboard");
   state(settings->javascript_dom_paste, "javascriptDomPaste");
-  state(settings->javascript_open_windows, "javascriptOpenWindows");
   state(settings->local_storage, "localStorage");
   state(settings->plugins, "plugins");
   state(settings->remote_fonts, "remoteFonts");

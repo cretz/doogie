@@ -3,6 +3,7 @@
 #include "action_manager.h"
 #include "cef/cef.h"
 #include "main_window.h"
+#include "page_index.h"
 #include "profile.h"
 
 #ifdef QT_DEBUG
@@ -18,6 +19,8 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationName("Doogie");
   doogie::Profile::Current()->Init();
   doogie::ActionManager::CreateInstance(&app);
+
+  doogie::PageIndex::Expirer expirer;
 
   doogie::MainWindow win(cef);
   win.show();

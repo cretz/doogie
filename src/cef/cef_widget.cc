@@ -41,6 +41,8 @@ CefWidget::CefWidget(const Cef& cef,
   });
   connect(handler_, &CefHandler::LoadStateChanged,
           this, &CefWidget::LoadStateChanged);
+  connect(handler_, &CefHandler::LoadStart,
+          this, &CefWidget::LoadStart);
   connect(handler_, &CefHandler::PageOpen,
           this, &CefWidget::PageOpen);
   connect(handler_, &CefHandler::FindResult,
@@ -223,7 +225,7 @@ void CefWidget::focusOutEvent(QFocusEvent* event) {
 }
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
-    const CefString&, int, CefRefPtr<CefImage> image) {
+    const CefString& url, int, CefRefPtr<CefImage> image) {
   // TODO(cretz): should I somehow check if the page has changed before
   //  this came back?
   QIcon icon;
@@ -245,7 +247,8 @@ void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
       }
     }
   }
-  emit cef_widg_->FaviconChanged(icon);
+  emit cef_widg_->FaviconChanged(QString::fromStdString(url.ToString()),
+                                 icon);
 }
 
 }  // namespace doogie
