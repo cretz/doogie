@@ -3,7 +3,6 @@
 namespace doogie {
 
 WorkspaceDialog::WorkspaceDialog(QWidget* parent) : QDialog(parent) {
-
 }
 
 int WorkspaceDialog::execOpen(QList<Workspace> open_workspaces) {

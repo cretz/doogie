@@ -8,11 +8,10 @@ namespace doogie {
 
 class Workspace {
  public:
-
   class WorkspacePage {
    public:
-    WorkspacePage(qlonglong id = -1);
-    WorkspacePage(const QSqlRecord& record);
+    explicit WorkspacePage(qlonglong id = -1);
+    explicit WorkspacePage(const QSqlRecord& record);
 
     qlonglong WorkspaceId() const { return workspace_id_; }
     void SetWorkspaceId(qlonglong workspace_id) {
@@ -75,8 +74,8 @@ class Workspace {
 
   static bool NameInUse(const QString& name);
 
-  Workspace(qlonglong id = -1);
-  Workspace(const QSqlRecord& record);
+  explicit Workspace(qlonglong id = -1);
+  explicit Workspace(const QSqlRecord& record);
 
   bool Exists() const { return id_ >= 0; }
   qlonglong Id() const { return id_; }

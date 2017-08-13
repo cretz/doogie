@@ -8,7 +8,7 @@ Workspace::WorkspacePage::WorkspacePage(qlonglong id) {
   if (id < 0) return;
   QSqlQuery query;
   FromRecord(Sql::ExecSingleParam(
-               query,
+               &query,
                "SELECT * FROM workspace_page WHERE id = ?",
                { id }));
 }
@@ -46,26 +46,26 @@ bool Workspace::WorkspacePage::Save() {
         QVariant(QVariant::LongLong) : parent_id_;
   if (Exists()) {
     return Sql::ExecParam(
-          query,
+          &query,
           "UPDATE workspace_page SET "
-          " workspace_id = ?,"
-          " parent_id = ?,"
-          " pos = ?,"
-          " icon = ?,"
-          " title = ?,"
-          " url = ?,"
-          " bubble = ?,"
-          " suspended = ?,"
-          " expanded = ?"
+          " workspace_id = ?, "
+          " parent_id = ?, "
+          " pos = ?, "
+          " icon = ?, "
+          " title = ?, "
+          " url = ?, "
+          " bubble = ?, "
+          " suspended = ?, "
+          " expanded = ? "
           "WHERE id = ?",
           { workspace_id_, parent_id, pos_, serialized_icon_,
             title_, url_, bubble_, suspended_, expanded_, id_ });
   }
   auto ok = Sql::ExecParam(
-      query,
-      "INSERT INTO workspace_page ("
-      "   workspace_id, parent_id, pos, icon,"
-      "   title, url, bubble, suspended, expanded"
+      &query,
+      "INSERT INTO workspace_page ( "
+      "   workspace_id, parent_id, pos, icon, "
+      "   title, url, bubble, suspended, expanded "
       ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       { workspace_id_, parent_id, pos_, serialized_icon_,
         title_, url_, bubble_, suspended_, expanded_ });
@@ -77,7 +77,7 @@ bool Workspace::WorkspacePage::Save() {
 bool Workspace::WorkspacePage::Delete() {
   if (id_ < 0) return false;
   QSqlQuery query;
-  auto ok = Sql::ExecParam(query,
+  auto ok = Sql::ExecParam(&query,
                            "DELETE FROM workspace_page WHERE id = ?",
                            { id_ });
   if (ok) id_ = -1;
@@ -102,7 +102,7 @@ void Workspace::WorkspacePage::FromRecord(const QSqlRecord& record) {
 QList<Workspace> Workspace::Workspaces() {
   QList<Workspace> ret;
   QSqlQuery query;
-  if (!Sql::Exec(query, "SELECT * FROM workspace ORDER BY name")) return ret;
+  if (!Sql::Exec(&query, "SELECT * FROM workspace ORDER BY name")) return ret;
   while (query.next()) ret.append(Workspace(query.record()));
   return ret;
 }
@@ -121,14 +121,14 @@ QList<Workspace> Workspace::RecentWorkspaces(QSet<qlonglong> excluding,
   sql += QString(" ORDER BY last_opened DESC LIMIT %1").arg(count);
   QList<Workspace> ret;
   QSqlQuery query;
-  if (!Sql::Exec(query, sql)) return ret;
+  if (!Sql::Exec(&query, sql)) return ret;
   while (query.next()) ret.append(Workspace(query.record()));
   return ret;
 }
 
 QString Workspace::NextUnusedWorkspaceName() {
   QSqlQuery query;
-  Sql::Exec(query, "SELECT COUNT(1) FROM workspace");
+  Sql::Exec(&query, "SELECT COUNT(1) FROM workspace");
   if (!query.next()) return "Workspace 1";
   int count = query.value(0).toInt();
   QString name;
@@ -140,7 +140,7 @@ QString Workspace::NextUnusedWorkspaceName() {
 
 bool Workspace::NameInUse(const QString& name) {
   QSqlQuery query;
-  return !Sql::ExecSingleParam(query,
+  return !Sql::ExecSingleParam(&query,
                                "SELECT 1 FROM workspace WHERE name = ?",
                                { name }).isEmpty();
 }
@@ -148,7 +148,7 @@ bool Workspace::NameInUse(const QString& name) {
 Workspace::Workspace(qlonglong id) {
   if (id < 0) return;
   QSqlQuery query;
-  FromRecord(Sql::ExecSingleParam(query,
+  FromRecord(Sql::ExecSingleParam(&query,
                                   "SELECT * FROM workspace WHERE id = ?",
                                   { id }));
 }
@@ -162,16 +162,16 @@ bool Workspace::Save() {
   QSqlQuery query;
   if (Exists()) {
     return Sql::ExecParam(
-          query,
+          &query,
           "UPDATE workspace SET "
-          " name = ?,"
-          " last_opened = ?"
+          " name = ?, "
+          " last_opened = ? "
           "WHERE id = ?",
           { name_, last_opened_, id_ });
   }
   auto ok = Sql::ExecParam(
-        query,
-        "INSERT INTO workspace (name, last_opened)"
+        &query,
+        "INSERT INTO workspace (name, last_opened) "
         "VALUES (?, ?)",
         { name_, last_opened_ });
   if (!ok) return false;
@@ -184,11 +184,11 @@ bool Workspace::Delete() {
   // Delete children first
   QSqlDatabase::database().transaction();
   QSqlQuery query;
-  auto ok = Sql::ExecParam(query,
+  auto ok = Sql::ExecParam(&query,
                            "DELETE FROM workspace_page WHERE workspace_id = ?",
                            { id_ });
   if (ok) {
-    ok = Sql::ExecParam(query,
+    ok = Sql::ExecParam(&query,
                        "DELETE FROM workspace WHERE id = ?",
                         { id_ });
   }
@@ -205,7 +205,7 @@ QList<Workspace::WorkspacePage> Workspace::AllChildren() const {
   QList<Workspace::WorkspacePage> ret;
   QSqlQuery query;
   auto ok = Sql::ExecParam(
-        query,
+        &query,
         "SELECT * FROM workspace_page "
         "WHERE workspace_id = ? "
         "ORDER BY pos",
@@ -220,9 +220,9 @@ QList<Workspace::WorkspacePage> Workspace::ChildrenOf(
   QList<Workspace::WorkspacePage> ret;
   QSqlQuery query;
   auto ok = Sql::ExecParam(
-        query,
+        &query,
         "SELECT * FROM workspace_page "
-        "WHERE workspace_id = ? AND parent_id = ?"
+        "WHERE workspace_id = ? AND parent_id = ? "
         "ORDER BY pos",
         { id_, parent_id < 0 ? QVariant(QVariant::LongLong) : parent_id });
   if (!ok) return ret;

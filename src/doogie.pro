@@ -30,6 +30,7 @@ SOURCES += \
     profile_settings_dialog.cc \
     settings_widget.cc \
     sql.cc \
+    url_edit.cc \
     util.cc \
     workspace.cc \
     workspace_dialog.cc \
@@ -54,6 +55,7 @@ HEADERS += \
     profile_settings_dialog.h \
     settings_widget.h \
     sql.h \
+    url_edit.h \
     util.h \
     workspace.h \
     workspace_dialog.h \

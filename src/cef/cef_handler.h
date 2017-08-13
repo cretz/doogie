@@ -110,6 +110,7 @@ class CefHandler :
   // Focus handler overrides...
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
   bool OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) override;
+  void OnTakeFocus(CefRefPtr<CefBrowser> browser, bool next) override;
 
   // JS dialog handler overrides...
   typedef std::function<void(const QString&,

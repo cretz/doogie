@@ -213,14 +213,14 @@ void CefWidget::SetJsDialogCallback(CefHandler::JsDialogCallback callback) {
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
   if (browser_) {
-    browser_->GetHost()->SendFocusEvent(true);
+    browser_->GetHost()->SetFocus(true);
   }
 }
 
 void CefWidget::focusOutEvent(QFocusEvent* event) {
   QWidget::focusOutEvent(event);
   if (browser_) {
-    browser_->GetHost()->SendFocusEvent(false);
+    browser_->GetHost()->SetFocus(false);
   }
 }
 

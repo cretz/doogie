@@ -24,7 +24,7 @@ class PageTree : public QTreeWidget {
   PageTreeItem* NewPage(const QString& url,
                         PageTreeItem* parent,
                         bool make_current);
-  PageTreeItem* NewPage(Workspace::WorkspacePage& page,
+  PageTreeItem* NewPage(Workspace::WorkspacePage* page,
                         PageTreeItem* parent,
                         bool make_current);
   void ApplyBubbleSelectMenu(QMenu* menu,
@@ -34,7 +34,7 @@ class PageTree : public QTreeWidget {
   void ApplyWorkspaceMenu(QMenu* menu,
                           const Workspace& workspace,
                           WorkspaceTreeItem* item);
-  WorkspaceTreeItem* OpenWorkspace(Workspace& workspace);
+  WorkspaceTreeItem* OpenWorkspace(Workspace* workspace);
 
   const Workspace& ImplicitWorkspace() const { return implicit_workspace_; }
   bool HasImplicitWorkspace() const { return has_implicit_workspace_; }
@@ -82,7 +82,7 @@ class PageTree : public QTreeWidget {
   void SetupActions();
   void SetupInitialWorkspaces();
   PageTreeItem* AddBrowser(QPointer<BrowserWidget> browser,
-                           Workspace::WorkspacePage& page,
+                           Workspace::WorkspacePage* page,
                            PageTreeItem* parent,
                            bool make_current);
   void CloseWorkspace(WorkspaceTreeItem* item, bool send_close_event = true);

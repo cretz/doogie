@@ -16,24 +16,24 @@ QList<PageIndex::AutocompletePage> PageIndex::AutocompleteSuggest(
   // Take the text, trim, split on space, ignore empties, add asterisk
   // after each item, rejoin, search...
   // Oh, and we quote it, which means replace existing quotes w/ double quotes
-  QString to_search = " ";
-  for (auto piece : text.trimmed().replace('"', "\"\"").
+  QString to_search = "";
+  for (auto piece : text.trimmed().replace("'", "''").
        split(' ', QString::SkipEmptyParts)) {
-    to_search += QString('"') + piece + "\"* ";
+    to_search += QString("\"%1\"*").arg(piece);
   }
   QList<PageIndex::AutocompletePage> ret;
   if (to_search.length() == 1) return ret;
   QSqlQuery query;
   auto sql = QString(
       "SELECT ap.url, ap.title, f.url as favicon_url "
-      "FROM autocomplete_page_fts apf('%1') "
+      "FROM autocomplete_page_fts('%1') apf "
       "  JOIN autocomplete_page ap ON "
       "    ap.id = apf.rowid "
       "  LEFT JOIN favicon f "
       "    ON f.id = ap.favicon_id "
       "ORDER BY apf.frecency DESC "
-      "LIMIT %2").arg(to_search, count);
-  if (!Sql::Exec(query, sql)) return ret;
+      "LIMIT %2").arg(to_search).arg(count);
+  if (!Sql::Exec(&query, sql)) return ret;
   while (query.next()) {
     ret.append(PageIndex::AutocompletePage {
         query.value("url").toString(),
@@ -62,7 +62,7 @@ bool PageIndex::MarkVisit(const QString& url,
   auto favicon_id = FaviconId(favicon_url, favicon);
   QSqlQuery query;
   auto ok = Sql::ExecParam(
-      query,
+      &query,
       "UPDATE autocomplete_page SET "
       "  schemeless_url = ?, "
       "  title = ?, "
@@ -77,7 +77,7 @@ bool PageIndex::MarkVisit(const QString& url,
   if (query.numRowsAffected() > 0) return true;
   // Try an insert
   return Sql::ExecParam(
-    query,
+    &query,
     "INSERT INTO autocomplete_page ( "
     "  url, url_hash, schemeless_url, title, "
     "  favicon_id, last_visited, visit_count, frecency "
@@ -89,7 +89,7 @@ bool PageIndex::MarkVisit(const QString& url,
 bool PageIndex::UpdateTitle(const QString& url, const QString& title) {
   QSqlQuery query;
   return Sql::ExecParam(
-      query,
+      &query,
       "UPDATE autocomplete_page SET title = ? "
       "WHERE url_hash = ? and url = ?",
       { title, Util::HashString(url), url });
@@ -100,7 +100,7 @@ bool PageIndex::UpdateFavicon(const QString& url,
                               const QIcon& favicon) {
   QSqlQuery query;
   return Sql::ExecParam(
-      query,
+      &query,
       "UPDATE autocomplete_page SET favicon_id = ? "
       "WHERE url_hash = ? AND url = ?",
       { FaviconId(favicon_url, favicon), Util::HashString(url), url });
@@ -115,7 +115,7 @@ QIcon PageIndex::CachedFavicon(const QString& url) {
     QSqlQuery query;
     auto hash = Util::HashString(url);
     auto rec = Sql::ExecSingleParam(
-          query,
+          &query,
           "SELECT data FROM favicon "
           "WHERE url_hash = ? AND url = ?",
           { hash, url });
@@ -131,13 +131,13 @@ void PageIndex::DoExpiration() {
   auto old =
       QDateTime::currentSecsSinceEpoch() - kExpireNotVisitedSinceSeconds;
   Sql::ExecParam(
-        query,
+        &query,
         "DELETE FROM autocomplete_page WHERE last_visited < ?",
         { old });
   Sql::Exec(
-        query,
+        &query,
         // Meh, we know it's slow...put it in the delete trigger instead?
-        "DELETE FROM favicon WHERE id IN ( "
+        "DELETE FROM favicon WHERE id NOT IN ( "
         "  SELECT DISTINCT favicon_id "
         "  FROM autocomplete_page "
         ")");
@@ -154,7 +154,7 @@ QVariant PageIndex::FaviconId(const QString& url, const QIcon& favicon) {
     return buffer.data();
   };
   auto record = Sql::ExecSingleParam(
-      query,
+      &query,
       "SELECT id "
       "FROM favicon "
       "WHERE url_hash = ? AND url = ?",
@@ -166,7 +166,7 @@ QVariant PageIndex::FaviconId(const QString& url, const QIcon& favicon) {
   buffer.open(QIODevice::WriteOnly);
   favicon.pixmap(16, 16).save(&buffer, "PNG");
   auto ok = Sql::ExecParam(
-      query,
+      &query,
       "INSERT INTO favicon ( "
       "  url, url_hash, data "
       ") VALUES (?, ?, ?)",

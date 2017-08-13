@@ -9,10 +9,10 @@ namespace doogie {
 class PageIndex {
  public:
   class Expirer {
-    public:
-     Expirer();
-    private:
-     QTimer timer;
+   public:
+    Expirer();
+   private:
+    QTimer timer;
   };
 
   struct AutocompletePage {

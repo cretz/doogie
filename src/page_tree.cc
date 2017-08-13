@@ -175,26 +175,26 @@ PageTreeItem* PageTree::NewPage(const QString &url,
     page.SetBubble(Profile::Current()->DefaultBubble().Name());
   }
   page.SetUrl(url);
-  return NewPage(page, parent, make_current);
+  return NewPage(&page, parent, make_current);
 }
 
-PageTreeItem* PageTree::NewPage(Workspace::WorkspacePage& page,
+PageTreeItem* PageTree::NewPage(Workspace::WorkspacePage* page,
                                 PageTreeItem* parent,
                                 bool make_current) {
-  auto bubble_index = Profile::Current()->BubbleIndexFromName(page.Bubble());
-  auto start_url = page.Url();
+  auto bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
+  auto start_url = page->Url();
   if (bubble_index == -1) {
-    qCritical() << "Workspace page used bubble '" << page.Bubble() <<
+    qCritical() << "Workspace page used bubble '" << page->Bubble() <<
                    "' which doesn't exist anymore,"
                    " using default and suspending";
-    page.SetBubble(Profile::Current()->DefaultBubble().Name());
-    bubble_index = Profile::Current()->BubbleIndexFromName(page.Bubble());
-    page.SetSuspended(true);
+    page->SetBubble(Profile::Current()->DefaultBubble().Name());
+    bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
+    page->SetSuspended(true);
   }
-  if (page.Suspended()) start_url = "";
+  if (page->Suspended()) start_url = "";
   auto bubble = Profile::Current()->Bubbles()[bubble_index];
   auto browser = browser_stack_->NewBrowser(bubble, start_url);
-  if (page.Suspended()) browser->SetSuspended(true);
+  if (page->Suspended()) browser->SetSuspended(true);
   return AddBrowser(browser, page, parent, make_current);
 }
 
@@ -245,7 +245,7 @@ void PageTree::ApplyRecentWorkspacesMenu(QMenu* menu) {
   for (auto& workspace : Workspace::RecentWorkspaces(exclude, 10)) {
     auto id = workspace.Id();
     menu->addAction(workspace.FriendlyName(), [=]() {
-      OpenWorkspace(Workspace(id));
+      OpenWorkspace(&Workspace(id));
     });
   }
 }
@@ -310,26 +310,26 @@ void PageTree::ApplyWorkspaceMenu(QMenu* menu,
   })->setEnabled(item);
 }
 
-WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace& workspace) {
+WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace* workspace) {
   MakeWorkspaceExplicitIfPossible();
 
   // Mark as opened
-  workspace.SetLastOpened(QDateTime::currentMSecsSinceEpoch());
-  workspace.Save();
-  auto item = new WorkspaceTreeItem(workspace);
+  workspace->SetLastOpened(QDateTime::currentMSecsSinceEpoch());
+  workspace->Save();
+  auto item = new WorkspaceTreeItem(*workspace);
   addTopLevelItem(item);
 
   // Save that it's open in the profile
   auto opened_list = Profile::Current()->OpenWorkspaceIds();
-  opened_list.removeAll(workspace.Id());
-  opened_list.append(workspace.Id());
+  opened_list.removeAll(workspace->Id());
+  opened_list.append(workspace->Id());
   Profile::Current()->SetOpenWorkspaceIds(opened_list);
   Profile::Current()->SavePrefs();
 
   // Let's add the children
   QHash<qlonglong, PageTreeItem*> items_by_page_id;
   QHash<qlonglong, QList<Workspace::WorkspacePage>> children_by_parent_id;
-  for (auto& child : workspace.AllChildren()) {
+  for (auto& child : workspace->AllChildren()) {
     children_by_parent_id[child.ParentId()].append(child);
   }
   std::function<void(qlonglong)> add_children_of =
@@ -337,7 +337,7 @@ WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace& workspace) {
     auto parent = items_by_page_id.value(id);
     for (auto child : children_by_parent_id[id]) {
       auto expanded = child.Expanded();
-      items_by_page_id[child.Id()] = NewPage(child, parent, false);
+      items_by_page_id[child.Id()] = NewPage(&child, parent, false);
       add_children_of(child.Id());
       items_by_page_id[child.Id()]->setExpanded(expanded);
     }
@@ -1075,7 +1075,7 @@ void PageTree::SetupActions() {
     Workspace workspace;
     workspace.SetName(Workspace::NextUnusedWorkspaceName());
     workspace.Save();
-    auto item = OpenWorkspace(workspace);
+    auto item = OpenWorkspace(&workspace);
     EditWorkspaceName(item);
   });
   connect(ActionManager::Action(ActionManager::ManageWorkspaces),
@@ -1086,7 +1086,7 @@ void PageTree::SetupActions() {
           &QAction::triggered, [=]() {
     WorkspaceDialog dialog(window());
     if (dialog.execOpen(Workspaces()) == QDialog::Accepted) {
-      OpenWorkspace(dialog.SelectedWorkspace());
+      OpenWorkspace(&dialog.SelectedWorkspace());
     }
   });
 }
@@ -1098,7 +1098,7 @@ void PageTree::SetupInitialWorkspaces() {
     if (workspace.Exists()) {
       found_any = true;
       qDebug() << "Opening previous workspace ID " << id;
-      OpenWorkspace(workspace);
+      OpenWorkspace(&workspace);
     }
   }
   if (!found_any) {
@@ -1106,25 +1106,25 @@ void PageTree::SetupInitialWorkspaces() {
     auto recent = Workspace::RecentWorkspaces({}, 1);
     if (!recent.isEmpty()) {
       qDebug() << "Using most recent workspace";
-      OpenWorkspace(recent.first());
+      OpenWorkspace(&recent.first());
     } else {
       // Just create a default one
       Workspace workspace;
       qDebug() << "Opening default workspace";
-      OpenWorkspace(workspace);
+      OpenWorkspace(&workspace);
     }
   }
   MakeWorkspaceImplicitIfPossible();
 }
 
 PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
-                                   Workspace::WorkspacePage& page,
+                                   Workspace::WorkspacePage* page,
                                    PageTreeItem* parent,
                                    bool make_current) {
   // Create the tree item
-  page.SetPos(parent ? parent->childCount() : topLevelItemCount());
-  page.Save();
-  auto browser_item = new PageTreeItem(browser, page);
+  page->SetPos(parent ? parent->childCount() : topLevelItemCount());
+  page->Save();
+  auto browser_item = new PageTreeItem(browser, *page);
 
   // Put as top level or as child
   if (parent) {
@@ -1145,7 +1145,7 @@ PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
   if (make_current) {
     setCurrentItem(browser_item, 0, QItemSelectionModel::Current);
   }
-  browser_item->setExpanded(page.Expanded());
+  browser_item->setExpanded(page->Expanded());
   // Make all tab opens open as child
   connect(browser, &BrowserWidget::PageOpen,
           [=](CefHandler::WindowOpenType type,

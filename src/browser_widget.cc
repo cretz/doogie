@@ -34,7 +34,7 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   forward_button_->setDisabled(true);
   connect(forward_button_, &QToolButton::clicked, [=](bool) { Forward(); });
 
-  url_edit_ = new QLineEdit(this);
+  url_edit_ = new UrlEdit(this);
   connect(url_edit_, &QLineEdit::returnPressed, [=]() {
     cef_widg_->LoadUrl(url_edit_->text());
     cef_widg_->setFocus();
@@ -324,12 +324,14 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       emit SuspensionChanged();
     }
     emit LoadingStateChanged();
-  });
-  connect(cef_widg_, &CefWidget::LoadStart,
-          [=](CefLoadHandler::TransitionType transition_type) {
-    // Only manual and link transition types do we mark visits
-    if (transition_type == TT_LINK || transition_type == TT_EXPLICIT) {
-      PageIndex::MarkVisit(CurrentUrl(), "", "", QIcon());
+    // If loading is complete, mark the visit. We used to do this on
+    //  load start and check the transition type, but we realized that
+    //  it's best to wait until it's finished anyways and we don't care
+    //  as much about the transition type.
+    // TODO(cretz): Test when title/favicon is not changed or not present
+    if (!is_loading) {
+      PageIndex::MarkVisit(CurrentUrl(), current_title_,
+                           current_favicon_url_, current_favicon_);
     }
   });
   connect(cef_widg_, &CefWidget::PageOpen,

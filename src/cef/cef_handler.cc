@@ -64,6 +64,9 @@ bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser>, FocusSource) {
   return false;
 }
 
+void CefHandler::OnTakeFocus(CefRefPtr<CefBrowser>, bool) {
+}
+
 bool CefHandler::OnJSDialog(CefRefPtr<CefBrowser> browser,
                             const CefString& origin_url,
                             JSDialogType dialog_type,

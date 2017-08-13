@@ -9,7 +9,7 @@ namespace doogie {
 
 class WorkspaceTreeItem : public QTreeWidgetItem {
  public:
-  WorkspaceTreeItem(const Workspace& workspace);
+  explicit WorkspaceTreeItem(const Workspace& workspace);
   ~WorkspaceTreeItem();
 
   const Workspace& CurrentWorkspace() const { return workspace_; }

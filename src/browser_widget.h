@@ -6,6 +6,7 @@
 #include "bubble.h"
 #include "cef/cef_widget.h"
 #include "find_widget.h"
+#include "url_edit.h"
 
 namespace doogie {
 
@@ -98,7 +99,7 @@ class BrowserWidget : public QWidget {
   QToolButton* back_button_ = nullptr;
   QToolButton* forward_button_ = nullptr;
   QMenu* nav_menu_ = nullptr;
-  QLineEdit* url_edit_ = nullptr;
+  UrlEdit* url_edit_ = nullptr;
   QToolButton* refresh_button_ = nullptr;
   QToolButton* stop_button_ = nullptr;
   CefWidget* cef_widg_ = nullptr;
