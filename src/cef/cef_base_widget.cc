@@ -14,12 +14,14 @@ const CefWindowInfo& CefBaseWidget::WindowInfo() const {
   return window_info_;
 }
 
-void CefBaseWidget::moveEvent(QMoveEvent*) {
+void CefBaseWidget::moveEvent(QMoveEvent* event) {
   this->UpdateSize();
+  QWidget::moveEvent(event);
 }
 
-void CefBaseWidget::resizeEvent(QResizeEvent*) {
+void CefBaseWidget::resizeEvent(QResizeEvent* event) {
   this->UpdateSize();
+  QWidget::resizeEvent(event);
 }
 
 }  // namespace doogie

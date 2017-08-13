@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "cef/cef.h"
+#include "download.h"
 
 namespace doogie {
 
@@ -13,6 +14,7 @@ class CefHandler :
     public CefClient,
     public CefContextMenuHandler,
     public CefDisplayHandler,
+    public CefDownloadHandler,
     public CefFindHandler,
     public CefFocusHandler,
     public CefJSDialogHandler,
@@ -45,6 +47,10 @@ class CefHandler :
   }
 
   CefRefPtr<CefDisplayHandler> GetDisplayHandler() override {
+    return this;
+  }
+
+  CefRefPtr<CefDownloadHandler> GetDownloadHandler() override {
     return this;
   }
 
@@ -98,6 +104,16 @@ class CefHandler :
                        const CefString& value) override;
   void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
                           const std::vector<CefString>& icon_urls) override;
+
+  // Download handler overrides...
+  void OnBeforeDownload(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefDownloadItem> download_item,
+      const CefString& suggested_name,
+      CefRefPtr<CefBeforeDownloadCallback> callback) override;
+  void OnDownloadUpdated(CefRefPtr<CefBrowser> browser,
+                         CefRefPtr<CefDownloadItem> download_item,
+                         CefRefPtr<CefDownloadItemCallback> callback) override;
 
   // Find handler overrides...
   void OnFindResult(CefRefPtr<CefBrowser> browser,
@@ -188,6 +204,9 @@ class CefHandler :
   void StatusChanged(const QString& status);
   // Empty if no URL
   void FaviconUrlChanged(const QString& url);
+  void DownloadRequested(const Download& download,
+                         CefRefPtr<CefBeforeDownloadCallback> callback);
+  void DownloadUpdated(const Download& download);
   void FindResult(int identifier,
                   int count,
                   const CefRect& selection_rect,

@@ -17,6 +17,7 @@ SOURCES += \
     bubble.cc \
     bubble_settings_dialog.cc \
     dev_tools_dock.cc \
+    download.cc \
     find_widget.cc \
     logging_dock.cc \
     main.cc \
@@ -43,6 +44,7 @@ HEADERS += \
     bubble.h \
     bubble_settings_dialog.h \
     dev_tools_dock.h \
+    download.h \
     find_widget.h \
     logging_dock.h \
     main_window.h \

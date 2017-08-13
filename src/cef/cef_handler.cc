@@ -46,6 +46,21 @@ void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
   }
 }
 
+void CefHandler::OnBeforeDownload(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefDownloadItem> download_item,
+    const CefString&,
+    CefRefPtr<CefBeforeDownloadCallback> callback) {
+  emit DownloadRequested(Download(download_item), callback);
+}
+
+void CefHandler::OnDownloadUpdated(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefDownloadItem> download_item,
+    CefRefPtr<CefDownloadItemCallback> callback) {
+  emit DownloadUpdated(Download(download_item, callback));
+}
+
 void CefHandler::OnFindResult(CefRefPtr<CefBrowser> browser,
                               int identifier,
                               int count,
