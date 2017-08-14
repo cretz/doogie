@@ -308,6 +308,10 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     emit FaviconChanged();
     PageIndex::UpdateFavicon(CurrentUrl(), url, icon);
   });
+  connect(cef_widg_, &CefWidget::DownloadRequested,
+          this, &BrowserWidget::DownloadRequested);
+  connect(cef_widg_, &CefWidget::DownloadUpdated,
+          this, &BrowserWidget::DownloadUpdated);
   connect(cef_widg_, &CefWidget::LoadStateChanged,
           [=](bool is_loading, bool can_go_back, bool can_go_forward) {
     loading_ = is_loading;

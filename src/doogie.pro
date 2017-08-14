@@ -19,6 +19,8 @@ SOURCES += \
     bubble_settings_dialog.cc \
     dev_tools_dock.cc \
     download.cc \
+    downloads_dock.cc \
+    download_list_item.cc \
     find_widget.cc \
     logging_dock.cc \
     main.cc \
@@ -47,6 +49,8 @@ HEADERS += \
     bubble_settings_dialog.h \
     dev_tools_dock.h \
     download.h \
+    downloads_dock.h \
+    download_list_item.h \
     find_widget.h \
     logging_dock.h \
     main_window.h \
@@ -78,6 +82,9 @@ debug:PROFILE = Debug
 
 win32 {
     LIBS += -luser32
+
+    SOURCES += \
+        util_win.cc
 
     # Chromium reads the manifest, needs a specific one
     # See http://magpcss.org/ceforum/viewtopic.php?f=6&t=14721

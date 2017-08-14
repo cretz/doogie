@@ -26,6 +26,10 @@ BrowserWidget* BrowserStack::NewBrowser(const Bubble& bubble,
   connect(widg, &BrowserWidget::CloseCancelled, [=]() {
     emit BrowserCloseCancelled(widg);
   });
+  connect(widg, &BrowserWidget::DownloadRequested,
+          this, &BrowserStack::DownloadRequested);
+  connect(widg, &BrowserWidget::DownloadUpdated,
+          this, &BrowserStack::DownloadUpdated);
   // We load the URL separately so we can have the loading icon and what not
   if (!url.isEmpty()) widg->LoadUrl(url);
   addWidget(widg);

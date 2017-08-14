@@ -66,6 +66,9 @@ class BrowserWidget : public QWidget {
  signals:
   void TitleChanged();
   void FaviconChanged();
+  void DownloadRequested(const Download& download,
+                         CefRefPtr<CefBeforeDownloadCallback> callback);
+  void DownloadUpdated(const Download& download);
   void LoadingStateChanged();
   void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,

@@ -1,6 +1,7 @@
 #ifndef DOOGIE_DOWNLOAD_H_
 #define DOOGIE_DOWNLOAD_H_
 
+#include <QtSql>
 #include <QtWidgets>
 
 #include "cef/cef.h"
@@ -17,15 +18,32 @@ class Download {
     Unknown
   };
 
+  // Oldest first
+  static QList<Download> Downloads();
+  static bool ClearDownloads(QList<qlonglong> exclude_ids);
+
+  explicit Download();
   explicit Download(
       CefRefPtr<CefDownloadItem> item,
       CefRefPtr<CefDownloadItemCallback> update_callback = nullptr);
+  explicit Download(
+      CefRefPtr<CefDownloadItem> item,
+      const QString& suggested_file_name);
 
   void Cancel();
   void Pause();
   void Resume();
 
-  uint Id() const { return id_; }
+  // Note, if already exists, only the end time and state are
+  //  updated (when end time is present)
+  bool Persist();
+  bool Delete();
+
+  qlonglong DbId() const { return db_id_; }
+  void SetDbId(qlonglong db_id) { db_id_ = db_id; }
+  bool Exists() const { return db_id_ > -1; }
+
+  uint LiveId() const { return live_id_; }
   QString MimeType() const { return mime_type_; }
   QString OrigUrl() const { return orig_url_; }
   QString Url() const { return url_; }
@@ -40,7 +58,12 @@ class Download {
   qint64 CurrentBytesPerSec() const { return current_bytes_per_sec_; }
 
  private:
-  uint id_;
+  explicit Download(const QSqlRecord& record);
+
+  void FromCef(CefRefPtr<CefDownloadItem> item);
+
+  qlonglong db_id_ = -1;
+  uint live_id_ = -1;
   QString mime_type_;
   QString orig_url_;
   QString url_;

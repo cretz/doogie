@@ -49,9 +49,12 @@ void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
 void CefHandler::OnBeforeDownload(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefDownloadItem> download_item,
-    const CefString&,
+    const CefString& suggested_file_name,
     CefRefPtr<CefBeforeDownloadCallback> callback) {
-  emit DownloadRequested(Download(download_item), callback);
+  emit DownloadRequested(
+        Download(download_item,
+                 QString::fromStdString(suggested_file_name.ToString())),
+        callback);
 }
 
 void CefHandler::OnDownloadUpdated(

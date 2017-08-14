@@ -69,6 +69,9 @@ class CefWidget : public CefBaseWidget {
   void TitleChanged(const QString& title);
   void StatusChanged(const QString& status);
   void FaviconChanged(const QString& url, const QIcon& icon);
+  void DownloadRequested(const Download& download,
+                         CefRefPtr<CefBeforeDownloadCallback> callback);
+  void DownloadUpdated(const Download& download);
   void LoadStateChanged(bool is_loading,
                         bool can_go_back,
                         bool can_go_forward);

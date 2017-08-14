@@ -94,4 +94,34 @@ quint64 Util::HashString(const QString& str) {
   return hash;
 }
 
+QString Util::FriendlyByteSize(double num) {
+  // Ref: https://stackoverflow.com/questions/30958043/qt-easiest-way-to-convert-int-to-file-size-format-kb-mb-or-gb
+  QStringList list = { "KB", "MB", "GB", "TB" };
+  QStringListIterator i(list);
+  QString unit = "bytes";
+  while(num >= 1024.0 && i.hasNext()) {
+    unit = i.next();
+    num /= 1024.0;
+  }
+  return QString::number(num, 'f', 2) + " " + unit;
+}
+
+QString Util::FriendlyTimeSpan(qint64 seconds) {
+  if (seconds < 60) return QString("%1s").arg(seconds);
+  if (seconds < 3600) {
+    return QString("%1m %2s").arg(seconds / 60).arg(seconds % 60);
+  }
+  if (seconds < 24 * 3600) {
+    auto after_hour_seconds = seconds % 3600;
+    return QString("%1h %2m %3s").arg(seconds / 3600).
+        arg(after_hour_seconds / 60).arg(after_hour_seconds % 60);
+  }
+  auto after_day_seconds = seconds % (24 * 3600);
+  auto after_hour_seconds = after_day_seconds % 3600;
+  return QString("%1d %2h %3m %4s").arg(seconds / (24 * 3600)).
+      arg(after_day_seconds / 3600).
+      arg(after_hour_seconds / 60).
+      arg(after_hour_seconds % 60);
+}
+
 }  // namespace doogie

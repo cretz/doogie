@@ -27,6 +27,11 @@ class Util {
   static QKeySequence KeySequenceOrEmpty(const QString& str);
 
   static quint64 HashString(const QString& str);
+
+  static QString FriendlyByteSize(double num);
+  static QString FriendlyTimeSpan(qint64 seconds);
+
+  static bool OpenContainingFolder(const QString& path);
 };
 
 }  // namespace doogie

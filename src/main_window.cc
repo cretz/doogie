@@ -41,6 +41,11 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
     launch_with_profile_on_close = "";
   });
 
+  downloads_dock_ = new DownloadsDock(browser_stack_, this);
+  downloads_dock_->setObjectName("downloads_dock");
+  downloads_dock_->setVisible(false);
+  addDockWidget(Qt::LeftDockWidgetArea, downloads_dock_);
+
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
   page_tree_dock_->setObjectName("page_tree_dock");
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
@@ -209,13 +214,21 @@ void MainWindow::SetupActions() {
           &QAction::triggered, [=]() {
     ShowDevTools(browser_stack_->CurrentBrowser(), QPoint(), false);
   });
+  auto downloads_action =
+      ActionManager::Action(ActionManager::DownloadsWindow);
+  connect(downloads_action, &QAction::triggered, [=]() {
+    downloads_dock_->setVisible(!downloads_dock_->isVisible());
+  });
+  downloads_action->setCheckable(true);
+  connect(downloads_dock_, &QDockWidget::visibilityChanged, [=](bool visible) {
+    downloads_action->setChecked(visible);
+  });
   auto logs_action = ActionManager::Action(ActionManager::LogsWindow);
   connect(logs_action, &QAction::triggered, [=]() {
     logging_dock_->setVisible(!logging_dock_->isVisible());
   });
   logs_action->setCheckable(true);
-  connect(logging_dock_, &QDockWidget::visibilityChanged,
-          [this, logs_action](bool visible) {
+  connect(logging_dock_, &QDockWidget::visibilityChanged, [=](bool visible) {
     logs_action->setChecked(visible);
   });
 
@@ -251,6 +264,7 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::FocusAddressBar);
   menu_action(menu, ActionManager::FocusBrowser);
   menu_action(menu, ActionManager::LogsWindow);
+  menu_action(menu, ActionManager::DownloadsWindow);
 
   // Non-visible actions
   addAction(ActionManager::Action(ActionManager::NewChildBackgroundPage));

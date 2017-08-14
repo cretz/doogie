@@ -7,6 +7,7 @@
 #include "cef/cef.h"
 #include "cef/cef_widget.h"
 #include "dev_tools_dock.h"
+#include "downloads_dock.h"
 #include "logging_dock.h"
 #include "page_tree_dock.h"
 
@@ -40,6 +41,7 @@ class MainWindow : public QMainWindow {
   const Cef& cef_;
   BrowserStack* browser_stack_;
   PageTreeDock* page_tree_dock_;
+  DownloadsDock* downloads_dock_;
   DevToolsDock* dev_tools_dock_;
   LoggingDock* logging_dock_;
   bool attempting_to_close_ = false;

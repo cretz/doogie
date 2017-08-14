@@ -36,6 +36,10 @@ CefWidget::CefWidget(const Cef& cef,
             new CefWidget::FaviconDownloadCallback(this));
     }
   });
+  connect(handler_, &CefHandler::DownloadRequested,
+          this, &CefWidget::DownloadRequested);
+  connect(handler_, &CefHandler::DownloadUpdated,
+          this, &CefWidget::DownloadUpdated);
   connect(handler_, &CefHandler::FocusObtained, [=]() {
     setFocus();
   });

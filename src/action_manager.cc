@@ -102,6 +102,7 @@ void ActionManager::CreateActions() {
 
   RegisterAction(ToggleDevTools, "Toggle Dev Tools");
   RegisterAction(LogsWindow, "Logs");
+  RegisterAction(DownloadsWindow, "Downloads");
   RegisterAction(FocusPageTree, "Focus Page Tree");
   RegisterAction(FocusAddressBar, "Focus Address Bar");
   RegisterAction(FocusBrowser, "Focus Browser");

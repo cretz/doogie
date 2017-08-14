@@ -24,6 +24,21 @@ CREATE TABLE IF NOT EXISTS workspace_page (
   FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE
 );
 
+-- Download stuff
+--
+CREATE TABLE IF NOT EXISTS download (
+  id INTEGER PRIMARY KEY NOT NULL,
+  mime_type TEXT NOT NULL,
+  orig_url TEXT NOT NULL,
+  url TEXT NOT NULL,
+  path TEXT NOT NULL,
+  success BOOLEAN NOT NULL,
+  -- Unix timestamp
+  start_time INTEGER NOT NULL,
+  end_time INTEGER,
+  size INTEGER NOT NULL
+);
+
 -- Page index stuff
 --
 CREATE TABLE IF NOT EXISTS favicon (

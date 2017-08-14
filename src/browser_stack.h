@@ -23,6 +23,9 @@ class BrowserStack : public QStackedWidget {
   void CurrentBrowserOrLoadingStateChanged();
   void ShowDevToolsRequest(BrowserWidget* browser, const QPoint& inspect_at);
   void BrowserCloseCancelled(BrowserWidget* browser);
+  void DownloadRequested(const Download& download,
+                         CefRefPtr<CefBeforeDownloadCallback> callback);
+  void DownloadUpdated(const Download& download);
 
  private:
   void SetupActions();
