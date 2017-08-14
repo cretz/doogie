@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<head>
+  <script>
+    window.MutationObserver = function() {
+      console.log('Ha ha, tricked you')
+    }
+  </script>
+  <title>Ad Block</title>
+</head>
+<body>
+  <br />
+  <div id="test-div">
+    I will put an ad below here delayed:
+  </div>
+
+  <script>
+    function appendAd() {
+      document.getElementById('test-div').innerHTML += '<span class="ocp-sponsor"><br />AD!!</span>'
+    }
+    setTimeout(appendAd, 1000)
+  </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 #include "cef/cef_app_handler.h"
 
+#include "blocker.h"
+
 namespace doogie {
 
 CefAppHandler::CefAppHandler() {}
@@ -15,6 +17,16 @@ bool CefAppHandler::OnBeforeNavigation(
                                 navigation_type, is_redirect);
   }
   return false;
+}
+
+void CefAppHandler::OnContextCreated(CefRefPtr<CefBrowser> browser,
+                                     CefRefPtr<CefFrame> frame,
+                                     CefRefPtr<CefV8Context> context) {
+  blocker_.OnFrameCreated(browser, frame, context);
+}
+
+void CefAppHandler::OnWebKitInitialized() {
+  blocker_.Init();
 }
 
 }  // namespace doogie

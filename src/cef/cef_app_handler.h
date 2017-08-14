@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 
+#include "blocker.h"
 #include "cef/cef_base.h"
 
 namespace doogie {
@@ -42,8 +43,14 @@ class CefAppHandler :
     before_nav_callback_ = before_nav_callback;
   }
 
+  void OnContextCreated(CefRefPtr<CefBrowser> browser,
+                        CefRefPtr<CefFrame> frame,
+                        CefRefPtr<CefV8Context> context);
+
+  void OnWebKitInitialized() override;
 
  private:
+  Blocker blocker_;
   std::function<bool(CefRefPtr<CefBrowser>,
                      CefRefPtr<CefFrame>,
                      CefRefPtr<CefRequest>,
