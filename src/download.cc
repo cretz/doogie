@@ -44,6 +44,7 @@ Download::Download(CefRefPtr<CefDownloadItem> item,
 
 void Download::Cancel() {
   if (update_callback_) update_callback_->Cancel();
+  current_state_ = Canceled;
 }
 
 void Download::Pause() {
@@ -95,11 +96,11 @@ Download::Download(const QSqlRecord& record) {
   path_ = record.value("path").toString();
   start_time_ = QDateTime::fromSecsSinceEpoch(
       record.value("start_time").toLongLong(), Qt::UTC);
-  if (record.contains("end_time")) {
-    end_time_ = QDateTime::fromSecsSinceEpoch(
-        record.value("end_time").toLongLong(), Qt::UTC);
+  auto end_secs = record.value("end_time").toLongLong();
+  if (end_secs > 0) {
+    end_time_ = QDateTime::fromSecsSinceEpoch(end_secs, Qt::UTC);
   }
-  total_bytes_ = record.value("total_byes").toLongLong();
+  total_bytes_ = record.value("total_bytes").toLongLong();
   // We have to set as complete or canceled when coming from the DB
   current_state_ = record.value("success").toBool() ? Complete : Canceled;
 }
@@ -117,8 +118,10 @@ void Download::FromCef(CefRefPtr<CefDownloadItem> item) {
           (item->IsInProgress() ? Download::InProgress : Download::Unknown));
   start_time_ = QDateTime::fromSecsSinceEpoch(item->GetStartTime().GetTimeT(),
                                               Qt::UTC);
-  end_time_ = QDateTime::fromSecsSinceEpoch(item->GetEndTime().GetTimeT(),
-                                            Qt::UTC);
+  if (item->GetEndTime().GetTimeT() > 0) {
+    end_time_ = QDateTime::fromSecsSinceEpoch(item->GetEndTime().GetTimeT(),
+                                              Qt::UTC);
+  }
   bytes_received_ = item->GetReceivedBytes();
   total_bytes_ = item->GetTotalBytes();
   current_bytes_per_sec_ = item->GetCurrentSpeed();

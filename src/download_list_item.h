@@ -14,7 +14,7 @@ class DownloadListItem : public QListWidgetItem {
   // Returns false if this is not the right item for it
   bool UpdateDownload(const Download& download);
   void ApplyContextMenu(QMenu* menu);
-  void DeleteAndRemove();
+  void DeleteAndRemoveIfDone();
  private:
   Download download_;
 

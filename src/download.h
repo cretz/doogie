@@ -11,8 +11,8 @@ namespace doogie {
 class Download {
  public:
   enum State {
+    // Note, this is the value even when paused
     InProgress,
-    Paused,
     Canceled,
     Complete,
     Unknown

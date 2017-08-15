@@ -7,7 +7,7 @@ bool Util::OpenContainingFolder(const QString& path) {
   if (explorer.isEmpty()) return false;
   auto param = QDir::toNativeSeparators(path);
   if (!QFileInfo(path).isDir()) param = QString("/select,") + param;
-  return QProcess::startDetached(explorer + param);
+  return QProcess::startDetached(explorer + " " + param);
 }
 
 }  // namespace doogie

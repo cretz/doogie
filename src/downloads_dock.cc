@@ -12,14 +12,28 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
   auto layout = new QVBoxLayout;
 
   auto button_layout = new QHBoxLayout;
-  auto close_button = new QToolButton;
-  close_button->setText("Remove All Finished");
-  close_button->setAutoRaise(true);
-  button_layout->addWidget(close_button);
+  auto remove_all_button = new QToolButton;
+  remove_all_button->setText("Remove All Finished");
+  remove_all_button->setAutoRaise(true);
+  button_layout->addWidget(remove_all_button);
   button_layout->addStretch(1);
   layout->addLayout(button_layout);
 
   auto list = new QListWidget;
+  list->setResizeMode(QListView::Adjust);
+  list->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(list, &QListWidget::customContextMenuRequested,
+          [=](const QPoint& pos) {
+    QMenu menu;
+    auto item = static_cast<DownloadListItem*>(list->itemAt(pos));
+    if (item) {
+      item->ApplyContextMenu(&menu);
+      menu.addSeparator();
+    }
+    menu.addAction("Remove All Finished",
+                   [=]() { remove_all_button->click(); });
+    menu.exec(list->mapToGlobal(pos));
+  });
   layout->addWidget(list, 1);
 
   auto widg = new QWidget;
@@ -46,6 +60,17 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
     add_or_update_download(download, true);
   }
 
+  connect(remove_all_button, &QToolButton::clicked, [=]() {
+    // Get all items, then delete em
+    QList<DownloadListItem*> to_delete;
+    for (int i = 0; i < list->count(); i++) {
+      to_delete.append(static_cast<DownloadListItem*>(list->item(i)));
+    }
+    for (auto item : to_delete) {
+      item->DeleteAndRemoveIfDone();
+    }
+  });
+
   // Connect to browser stack to handle downloads
   connect(browser_stack, &BrowserStack::DownloadRequested,
       [=](const Download& download,
@@ -65,6 +90,15 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
           nullptr, "Save Download As...",
           QDir(suggested_dir).filePath(suggested_file_name));
     if (save_name.isEmpty()) return;
+    // We have to delete it if it's present
+    {
+      QFile file(save_name);
+      if (file.exists() && !file.remove()) {
+        QMessageBox::critical(nullptr, "Save Error",
+                              "Unable to delete existing file");
+        return;
+      }
+    }
     QSettings().setValue("downloadsDock/saveDir",
                          QFileInfo(save_name).dir().path());
     callback->Continue(CefString(QDir::toNativeSeparators(save_name).toStdString()), false);
