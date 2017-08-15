@@ -173,4 +173,8 @@ void DownloadListItem::DeleteAndRemoveIfDone() {
   }
 }
 
+bool DownloadListItem::DownloadActive() {
+  return download_.CurrentState() == Download::InProgress;
+}
+
 }  // namespace doogie

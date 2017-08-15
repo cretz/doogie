@@ -38,6 +38,7 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   connect(browser_stack_, &BrowserStack::BrowserCloseCancelled,
           [=](BrowserWidget*) {
     attempting_to_close_ = false;
+    ok_with_terminating_downloads_ = false;
     launch_with_profile_on_close = "";
   });
 
@@ -130,6 +131,21 @@ QJsonObject MainWindow::DebugDump() const {
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
+  // Warn the user about active/paused downloads
+  if (downloads_dock_->HasActiveDownload() &&
+      !ok_with_terminating_downloads_) {
+    auto but = QMessageBox::question(
+          nullptr, "Doogie",
+          "Some downloads are still active/paused.\n"
+          "Closing Doogie will terminate the download "
+          "part-way causing file corruption.\n"
+          "Are you sure you want to continue closing?");
+    if (but != QMessageBox::Yes) {
+      event->ignore();
+      return;
+    }
+    ok_with_terminating_downloads_ = true;
+  }
   // We only let close go through if there are no open pages
   if (page_tree_dock_->HasTopLevelItems()) {
     attempting_to_close_ = true;
@@ -268,6 +284,8 @@ void MainWindow::SetupActions() {
 
   // Non-visible actions
   addAction(ActionManager::Action(ActionManager::NewChildBackgroundPage));
+  addAction(ActionManager::Action(ActionManager::NextPage));
+  addAction(ActionManager::Action(ActionManager::PreviousPage));
 }
 
 void MainWindow::ShowDevTools(BrowserWidget* browser,

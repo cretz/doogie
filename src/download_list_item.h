@@ -15,6 +15,7 @@ class DownloadListItem : public QListWidgetItem {
   bool UpdateDownload(const Download& download);
   void ApplyContextMenu(QMenu* menu);
   void DeleteAndRemoveIfDone();
+  bool DownloadActive();
  private:
   Download download_;
 

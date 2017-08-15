@@ -1065,6 +1065,59 @@ void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::CloseAllPages),
           &QAction::triggered,
           [=]() { CloseItemsInReverseOrder(Items()); });
+
+  connect(ActionManager::Action(ActionManager::NextPage),
+          &QAction::triggered, [=]() {
+    if (topLevelItemCount() == 0) return;
+    // Find the item below the current one or go to the first one
+    if (CurrentItem()) {
+      QTreeWidgetItem* item = CurrentItem();
+      while (item = itemBelow(item)) {
+        if (item->type() == kPageItemType) {
+          setCurrentItem(item, 0,
+                         QItemSelectionModel::ClearAndSelect |
+                         QItemSelectionModel::Current);
+          return;
+        }
+      }
+    }
+    // First visible item
+    for (auto item : Items()) {
+      if (!item->isHidden()) {
+        setCurrentItem(item, 0,
+                       QItemSelectionModel::ClearAndSelect |
+                       QItemSelectionModel::Current);
+        return;
+      }
+    }
+  });
+  connect(ActionManager::Action(ActionManager::PreviousPage),
+          &QAction::triggered, [=]() {
+    if (topLevelItemCount() == 0) return;
+    // Find the item above the current one or go to the last one
+    if (CurrentItem()) {
+      QTreeWidgetItem* item = CurrentItem();
+      while (item = itemAbove(item)) {
+        if (item->type() == kPageItemType) {
+          setCurrentItem(item, 0,
+                         QItemSelectionModel::ClearAndSelect |
+                         QItemSelectionModel::Current);
+          return;
+        }
+      }
+    }
+    // Last visible item
+    auto items = Items();
+    for (auto i = items.crbegin(); i != items.crend(); i++) {
+      if (!(*i)->isHidden()) {
+        setCurrentItem(*i, 0,
+                       QItemSelectionModel::ClearAndSelect |
+                       QItemSelectionModel::Current);
+        return;
+      }
+    }
+  });
+
   connect(ActionManager::Action(ActionManager::FocusPageTree),
           &QAction::triggered,
           [=]() { setFocus(); });

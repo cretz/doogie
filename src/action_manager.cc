@@ -100,6 +100,9 @@ void ActionManager::CreateActions() {
   RegisterAction(CollapseAllTrees, "Collapse All Trees");
   RegisterAction(CloseAllPages, "Close All Pages");
 
+  RegisterAction(NextPage, "Next Page");
+  RegisterAction(PreviousPage, "Previous Page");
+
   RegisterAction(ToggleDevTools, "Toggle Dev Tools");
   RegisterAction(LogsWindow, "Logs");
   RegisterAction(DownloadsWindow, "Downloads");
@@ -120,6 +123,8 @@ void ActionManager::CreateActions() {
   shortcuts(ActionManager::NewChildForegroundPage, "Ctrl+Shift+T");
   shortcuts(ActionManager::ClosePage, "Ctrl+F4; Ctrl+W");
   shortcuts(ActionManager::CloseAllPages, "Ctrl+Shift+F4; Ctrl+Shift+W");
+  shortcuts(ActionManager::NextPage, "Ctrl+Down; Ctrl+Tab");
+  shortcuts(ActionManager::PreviousPage, "Ctrl+Up; Ctrl+Shift+Tab");
   shortcuts(ActionManager::ToggleDevTools, "F12; Ctrl+F12");
   shortcuts(ActionManager::Reload, "F5; Ctrl+F5; Ctrl+R");
   shortcuts(ActionManager::Stop, "Esc");

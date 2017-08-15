@@ -37,57 +37,62 @@ void UrlEdit::focusOutEvent(QFocusEvent* event) {
 }
 
 void UrlEdit::keyPressEvent(QKeyEvent* event) {
-  if (event->key() == Qt::Key_Escape && autocomplete_->isVisible()) {
-    setText(typed_before_moved_);
-    autocomplete_->hide();
-    return;
-  }
-  if (event->key() == Qt::Key_Up || event->key() == Qt::Key_PageUp ||
-      event->key() == Qt::Key_Down || event->key() == Qt::Key_PageDown) {
-    if (!autocomplete_->isVisible()) {
-      HandleTextEdit(text());
+  // All my stuff only applies when there are no modifiers
+  if (event->modifiers() == Qt::NoModifier) {
+    // Hide the auto complete window if we escaped
+    if (event->key() == Qt::Key_Escape && autocomplete_->isVisible()) {
+      setText(typed_before_moved_);
+      autocomplete_->hide();
       return;
     }
+    // Move around the autocomplete window
+    if (event->key() == Qt::Key_Up || event->key() == Qt::Key_PageUp ||
+        event->key() == Qt::Key_Down || event->key() == Qt::Key_PageDown) {
+      if (!autocomplete_->isVisible()) {
+        HandleTextEdit(text());
+        return;
+      }
 
-    // A result of -1 means we will remove all selection/current
-    auto row = autocomplete_->currentRow();
-    if (event->key() == Qt::Key_Up) {
-      if (row == -1) {
-        row = autocomplete_->count() - 1;
-      } else if (row == 0) {
-        row = -1;
-      } else {
-        row--;
+      // A result of -1 means we will remove all selection/current
+      auto row = autocomplete_->currentRow();
+      if (event->key() == Qt::Key_Up) {
+        if (row == -1) {
+          row = autocomplete_->count() - 1;
+        } else if (row == 0) {
+          row = -1;
+        } else {
+          row--;
+        }
+      } else if (event->key() == Qt::Key_PageUp) {
+        if (row == -1) {
+          row = autocomplete_->count() - 1;
+        } else if (row == 0) {
+          row = -1;
+        } else if (row < 5) {
+          row = 0;
+        } else {
+          row -= 5;
+        }
+      } else if (event->key() == Qt::Key_Down) {
+        if (row == autocomplete_->count() - 1) {
+          row = -1;
+        } else {
+          row++;
+        }
+      } else if (event->key() == Qt::Key_PageDown) {
+        if (row == -1) {
+          row = 0;
+        } else if (row == autocomplete_->count() - 1) {
+          row = -1;
+        } else if (row > autocomplete_->count() - 6) {
+          row = autocomplete_->count() - 1;
+        } else {
+          row += 5;
+        }
       }
-    } else if (event->key() == Qt::Key_PageUp) {
-      if (row == -1) {
-        row = autocomplete_->count() - 1;
-      } else if (row == 0) {
-        row = -1;
-      } else if (row < 5) {
-        row = 0;
-      } else {
-        row -= 5;
-      }
-    } else if (event->key() == Qt::Key_Down) {
-      if (row == autocomplete_->count() - 1) {
-        row = -1;
-      } else {
-        row++;
-      }
-    } else if (event->key() == Qt::Key_PageDown) {
-      if (row == -1) {
-        row = 0;
-      } else if (row == autocomplete_->count() - 1) {
-        row = -1;
-      } else if (row > autocomplete_->count() - 6) {
-        row = autocomplete_->count() - 1;
-      } else {
-        row += 5;
-      }
+      autocomplete_->setCurrentRow(row);
+      return;
     }
-    autocomplete_->setCurrentRow(row);
-    return;
   }
   QLineEdit::keyPressEvent(event);
   typed_before_moved_ = text();

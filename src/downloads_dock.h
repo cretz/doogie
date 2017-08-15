@@ -12,6 +12,11 @@ class DownloadsDock : public QDockWidget {
  public:
   explicit DownloadsDock(BrowserStack* browser_stack,
                          QWidget* parent = nullptr);
+
+  bool HasActiveDownload();
+
+ private:
+  QListWidget* list_;
 };
 
 }  // namespace doogie

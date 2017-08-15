@@ -19,22 +19,22 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
   button_layout->addStretch(1);
   layout->addLayout(button_layout);
 
-  auto list = new QListWidget;
-  list->setResizeMode(QListView::Adjust);
-  list->setContextMenuPolicy(Qt::CustomContextMenu);
-  connect(list, &QListWidget::customContextMenuRequested,
+  list_ = new QListWidget;
+  list_->setResizeMode(QListView::Adjust);
+  list_->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(list_, &QListWidget::customContextMenuRequested,
           [=](const QPoint& pos) {
     QMenu menu;
-    auto item = static_cast<DownloadListItem*>(list->itemAt(pos));
+    auto item = static_cast<DownloadListItem*>(list_->itemAt(pos));
     if (item) {
       item->ApplyContextMenu(&menu);
       menu.addSeparator();
     }
     menu.addAction("Remove All Finished",
                    [=]() { remove_all_button->click(); });
-    menu.exec(list->mapToGlobal(pos));
+    menu.exec(list_->mapToGlobal(pos));
   });
-  layout->addWidget(list, 1);
+  layout->addWidget(list_, 1);
 
   auto widg = new QWidget;
   widg->setLayout(layout);
@@ -44,13 +44,13 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
       const Download& download,
       bool force_add = false) {
     if (!force_add) {
-      for (int i = 0; i < list->count(); i++) {
-        auto item = static_cast<DownloadListItem*>(list->item(i));
+      for (int i = 0; i < list_->count(); i++) {
+        auto item = static_cast<DownloadListItem*>(list_->item(i));
         if (item->UpdateDownload(download)) return;
       }
     }
     auto item = new DownloadListItem;
-    list->insertItem(0, item);
+    list_->insertItem(0, item);
     item->AfterAdded();
     item->UpdateDownload(download);
   };
@@ -63,8 +63,8 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
   connect(remove_all_button, &QToolButton::clicked, [=]() {
     // Get all items, then delete em
     QList<DownloadListItem*> to_delete;
-    for (int i = 0; i < list->count(); i++) {
-      to_delete.append(static_cast<DownloadListItem*>(list->item(i)));
+    for (int i = 0; i < list_->count(); i++) {
+      to_delete.append(static_cast<DownloadListItem*>(list_->item(i)));
     }
     for (auto item : to_delete) {
       item->DeleteAndRemoveIfDone();
@@ -108,6 +108,15 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
     // We ignore downloads w/out a path (they force em to start early)
     if (!download.Path().isEmpty()) add_or_update_download(download);
   });
+}
+
+bool DownloadsDock::HasActiveDownload() {
+  for (int i = 0; i < list_->count(); i++) {
+    if (static_cast<DownloadListItem*>(list_->item(i))->DownloadActive()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace doogie

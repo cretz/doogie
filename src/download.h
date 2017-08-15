@@ -70,12 +70,12 @@ class Download {
   QString suggested_file_name_;
   QString path_;
 
-  State current_state_;
+  State current_state_ = Unknown;
   QDateTime start_time_;
   QDateTime end_time_;
-  qint64 bytes_received_;
-  qint64 total_bytes_;
-  qint64 current_bytes_per_sec_;
+  qint64 bytes_received_= -1;
+  qint64 total_bytes_ = -1;
+  qint64 current_bytes_per_sec_ = -1;
 
   CefRefPtr<CefDownloadItemCallback> update_callback_;
 };

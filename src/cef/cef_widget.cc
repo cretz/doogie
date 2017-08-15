@@ -93,6 +93,10 @@ QString CefWidget::CurrentUrl() const {
   return "";
 }
 
+bool CefWidget::HasDocument() const {
+  return browser_ && browser_->HasDocument();
+}
+
 void CefWidget::TryClose() {
   if (browser_) {
     browser_->GetHost()->CloseBrowser(true);
@@ -216,7 +220,8 @@ void CefWidget::SetJsDialogCallback(CefHandler::JsDialogCallback callback) {
 
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
-  if (browser_) {
+  // Only focus the browser if it has a document
+  if (HasDocument()) {
     browser_->GetHost()->SetFocus(true);
   }
 }

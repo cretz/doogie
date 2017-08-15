@@ -57,6 +57,9 @@ class ActionManager : public QObject {
     CollapseAllTrees,
     CloseAllPages,
 
+    NextPage,
+    PreviousPage,
+
     ToggleDevTools,
     LogsWindow,
     DownloadsWindow,

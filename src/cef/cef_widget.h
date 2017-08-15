@@ -31,6 +31,7 @@ class CefWidget : public CefBaseWidget {
   QPointer<QWidget> OverrideWidget() const;
   void LoadUrl(const QString& url);
   QString CurrentUrl() const;
+  bool HasDocument() const;
   void TryClose();
 
   void LoadFaviconIcon(const QString& url);
