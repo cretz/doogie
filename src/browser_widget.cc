@@ -35,7 +35,7 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   connect(forward_button_, &QToolButton::clicked, [=](bool) { Forward(); });
 
   url_edit_ = new UrlEdit(this);
-  connect(url_edit_, &QLineEdit::returnPressed, [=]() {
+  connect(url_edit_, &UrlEdit::returnPressed, [=]() {
     cef_widg_->LoadUrl(url_edit_->text());
     cef_widg_->setFocus();
   });
@@ -121,10 +121,15 @@ void BrowserWidget::TryClose() {
 }
 
 void BrowserWidget::FocusUrlEdit() {
-  url_edit_->setFocus();
-  url_edit_->activateWindow();
-  // We choose to select the entire text here to make nav easier
-  url_edit_->selectAll();
+  // We have to defer this because CEF window steals focus immediately
+  // here.
+  // TODO(cretz): Fix when https://bitbucket.org/chromiumembedded/cef/issues/1856/ is fixed
+  QTimer::singleShot(0, [=]() {
+    url_edit_->activateWindow();
+    url_edit_->setFocus();
+    // We choose to select the entire text here to make nav easier
+    url_edit_->selectAll();
+  });
 }
 
 void BrowserWidget::FocusBrowser() {

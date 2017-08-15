@@ -72,9 +72,10 @@ bool DownloadListItem::UpdateDownload(const Download& d) {
   if (download_.LiveId() != download_.LiveId()) return false;
 
   // Set it and persist it
-  auto old_id = download_.DbId();
+  auto old_id = -1;
+  if (download_.Exists()) old_id = download_.DbId();
   download_ = d;
-  download_.SetDbId(old_id);
+  if (old_id >= 0) download_.SetDbId(old_id);
   download_.Persist();
 
   // Update the widgets
@@ -134,6 +135,7 @@ bool DownloadListItem::UpdateDownload(const Download& d) {
     sub_pieces << time.toLocalTime().toString();
   }
   sub_name_label_->setText(sub_pieces.join(" - "));
+  return true;
 }
 
 void DownloadListItem::ApplyContextMenu(QMenu* menu) {
