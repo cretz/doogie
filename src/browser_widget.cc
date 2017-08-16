@@ -77,6 +77,9 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   layout->setRowStretch(1, 1);
   setLayout(layout);
 
+  cef_widg_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  cef_widg_->adjustSize();
+
   auto override_widg = cef_widg_->OverrideWidget();
   if (override_widg) {
     layout->addWidget(override_widg, 1, 0);
@@ -111,7 +114,12 @@ BrowserWidget::BrowserWidget(const Cef& cef,
 }
 
 void BrowserWidget::LoadUrl(const QString &url) {
+  url_edit_->setText(url);
   cef_widg_->LoadUrl(url);
+}
+
+void BrowserWidget::SetUrlText(const QString& url) {
+  url_edit_->setText(url);
 }
 
 void BrowserWidget::TryClose() {
@@ -143,7 +151,6 @@ const Bubble& BrowserWidget::CurrentBubble() const {
 void BrowserWidget::ChangeCurrentBubble(const Bubble& bubble) {
   bubble_ = bubble;
   emit BubbleMaybeChanged();
-  // TODO(cretz): test when suspended
   RecreateCefWidget(CurrentUrl());
 }
 
@@ -156,7 +163,13 @@ QString BrowserWidget::CurrentTitle() const {
 }
 
 QString BrowserWidget::CurrentUrl() const {
-  return cef_widg_->CurrentUrl();
+  // As a special case, if this URL is invalid, we use
+  //  what's in the URL edit box
+  auto url = cef_widg_->CurrentUrl();
+  if (url == "data:text/html,chromewebdata") {
+    url = url_edit_->text();
+  }
+  return url;
 }
 
 bool BrowserWidget::Loading() const {
@@ -228,12 +241,12 @@ bool BrowserWidget::Suspended() const {
   return suspended_;
 }
 
-void BrowserWidget::SetSuspended(bool suspend) {
+void BrowserWidget::SetSuspended(bool suspend, const QString& url_override) {
   if (suspended_ == suspend) return;
+  // We have to defer to let loading state change
   suspended_ = suspend;
   if (suspended_) {
-    // Close directly, don't call this->TryClose
-    suspended_url_ = CurrentUrl();
+    suspended_url_ = url_override.isNull() ? CurrentUrl() : url_override;
     // We will make fake pixels for the rest of the screen
     // and we will make it lighter to look disabled
     auto screen = QGuiApplication::primaryScreen();
@@ -250,6 +263,7 @@ void BrowserWidget::SetSuspended(bool suspend) {
     font.setBold(true);
     painter.setFont(font);
     painter.drawText(rect(), Qt::AlignCenter, "Suspended");
+    // Close directly, don't call this->TryClose
     cef_widg_->TryClose();
   } else {
     emit SuspensionChanged();
@@ -328,7 +342,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     back_button_->setDisabled(!can_go_back);
     forward_button_->setDisabled(!can_go_forward);
     // It's no longer suspended
-    if (suspended_) {
+    if (suspended_ && loading_) {
       suspended_ = false;
       emit SuspensionChanged();
     }

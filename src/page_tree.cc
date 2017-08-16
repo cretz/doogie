@@ -144,8 +144,9 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     if (page_item) page_item->CollapseStateChanged();
   });
 
-  SetupInitialWorkspaces();
   SetupActions();
+  // We need to defer to let first show occur
+  QTimer::singleShot(0, [=]() { SetupInitialWorkspaces(); });
 }
 
 QMovie* PageTree::LoadingIconMovie() {
@@ -184,9 +185,11 @@ PageTreeItem* PageTree::NewPage(Workspace::WorkspacePage* page,
   auto bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
   auto start_url = page->Url();
   if (bubble_index == -1) {
-    qCritical() << "Workspace page used bubble '" << page->Bubble() <<
-                   "' which doesn't exist anymore,"
-                   " using default and suspending";
+    QMessageBox::warning(
+          nullptr, "Load Workspace",
+          QString("Workspace page used bubble '%1' "
+                  "which doesn't exist anymore, "
+                  "using default and suspending").arg(page->Bubble()));
     page->SetBubble(Profile::Current()->DefaultBubble().Name());
     bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
     page->SetSuspended(true);
@@ -194,8 +197,9 @@ PageTreeItem* PageTree::NewPage(Workspace::WorkspacePage* page,
   if (page->Suspended()) start_url = "";
   auto bubble = Profile::Current()->Bubbles()[bubble_index];
   auto browser = browser_stack_->NewBrowser(bubble, start_url);
-  if (page->Suspended()) browser->SetSuspended(true);
-  return AddBrowser(browser, page, parent, make_current);
+  auto item = AddBrowser(browser, page, parent, make_current);
+  if (page->Suspended()) browser->SetSuspended(true, page->Url());
+  return item;
 }
 
 void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
@@ -336,15 +340,17 @@ WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace* workspace) {
       [=, &items_by_page_id, &add_children_of](qlonglong id) {
     auto parent = items_by_page_id.value(id);
     for (auto child : children_by_parent_id[id]) {
-      auto expanded = child.Expanded();
       items_by_page_id[child.Id()] = NewPage(&child, parent, false);
       add_children_of(child.Id());
-      items_by_page_id[child.Id()]->setExpanded(expanded);
     }
   };
   add_children_of(-1);
   // Expand by default
   item->setExpanded(true);
+  // Set the child expansions
+  for (int i = 0; i < item->childCount(); i++) {
+    AsPageTreeItem(item->child(i))->ApplyWorkspaceExpansion();
+  }
 
   // If there is nothing current, set it as  child of this or just any
   // we can find
@@ -1357,7 +1363,7 @@ void PageTree::MakeWorkspaceExplicitIfPossible() {
   while (auto child = AsPageTreeItem(takeTopLevelItem(1))) {
     item->addChild(child);
     // We have to re-set the expansion here
-    child->setExpanded(child->WorkspacePage().Expanded());
+    child->ApplyWorkspaceExpansion();
     child->AfterAdded();
   }
   // This needs to be expanded
@@ -1376,7 +1382,7 @@ void PageTree::MakeWorkspaceImplicitIfPossible() {
   while (auto child = AsPageTreeItem(item->takeChild(0))) {
     addTopLevelItem(child);
     // We have to re-set the expansion here
-    child->setExpanded(child->WorkspacePage().Expanded());
+    child->ApplyWorkspaceExpansion();
     child->AfterAdded();
   }
   // Reset the current item

@@ -31,6 +31,7 @@ class BrowserWidget : public QWidget {
                          QWidget* parent = nullptr);
 
   void LoadUrl(const QString& url);
+  void SetUrlText(const QString& url);
   void TryClose();
   void FocusUrlEdit();
   void FocusBrowser();
@@ -59,7 +60,7 @@ class BrowserWidget : public QWidget {
   void SetZoomLevel(double level);
 
   bool Suspended() const;
-  void SetSuspended(bool suspend);
+  void SetSuspended(bool suspend, const QString& url_override = QString());
 
   QJsonObject DebugDump() const;
 

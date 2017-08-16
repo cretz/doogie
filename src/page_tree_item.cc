@@ -12,10 +12,17 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
       browser_(browser),
       workspace_page_(workspace_page) {
   if (!workspace_page_.Exists()) workspace_page_.Save();
+  if (!workspace_page_.Icon().isNull()) {
+    setIcon(0, workspace_page_.Icon());
+    setText(0, workspace_page_.Title());
+    browser->SetUrlText(workspace_page_.Url());
+  } else {
+    setText(0, "(New Window)");
+  }
+
   setFlags(Qt::ItemIsSelectable | Qt::ItemIsDragEnabled |
            Qt::ItemIsDropEnabled | Qt::ItemIsEnabled);
   // Connect title and favicon change
-  setText(0, "(New Window)");
   browser->connect(browser, &BrowserWidget::TitleChanged, [=]() {
     if (browser_) {
       setText(0, browser_->CurrentTitle());
@@ -68,6 +75,9 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
   browser->connect(browser, &BrowserWidget::SuspensionChanged, [=]() {
     auto palette = QGuiApplication::palette();
     if (browser_->Suspended()) {
+      // If it's still loading, re-apply the favicon here so
+      //  the loading movie stops
+      if (browser_->Loading()) ApplyFavicon();
       setForeground(0, palette.brush(QPalette::Disabled, QPalette::Text));
       auto existing_icon = icon(0);
       auto sizes = existing_icon.availableSizes();
@@ -121,7 +131,8 @@ void PageTreeItem::AfterAdded() {
   }
 
   auto tree = static_cast<PageTree*>(treeWidget());
-  ApplyFavicon();
+  // Apply with the current icon if it's there
+  ApplyFavicon(icon(0));
 
   // Set the icon
   auto label = new QLabel;
@@ -240,6 +251,13 @@ bool PageTreeItem::SelectedOrHasSelectedParent() const {
   return static_cast<PageTreeItem*>(parent())->SelectedOrHasSelectedParent();
 }
 
+void PageTreeItem::ApplyWorkspaceExpansion() {
+  setExpanded(workspace_page_.Expanded());
+  for (int i = 0; i < childCount(); i++) {
+    static_cast<PageTreeItem*>(child(i))->ApplyWorkspaceExpansion();
+  }
+}
+
 QList<PageTreeItem*> PageTreeItem::Siblings() const {
   auto my_parent = parent();
   if (!my_parent) my_parent = treeWidget()->invisibleRootItem();
@@ -282,11 +300,11 @@ void PageTreeItem::CollapseStateChanged() {
   }
 }
 
-void PageTreeItem::ApplyFavicon() {
+void PageTreeItem::ApplyFavicon(const QIcon& icon_override) {
   auto tree = static_cast<PageTree*>(treeWidget());
   if (loading_icon_frame_conn_) tree->disconnect(loading_icon_frame_conn_);
   if (browser_) {
-    if (browser_->Loading()) {
+    if (browser_->Loading() && !browser_->Suspended()) {
       tree->LoadingIconMovie()->start();
       // We don't like constantly setting the icon here, but there's not
       // a much better option. Putting a QMovie as a setItemWidget has other
@@ -297,7 +315,9 @@ void PageTreeItem::ApplyFavicon() {
         setIcon(0, QIcon(tree->LoadingIconMovie()->currentPixmap()));
       });
     } else {
-      auto icon = browser_->CurrentFavicon();
+      auto icon = icon_override.isNull() ?
+            browser_->CurrentFavicon() : icon_override;
+      // Only update if an icon is not already set
       if (icon.isNull()) {
         icon = Util::CachedIcon(":/res/images/fontawesome/file-o.png");
       }

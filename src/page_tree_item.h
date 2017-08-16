@@ -34,6 +34,7 @@ class PageTreeItem : public QTreeWidgetItem {
   void CollapseSelfAndChildren();
   QList<PageTreeItem*> SelfSelectedOrChildrenSelected() const;
   bool SelectedOrHasSelectedParent() const;
+  void ApplyWorkspaceExpansion();
 
   QList<PageTreeItem*> Siblings() const;
 
@@ -49,7 +50,7 @@ class PageTreeItem : public QTreeWidgetItem {
   void CollapseStateChanged();
 
  private:
-  void ApplyFavicon();
+  void ApplyFavicon(const QIcon& icon_override = QIcon());
 
   QPointer<BrowserWidget> browser_;
   Workspace::WorkspacePage workspace_page_;

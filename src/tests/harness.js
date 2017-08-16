@@ -32,8 +32,10 @@ exports.Harness = class Harness {
     if (this.resourceServer) return Promise.reject(new Error('Already running'))
     return new Promise((resolve, reject) => {
       const resServe = http.createServer((req, res) => {
-        const reqUrl = url.parse(req.url)
+        const reqUrl = url.parse(req.url, true)
         res.writeHead(200)
+        // We'll just return if it wants us to hang forever
+        if (reqUrl.query['loadForever']) return
         const stream = fs.createReadStream(
           path.join(this.resourceDir, path.normalize(reqUrl.pathname)))
         stream.once('error', e => {
