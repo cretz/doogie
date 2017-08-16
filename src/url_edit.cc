@@ -22,9 +22,7 @@ UrlEdit::UrlEdit(QWidget* parent) : QLineEdit(parent) {
     emit returnPressed();
   });
   connect(autocomplete_, &QListWidget::currentRowChanged, [=](int row) {
-    if (row == -1) {
-      setText(typed_before_moved_);
-    } else {
+    if (row >= 0) {
       setText(autocomplete_->item(row)->data(Qt::UserRole + 1).toString());
     }
   });
@@ -41,7 +39,6 @@ void UrlEdit::keyPressEvent(QKeyEvent* event) {
   if (event->modifiers() == Qt::NoModifier) {
     // Hide the auto complete window if we escaped
     if (event->key() == Qt::Key_Escape && autocomplete_->isVisible()) {
-      setText(typed_before_moved_);
       autocomplete_->hide();
       return;
     }
@@ -89,6 +86,9 @@ void UrlEdit::keyPressEvent(QKeyEvent* event) {
         } else {
           row += 5;
         }
+      }
+      if (row == -1) {
+        setText(typed_before_moved_);
       }
       autocomplete_->setCurrentRow(row);
       return;

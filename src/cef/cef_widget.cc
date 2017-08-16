@@ -47,6 +47,8 @@ CefWidget::CefWidget(const Cef& cef,
           this, &CefWidget::LoadStateChanged);
   connect(handler_, &CefHandler::LoadStart,
           this, &CefWidget::LoadStart);
+  connect(handler_, &CefHandler::LoadError,
+          this, &CefWidget::LoadError);
   connect(handler_, &CefHandler::PageOpen,
           this, &CefWidget::PageOpen);
   connect(handler_, &CefHandler::FindResult,

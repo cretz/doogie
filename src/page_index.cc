@@ -16,8 +16,14 @@ QList<PageIndex::AutocompletePage> PageIndex::AutocompleteSuggest(
   // Take the text, trim, split on space, ignore empties, add asterisk
   // after each item, rejoin, search...
   // Oh, and we quote it, which means replace existing quotes w/ double quotes
+  auto text_to_split = text;
+  // We need to take off the scheme if it's there
+  auto scheme_colon_index = text.indexOf("://");
+  if (scheme_colon_index >= 0) {
+    text_to_split = text.mid(scheme_colon_index + 3);
+  }
   QString to_search = "";
-  for (auto piece : text.trimmed().replace("'", "''").
+  for (auto piece : text_to_split.trimmed().replace("'", "''").
        split(' ', QString::SkipEmptyParts)) {
     to_search += QString("\"%1\"*").arg(piece);
   }

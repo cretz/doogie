@@ -118,6 +118,7 @@ class BrowserWidget : public QWidget {
   bool suspended_ = false;
   QString suspended_url_;
   QPixmap suspended_screenshot_;
+  bool next_load_is_error_ = true;
 };
 
 }  // namespace doogie

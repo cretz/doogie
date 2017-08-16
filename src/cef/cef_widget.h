@@ -77,6 +77,10 @@ class CefWidget : public CefBaseWidget {
                         bool can_go_back,
                         bool can_go_forward);
   void LoadStart(CefLoadHandler::TransitionType transition_type);
+  void LoadError(CefRefPtr<CefFrame> frame,
+                 CefLoadHandler::ErrorCode error_code,
+                 const QString& error_text,
+                 const QString& failed_url);
   void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,
                 bool user_gesture);

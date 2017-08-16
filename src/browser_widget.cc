@@ -356,6 +356,34 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       PageIndex::MarkVisit(CurrentUrl(), current_title_,
                            current_favicon_url_, current_favicon_);
     }
+    // Reset the URL edit stylesheet if we're not in error mode
+    if (loading_) {
+      if (next_load_is_error_) {
+        next_load_is_error_ = false;
+      } else {
+        url_edit_->setStyleSheet("");
+      }
+    }
+  });
+  connect(cef_widg_, &CefWidget::LoadError,
+          [=](CefRefPtr<CefFrame> frame,
+              CefLoadHandler::ErrorCode error_code,
+              const QString& error_text,
+              const QString& failed_url) {
+    // Some error codes we are ok with
+    if (error_code == ERR_NONE || error_code == ERR_ABORTED) {
+      return;
+    }
+    if (frame->IsMain()) {
+      url_edit_->setStyleSheet("QLineEdit { background-color: pink; }");
+      next_load_is_error_ = true;
+    }
+    auto new_html =
+        QString("<html><body style=\"background-color: pink;\">"
+                "Error loading page: <strong>%1</strong>"
+                "</body></html>").arg(error_text);
+    frame->LoadString(CefString(new_html.toStdString()),
+                      CefString(failed_url.toStdString()));
   });
   connect(cef_widg_, &CefWidget::PageOpen,
           [=](CefHandler::WindowOpenType type,

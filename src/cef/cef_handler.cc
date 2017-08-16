@@ -178,6 +178,16 @@ void CefHandler::OnLoadStart(CefRefPtr<CefBrowser> browser,
   if (frame->IsMain()) emit LoadStart(transition_type);
 }
 
+void CefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
+                             CefRefPtr<CefFrame> frame,
+                             ErrorCode error_code,
+                             const CefString& error_text,
+                             const CefString& failed_url) {
+  emit LoadError(frame, error_code,
+                 QString::fromStdString(error_text.ToString()),
+                 QString::fromStdString(failed_url.ToString()));
+}
+
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,
