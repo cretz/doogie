@@ -175,6 +175,13 @@ void CefHandler::OnLoadEnd(CefRefPtr<CefBrowser> browser,
 void CefHandler::OnLoadStart(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame,
                              TransitionType transition_type) {
+  // If we have JS we want to execute before anything else on this page,
+  //  we do it in CefRenderProcessHandler::OnContextCreated. But that is
+  //  not called on pages without JS, so we do a little no-op JS code here
+  //  to trigger JS context creation.
+  if (load_start_js_no_op_to_create_context_) {
+    frame->ExecuteJavaScript("// no-op", "<doogie>", 0);
+  }
   if (frame->IsMain()) emit LoadStart(transition_type);
 }
 

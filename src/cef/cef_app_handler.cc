@@ -26,7 +26,6 @@ void CefAppHandler::OnContextCreated(CefRefPtr<CefBrowser> browser,
 }
 
 void CefAppHandler::OnWebKitInitialized() {
-  blocker_.Init();
 }
 
 }  // namespace doogie

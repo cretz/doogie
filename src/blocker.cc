@@ -2,33 +2,23 @@
 
 namespace doogie {
 
-void Blocker::Init() {
-  // For element hiding we are going to walk the nodes and display: none
-  // all of them
-  auto code = CefString(
-      "var doogie = {}; "
-      "native function mutationCallback(); "
-      "Object.defineProperty(doogie, 'mutationCallback', { "
-      "  value: mutationCallback, "
-      "  writable: false "
-      "});");
-  CefRegisterExtension("doogie/blocker",
-                       code,
-                       new Blocker::MutationCallback());
-}
-
 void Blocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame,
                              CefRefPtr<CefV8Context> context) {
-  // TODO(cretz): waiting on http://www.magpcss.org/ceforum/viewtopic.php?f=6&t=15360
-  /*
+  // We are going to create a mutation callback function, use it,
+  //  then remove it to prevent fingerprinting
+  auto global = context->GetGlobal();
+  global->SetValue(
+      "mutationCallback",
+      CefV8Value::CreateFunction("mutationCallback",
+                                 new Blocker::MutationCallback()),
+      V8_PROPERTY_ATTRIBUTE_NONE);
   frame->ExecuteJavaScript(
-      "const obs = new MutationObserver(doogie.mutationCallback); "
-      "obs.observe(document, { childList: true, subtree: true }); ",
+      "const obs = new MutationObserver(mutationCallback);\n"
+      "obs.observe(document, { childList: true, subtree: true });\n"
+      "delete window.mutationCallback;",
       "<doogie>",
-      0
-  );
-  */
+      0);
 }
 
 bool Blocker::MutationCallback::Execute(const CefString& name,
@@ -39,28 +29,8 @@ bool Blocker::MutationCallback::Execute(const CefString& name,
   if (name != "mutationCallback" || arguments.empty()) return false;
   auto arg = arguments[0];
   if (!arg->IsArray()) return false;
-  /*
-  qDebug() << "!!Changed " << arg->GetArrayLength() << " nodes";
-  for (int i = 0; i < arg->GetArrayLength(); i++) {
-    auto record = arg->GetValue(i);
-    auto target = record->GetValue("target");
-    if (target) {
-      qDebug() << "!!Target: " << QString::fromStdString(target->GetValue("nodeName")->GetStringValue().ToString());
-    }
-    auto added = record->GetValue("addedNodes");
-    if (added) {
-      auto len = added->GetValue("length")->GetIntValue();
-      qDebug() << "!!Added node count: " << len;
-      for (int j = 0; j < len; j++) {
-        auto item = added->GetValue(j);
-        if (item) {
-          qDebug() << "!!Type: " << item->GetValue("nodeType")->GetIntValue();
-          qDebug() << "!!Name: " << QString::fromStdString(item->GetValue("nodeName")->GetStringValue().ToString());
-        }
-      }
-    }
-  }
-  */
+  // TODO(cretz): The rest of this for cosmetic filters
+  // qDebug() << "!!Changed " << arg->GetArrayLength() << " nodes";
   return true;
 }
 

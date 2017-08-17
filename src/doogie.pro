@@ -13,6 +13,7 @@ debug:CONFIG += console
 SOURCES += \
     action_manager.cc \
     blocker.cc \
+    blocker_rules.cc \
     browser_stack.cc \
     browser_widget.cc \
     bubble.cc \
@@ -43,6 +44,7 @@ SOURCES += \
 HEADERS += \
     action_manager.h \
     blocker.h \
+    blocker_rules.h \
     browser_stack.h \
     browser_widget.h \
     bubble.h \

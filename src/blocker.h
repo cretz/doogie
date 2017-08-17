@@ -10,8 +10,6 @@ namespace doogie {
 class Blocker {
 
  public:
-  void Init();
-
   void OnFrameCreated(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefV8Context> context);

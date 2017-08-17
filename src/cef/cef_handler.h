@@ -248,6 +248,7 @@ class CefHandler :
   void BrowserLog(const QString& str);
 
  private:
+  bool load_start_js_no_op_to_create_context_ = true;
   bool popup_as_page_open_ = true;
   JsDialogCallback js_dialog_callback_;
 
