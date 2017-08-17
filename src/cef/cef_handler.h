@@ -191,6 +191,11 @@ class CefHandler :
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefRequest> request,
                       bool is_redirect) override;
+  bool OnCertificateError(CefRefPtr<CefBrowser> browser,
+                          cef_errorcode_t cert_error,
+                          const CefString& request_url,
+                          CefRefPtr<CefSSLInfo> ssl_info,
+                          CefRefPtr<CefRequestCallback> callback) override;
   bool OnOpenURLFromTab(
       CefRefPtr<CefBrowser> browser,
       CefRefPtr<CefFrame> frame,
@@ -234,6 +239,11 @@ class CefHandler :
                  ErrorCode error_code,
                  const QString& error_text,
                  const QString& failed_url);
+  void CertificateError(
+      cef_errorcode_t cert_error,
+      const QString& request_url,
+      CefRefPtr<CefSSLInfo> ssl_info,
+      CefRefPtr<CefRequestCallback> callback);
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
   void BrowserLog(const QString& str);
 

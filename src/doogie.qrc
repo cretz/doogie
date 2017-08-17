@@ -9,11 +9,14 @@
         <file>images/fontawesome/circle.png</file>
         <file>images/fontawesome/file-o.png</file>
         <file>images/fontawesome/folder-open-o.png</file>
+        <file>images/fontawesome/lock.png</file>
         <file>images/fontawesome/pause.png</file>
         <file>images/fontawesome/play.png</file>
         <file>images/fontawesome/repeat.png</file>
         <file>images/fontawesome/times.png</file>
         <file>images/fontawesome/times-circle.png</file>
+        <file>images/fontawesome/unlock.png</file>
+        <file>images/fontawesome/unlock-alt.png</file>
 
         <file>schema.sql</file>
     </qresource>

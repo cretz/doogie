@@ -27,9 +27,14 @@ class CefWidget : public CefBaseWidget {
   ~CefWidget();
 
   std::vector<NavEntry> NavEntries() const;
+  CefRefPtr<CefSSLStatus> CurrentSSLStatus() const;
   // If result is non-null, it needs to replace this widget
   QPointer<QWidget> OverrideWidget() const;
   void LoadUrl(const QString& url);
+  // No frame means main frame
+  void ShowStringPage(const QString& url,
+                      const QString& contents,
+                      CefRefPtr<CefFrame> frame = nullptr);
   QString CurrentUrl() const;
   bool HasDocument() const;
   void TryClose();
@@ -81,6 +86,11 @@ class CefWidget : public CefBaseWidget {
                  CefLoadHandler::ErrorCode error_code,
                  const QString& error_text,
                  const QString& failed_url);
+  void CertificateError(
+      cef_errorcode_t cert_error,
+      const QString& request_url,
+      CefRefPtr<CefSSLInfo> ssl_info,
+      CefRefPtr<CefRequestCallback> callback);
   void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,
                 bool user_gesture);
@@ -113,20 +123,23 @@ class CefWidget : public CefBaseWidget {
   class NavEntryVisitor : public CefNavigationEntryVisitor {
    public:
     bool Visit(CefRefPtr<CefNavigationEntry> entry,
-               bool current, int, int) override {
-      NavEntry nav_entry = {
-        QString::fromStdString(entry->GetURL().ToString()),
-        QString::fromStdString(entry->GetTitle().ToString()),
-        current
-      };
-      entries_.push_back(nav_entry);
-      return true;
-    }
-    std::vector<NavEntry> Entries() { return entries_; }
+               bool current, int, int) override;
+    std::vector<NavEntry> Entries() const { return entries_; }
 
    private:
     std::vector<NavEntry> entries_;
     IMPLEMENT_REFCOUNTING(NavEntryVisitor)
+  };
+
+  class NavEntryCurrentSslVisitor : public CefNavigationEntryVisitor {
+   public:
+    bool Visit(CefRefPtr<CefNavigationEntry> entry,
+               bool current, int, int) override;
+    CefRefPtr<CefSSLStatus> SslStatus() const { return ssl_status_; }
+
+   private:
+    CefRefPtr<CefSSLStatus> ssl_status_;
+    IMPLEMENT_REFCOUNTING(NavEntryCurrentSslVisitor)
   };
 
   void InitBrowser(const Bubble& bubble, const QString& url);

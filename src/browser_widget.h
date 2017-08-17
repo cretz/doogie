@@ -97,11 +97,17 @@ class BrowserWidget : public QWidget {
   void HandleContextMenuCommand(CefRefPtr<CefContextMenuParams> params,
                                 int command_id,
                                 CefContextMenuHandler::EventFlags event_flags);
+  void ShowError(const QString& failed_url,
+                 const QString& error_text,
+                 CefRefPtr<CefFrame> frame = nullptr);
+  void UpdateSslStatus(bool check_errored);
+  void ShowSslInfo() const;
 
   const Cef& cef_;
   Bubble bubble_;
   QToolButton* back_button_ = nullptr;
   QToolButton* forward_button_ = nullptr;
+  QToolButton* ssl_button_ = nullptr;
   QMenu* nav_menu_ = nullptr;
   UrlEdit* url_edit_ = nullptr;
   QToolButton* refresh_button_ = nullptr;
@@ -118,7 +124,10 @@ class BrowserWidget : public QWidget {
   bool suspended_ = false;
   QString suspended_url_;
   QPixmap suspended_screenshot_;
-  bool next_load_is_error_ = true;
+  int number_of_load_completes_are_error_ = 0;
+  CefRefPtr<CefSSLInfo> errored_ssl_info_;
+  CefRefPtr<CefRequestCallback> errored_ssl_callback_;
+  CefRefPtr<CefSSLStatus> ssl_status_;
 };
 
 }  // namespace doogie

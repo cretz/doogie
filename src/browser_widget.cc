@@ -34,6 +34,11 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   forward_button_->setDisabled(true);
   connect(forward_button_, &QToolButton::clicked, [=](bool) { Forward(); });
 
+  ssl_button_ = new QToolButton;
+  ssl_button_->setAutoRaise(true);
+  ssl_button_->setDisabled(true);
+  connect(ssl_button_, &QToolButton::clicked, [=](bool) { ShowSslInfo(); });
+
   url_edit_ = new UrlEdit(this);
   connect(url_edit_, &UrlEdit::returnPressed, [=]() {
     cef_widg_->LoadUrl(url_edit_->text());
@@ -60,6 +65,7 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   top_layout->setMargin(0);
   top_layout->addWidget(back_button_);
   top_layout->addWidget(forward_button_);
+  top_layout->addWidget(ssl_button_);
   top_layout->addWidget(url_edit_, 1);
   top_layout->addWidget(stop_button_);
   top_layout->addWidget(refresh_button_);
@@ -356,13 +362,13 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
       PageIndex::MarkVisit(CurrentUrl(), current_title_,
                            current_favicon_url_, current_favicon_);
     }
-    // Reset the URL edit stylesheet if we're not in error mode
-    if (loading_) {
-      if (next_load_is_error_) {
-        next_load_is_error_ = false;
-      } else {
-        url_edit_->setStyleSheet("");
-      }
+
+    // Reset the stylesheet and update SSL status when not errored
+    if (number_of_load_completes_are_error_ <= 0) {
+      UpdateSslStatus(false);
+      url_edit_->setStyleSheet("");
+    } else if (!loading_) {
+      number_of_load_completes_are_error_--;
     }
   });
   connect(cef_widg_, &CefWidget::LoadError,
@@ -371,19 +377,20 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
               const QString& error_text,
               const QString& failed_url) {
     // Some error codes we are ok with
-    if (error_code == ERR_NONE || error_code == ERR_ABORTED) {
-      return;
+    if (error_code != ERR_NONE && error_code != ERR_ABORTED) {
+      ShowError(failed_url, error_text, frame);
     }
-    if (frame->IsMain()) {
-      url_edit_->setStyleSheet("QLineEdit { background-color: pink; }");
-      next_load_is_error_ = true;
-    }
-    auto new_html =
-        QString("<html><body style=\"background-color: pink;\">"
-                "Error loading page: <strong>%1</strong>"
-                "</body></html>").arg(error_text);
-    frame->LoadString(CefString(new_html.toStdString()),
-                      CefString(failed_url.toStdString()));
+  });
+  connect(cef_widg_, &CefWidget::CertificateError,
+          [=](cef_errorcode_t,
+              const QString& request_url,
+              CefRefPtr<CefSSLInfo> ssl_info,
+              CefRefPtr<CefRequestCallback> callback) {
+    // TODO(cretz): Check if this is the main frame please
+    errored_ssl_info_ = ssl_info;
+    errored_ssl_callback_ = callback;
+    ShowError(request_url, "Invalid Certificate");
+    UpdateSslStatus(true);
   });
   connect(cef_widg_, &CefWidget::PageOpen,
           [=](CefHandler::WindowOpenType type,
@@ -536,6 +543,8 @@ void BrowserWidget::RebuildNavMenu() {
 void BrowserWidget::ShowAsSuspendedScreenshot() {
   auto grid_layout = qobject_cast<QGridLayout*>(layout());
   if (Suspended()) {
+    // Have to disable the SSL button
+    ssl_button_->setDisabled(true);
     // Remove the cef widg and add screenshot
     grid_layout->removeWidget(cef_widg_);
     cef_widg_->hide();
@@ -640,6 +649,67 @@ void BrowserWidget::HandleContextMenuCommand(
       throw std::invalid_argument("Unknown command");
     }
   }
+}
+
+void BrowserWidget::ShowError(const QString& failed_url,
+                              const QString& error_text,
+                              CefRefPtr<CefFrame> frame) {
+  if (!frame || frame->IsMain()) {
+    url_edit_->setStyleSheet("QLineEdit { background-color: pink; }");
+    number_of_load_completes_are_error_ = 2;
+  }
+  auto new_html =
+      QString("<html><body style=\"background-color: pink;\">"
+              "Error loading page: <strong>%1</strong>"
+              "</body></html>").arg(error_text);
+  cef_widg_->ShowStringPage(failed_url, new_html, frame);
+}
+
+void BrowserWidget::UpdateSslStatus(bool check_errored) {
+  if (check_errored && errored_ssl_info_) {
+    ssl_button_->setDisabled(false);
+    ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
+        ":/res/images/fontawesome/unlock.png", "red")));
+    ssl_button_->setToolTip("Invalid Certificate");
+  } else if (loading_) {
+    ssl_button_->setDisabled(true);
+    ssl_button_->setIcon(QIcon());
+    ssl_button_->setToolTip("");
+  } else {
+    errored_ssl_info_ = nullptr;
+    errored_ssl_callback_ = nullptr;
+    ssl_status_ = cef_widg_->CurrentSSLStatus();
+    // If the SSL status is not there or there is no SSL, we mark
+    //  it as unlocked and disable the button
+    if (!ssl_status_ || !ssl_status_->IsSecureConnection()) {
+      ssl_button_->setIcon(Util::CachedIconLighterDisabled(
+          ":/res/images/fontawesome/unlock-alt.png"));
+      ssl_button_->setDisabled(true);
+      ssl_button_->setToolTip("Not secure");
+    } else {
+      ssl_button_->setDisabled(false);
+      // Red when there is a cert error, orange for content error,
+      //  green otherwise
+      if (ssl_status_->GetCertStatus() != CERT_STATUS_NONE) {
+        ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
+            ":/res/images/fontawesome/unlock.png", "red")));
+        ssl_button_->setToolTip("Invalid Certificate");
+      } else if (ssl_status_->GetContentStatus() !=
+                 SSL_CONTENT_NORMAL_CONTENT) {
+        ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
+            ":/res/images/fontawesome/unlock.png", "orange")));
+        ssl_button_->setToolTip("Insecure Page Contents");
+      } else {
+        ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
+            ":/res/images/fontawesome/lock.png", "green")));
+        ssl_button_->setToolTip("Secure");
+      }
+    }
+  }
+}
+
+void BrowserWidget::ShowSslInfo() const {
+  // TODO
 }
 
 }  // namespace doogie

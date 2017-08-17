@@ -49,6 +49,8 @@ CefWidget::CefWidget(const Cef& cef,
           this, &CefWidget::LoadStart);
   connect(handler_, &CefHandler::LoadError,
           this, &CefWidget::LoadError);
+  connect(handler_, &CefHandler::CertificateError,
+          this, &CefWidget::CertificateError);
   connect(handler_, &CefHandler::PageOpen,
           this, &CefWidget::PageOpen);
   connect(handler_, &CefHandler::FindResult,
@@ -70,11 +72,20 @@ CefWidget::~CefWidget() {
 
 std::vector<CefWidget::NavEntry> CefWidget::NavEntries() const {
   CefRefPtr<CefWidget::NavEntryVisitor> visitor =
-      new CefWidget::NavEntryVisitor;
+      new CefWidget::NavEntryVisitor();
   if (browser_) {
     browser_->GetHost()->GetNavigationEntries(visitor, false);
   }
   return visitor->Entries();
+}
+
+CefRefPtr<CefSSLStatus> CefWidget::CurrentSSLStatus() const {
+  CefRefPtr<CefWidget::NavEntryCurrentSslVisitor> visitor =
+      new CefWidget::NavEntryCurrentSslVisitor();
+  if (browser_ && !browser_->IsLoading() && browser_->HasDocument()) {
+    browser_->GetHost()->GetNavigationEntries(visitor, true);
+  }
+  return visitor->SslStatus();
 }
 
 QPointer<QWidget> CefWidget::OverrideWidget() const {
@@ -84,6 +95,16 @@ QPointer<QWidget> CefWidget::OverrideWidget() const {
 void CefWidget::LoadUrl(const QString& url) {
   if (browser_) {
     browser_->GetMainFrame()->LoadURL(CefString(url.toStdString()));
+  }
+}
+
+void CefWidget::ShowStringPage(const QString& url,
+                               const QString& contents,
+                               CefRefPtr<CefFrame> frame) {
+  if (browser_) {
+    auto f = frame ? frame : browser_->GetMainFrame();
+    f->LoadString(CefString(contents.toStdString()),
+                  CefString(url.toStdString()));
   }
 }
 
@@ -260,6 +281,26 @@ void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
   }
   emit cef_widg_->FaviconChanged(QString::fromStdString(url.ToString()),
                                  icon);
+}
+
+bool CefWidget::NavEntryVisitor::Visit(CefRefPtr<CefNavigationEntry> entry,
+                                       bool current,
+                                       int, int) {
+  NavEntry nav_entry = {
+    QString::fromStdString(entry->GetURL().ToString()),
+    QString::fromStdString(entry->GetTitle().ToString()),
+    current
+  };
+  entries_.push_back(nav_entry);
+  return true;
+}
+
+bool CefWidget::NavEntryCurrentSslVisitor::Visit(
+    CefRefPtr<CefNavigationEntry> entry,
+    bool current,
+    int, int) {
+  if (entry->IsValid() && current) ssl_status_ = entry->GetSSLStatus();
+  return false;
 }
 
 }  // namespace doogie

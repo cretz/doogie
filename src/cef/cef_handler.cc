@@ -195,6 +195,17 @@ bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
   return false;
 }
 
+bool CefHandler::OnCertificateError(CefRefPtr<CefBrowser> browser,
+                                    cef_errorcode_t cert_error,
+                                    const CefString& request_url,
+                                    CefRefPtr<CefSSLInfo> ssl_info,
+                                    CefRefPtr<CefRequestCallback> callback) {
+  emit CertificateError(cert_error,
+                        QString::fromStdString(request_url.ToString()),
+                        ssl_info, callback);
+  return true;
+}
+
 bool CefHandler::OnOpenURLFromTab(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefFrame> frame,
