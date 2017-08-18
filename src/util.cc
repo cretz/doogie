@@ -99,7 +99,7 @@ QString Util::FriendlyByteSize(double num) {
   QStringList list = { "KB", "MB", "GB", "TB" };
   QStringListIterator i(list);
   QString unit = "bytes";
-  while(num >= 1024.0 && i.hasNext()) {
+  while (num >= 1024.0 && i.hasNext()) {
     unit = i.next();
     num /= 1024.0;
   }

@@ -5,5 +5,5 @@
 /src/debug
 /src/release
 /src/.qmake.stash
-/src/tests/node_modules
-/src/tests/temp
+/src/tests/integration/node_modules
+/src/tests/integration/temp

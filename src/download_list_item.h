@@ -9,7 +9,7 @@ namespace doogie {
 
 class DownloadListItem : public QListWidgetItem {
  public:
-  explicit DownloadListItem();
+  DownloadListItem();
   void AfterAdded();
   // Returns false if this is not the right item for it
   bool UpdateDownload(const Download& download);
@@ -28,6 +28,6 @@ class DownloadListItem : public QListWidgetItem {
   QToolButton* open_folder_button_;
 };
 
-}  // namespace
+}  // namespace doogie
 
-#endif // DOWNLOAD_LIST_ITEM_H
+#endif  // DOOGIE_DOWNLOAD_LIST_ITEM_H_

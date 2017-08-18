@@ -135,9 +135,10 @@ void BrowserWidget::TryClose() {
 }
 
 void BrowserWidget::FocusUrlEdit() {
-  // We have to defer this because CEF window steals focus immediately
-  // here.
-  // TODO(cretz): Fix when https://bitbucket.org/chromiumembedded/cef/issues/1856/ is fixed
+  // We have to defer this because CEF window steals focus
+  // immediately here.
+  // TODO(cretz): Fix when the following is fixed:
+  //  https://bitbucket.org/chromiumembedded/cef/issues/1856/
   QTimer::singleShot(0, [=]() {
     url_edit_->activateWindow();
     url_edit_->setFocus();
@@ -709,7 +710,7 @@ void BrowserWidget::UpdateSslStatus(bool check_errored) {
 }
 
 void BrowserWidget::ShowSslInfo() const {
-  // TODO
+  // TODO(cretz): this
 }
 
 }  // namespace doogie

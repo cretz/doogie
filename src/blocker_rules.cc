@@ -2,10 +2,31 @@
 
 namespace doogie {
 
-BlockerRules::Rule BlockerRules::Rule::ParseRule(const QString& line) {
-  // TODO(cretz): cosmetic
-  return StaticRule::ParseRule(line);
+BlockerRules::Rule BlockerRules::Rule::ParseRule(const QString& line,
+                                                 int file_index,
+                                                 int line_num) {
+  auto trimmed = line.trimmed();
+  Rule rule;
+  if (trimmed.startsWith("!")) {
+    rule = CommentRule::ParseRule(line);
+  } else if (trimmed.startsWith("##")) {
+    rule = CosmeticRule::ParseRule(line);
+  } else if (!trimmed.isEmpty()) {
+    rule = StaticRule::ParseRule(line, file_index, line_num);
+  }
+  rule.file_index_ = file_index;
+  rule.line_num_ = line_num;
+  return rule;
 }
+
+BlockerRules::CommentRule BlockerRules::CommentRule::ParseRule(
+    const QString& line) {
+  CommentRule ret;
+  if (line.startsWith("! ")) ret.line_ = line.mid(2);
+  return ret;
+}
+
+BlockerRules::CommentRule::CommentRule() { }
 
 BlockerRules::StaticRule::RulePiece::RulePiece() { }
 
@@ -78,7 +99,7 @@ void BlockerRules::StaticRule::RulePiece::AddAsChildOf(RulePiece* parent) {
 }
 
 BlockerRules::StaticRule BlockerRules::StaticRule::ParseRule(
-    const QString& line) {
+    const QString& line, int file_index, int line_num) {
 
   StaticRule ret;
   auto rule_bytes = line.toLatin1();
@@ -148,15 +169,26 @@ BlockerRules::StaticRule BlockerRules::StaticRule::ParseRule(
     curr_index++;
   }
 
+  curr_piece->SetAsTerminator(file_index, line_num);
+
   return ret;
 }
 
 BlockerRules::StaticRule::StaticRule() { }
 
-QList<BlockerRules::Rule> BlockerRules::ParseRules(QTextStream* stream) {
+BlockerRules::CosmeticRule BlockerRules::CosmeticRule::ParseRule(
+    const QString& line) {
+  // TODO(cretz): this
+  return CosmeticRule();
+}
+
+QList<BlockerRules::Rule> BlockerRules::ParseRules(QTextStream* stream,
+                                                   int file_index) {
   QList<BlockerRules::Rule> ret;
+  int line_num = 0;
   while (!stream->atEnd()) {
-    auto rule = Rule::ParseRule(stream->readLine());
+    line_num++;
+    auto rule = Rule::ParseRule(stream->readLine(), file_index, line_num);
     if (!rule.IsNull()) ret.append(rule);
   }
   return ret;

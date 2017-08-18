@@ -108,3 +108,6 @@ unix {
 
 # include cef folder
 include(cef/cef.pri)
+
+# include tests
+include(tests/unit/tests.pri)

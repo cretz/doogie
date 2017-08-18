@@ -65,14 +65,26 @@ Once complete, the package(s) will in `release/package` (e.g. doogie.zip in Wind
 
 ### Testing
 
-The tests are integration tests and are not yet integrated in `build.go`. The tests are written in node.js. Make sure
-you have the latest LTS release of node installed and navigate to `src/tests`. To setup the test infrastructure, run:
+There are two types of tests, unit and integration tests at `tests/unit` and `tests/integration` respectively.
+
+#### Integration Tests
+
+The integration tests are not yet integrated in `build.go`. The tests are written in node.js. Make sure you have the
+latest LTS release of node installed and navigate to `src/tests/integration`. To setup the test infrastructure, run:
 
     npm install
 
 To run the tests, make sure a debug instance of Doogie is running then run
 
     npm test
+
+#### Unit Tests
+
+Assuming CEF is built (see the first "Running Build" step), unit tests can be run with:
+
+    go run build.go unit-test
+
+Like the `run` command, the `unit-test` command can be given a `release` target, otherwise it defaults to `debug`.
 
 ### Development
 

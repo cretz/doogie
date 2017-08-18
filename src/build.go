@@ -62,13 +62,15 @@ func start() error {
 		return buildCef()
 	case "lint":
 		return lint()
+	case "unit-test":
+		return unitTest()
 	default:
 		return fmt.Errorf("Unrecognized command '%v'", os.Args[1])
 	}
 }
 
-func run() error {
-	if err := build(); err != nil {
+func run(extraQmakeArgs ...string) error {
+	if err := build(extraQmakeArgs...); err != nil {
 		return err
 	}
 	target, err := target()
@@ -86,7 +88,7 @@ func clean() error {
 	return err
 }
 
-func build() error {
+func build(extraQmakeArgs ...string) error {
 	target, err := target()
 	if err != nil {
 		return err
@@ -103,11 +105,11 @@ func build() error {
 	}
 
 	// Run qmake TODO: put behind flag
-	qmakeArgs := []string{}
+	qmakeArgs := extraQmakeArgs
 	if target == "debug" {
-		qmakeArgs = []string{"CONFIG+=debug"}
+		qmakeArgs = append(qmakeArgs, "CONFIG+=debug")
 	} else {
-		qmakeArgs = []string{"CONFIG+=release", "CONFIG-=debug"}
+		qmakeArgs = append(qmakeArgs, "CONFIG+=release", "CONFIG-=debug")
 	}
 	qmakeArgs = append(qmakeArgs, "doogie.pro")
 	if err := execCmd(qmakePath, qmakeArgs...); err != nil {
@@ -120,7 +122,7 @@ func build() error {
 	if runtime.GOOS == "windows" {
 		makeExe = "nmake.exe"
 		// This version takes the target name unlike the Linux one
-		makeArgs = []string{target}
+		makeArgs = []string{target, "/NOLOGO"}
 	}
 	if err := execCmd(makeExe, makeArgs...); err != nil {
 		return fmt.Errorf("NMake failed: %v", err)
@@ -283,9 +285,10 @@ func lint() error {
 		// Can't use, ref: https://github.com/google/styleguide/issues/22
 		// "--root=doogie\\",
 	}
+	integrationTestDir := filepath.Join("tests", "integration")
 	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() && !strings.HasPrefix(info.Name(), "moc_") &&
-			!strings.HasPrefix(path, "tests") &&
+			!strings.HasPrefix(path, integrationTestDir) &&
 			(strings.HasSuffix(path, ".cc") || strings.HasSuffix(path, ".h")) {
 			args = append(args, path)
 		}
@@ -326,6 +329,17 @@ func lint() error {
 		return fmt.Errorf("Lint check returned one or more errors")
 	}
 	return nil
+}
+
+func unitTest() error {
+	if err := build("CONFIG+=test"); err != nil {
+		return err
+	}
+	target, err := target()
+	if err != nil {
+		return err
+	}
+	return execCmd(filepath.Join(target, exeExt("doogie-test")))
 }
 
 func target() (string, error) {

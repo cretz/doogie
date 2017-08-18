@@ -101,7 +101,9 @@ DownloadsDock::DownloadsDock(BrowserStack* browser_stack, QWidget* parent)
     }
     QSettings().setValue("downloadsDock/saveDir",
                          QFileInfo(save_name).dir().path());
-    callback->Continue(CefString(QDir::toNativeSeparators(save_name).toStdString()), false);
+    callback->Continue(
+          CefString(QDir::toNativeSeparators(save_name).toStdString()),
+          false);
   });
   connect(browser_stack, &BrowserStack::DownloadUpdated,
           [=](const Download& download) {

@@ -22,7 +22,7 @@ class Download {
   static QList<Download> Downloads();
   static bool ClearDownloads(QList<qlonglong> exclude_ids);
 
-  explicit Download();
+  Download();
   explicit Download(
       CefRefPtr<CefDownloadItem> item,
       CefRefPtr<CefDownloadItemCallback> update_callback = nullptr);
@@ -73,7 +73,7 @@ class Download {
   State current_state_ = Unknown;
   QDateTime start_time_;
   QDateTime end_time_;
-  qint64 bytes_received_= -1;
+  qint64 bytes_received_ = -1;
   qint64 total_bytes_ = -1;
   qint64 current_bytes_per_sec_ = -1;
 
