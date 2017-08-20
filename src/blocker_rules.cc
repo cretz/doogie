@@ -66,7 +66,7 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
   // We check all the children to see if there are any we already match
   //  and if there are, we just add our next to their next
   QHash<char, RulePiece>::iterator iter = children_.find(first_chr);
-  while (iter != children_.end()) {
+  while (iter != children_.end() && iter.key() == first_chr) {
     if (iter.value().piece_ == piece) {
       update_child(iter.value());
       return;
@@ -117,7 +117,7 @@ const BlockerRules::StaticRule::RulePiece*
           //  version too. Note, we can assume that case-insensitive
           //  pieces are all lowercase.
           if (case_sensitive_ ||
-              (url_ch >= 'A' && url_ch <= 'Z' && url_ch + 32 != piece_ch)) {
+              url_ch < 'A' || url_ch > 'Z' || url_ch + 32 != piece_ch) {
             return nullptr;
           }
         }
@@ -138,7 +138,7 @@ const BlockerRules::StaticRule::RulePiece*
 
   // Try all char-0's (i.e. any and seps)
   QHash<char, RulePiece>::const_iterator iter = children_.constFind(0);
-  while (iter != children_.constEnd()) {
+  while (iter != children_.constEnd() && iter.key() == 0) {
     auto ret = iter.value().CheckMatch(ctx, curr_index);
     if (ret) return ret;
     ++iter;
@@ -148,8 +148,8 @@ const BlockerRules::StaticRule::RulePiece*
   for (int i = curr_index; i < ctx.target_url.length(); i++) {
     char url_ch = ctx.target_url[i];
     iter = children_.constFind(url_ch);
-    while (iter != children_.constEnd()) {
-      auto ret = iter.value().CheckMatch(ctx, curr_index + i);
+    while (iter != children_.constEnd() && iter.key() == url_ch) {
+      auto ret = iter.value().CheckMatch(ctx, i);
       if (ret) return ret;
       ++iter;
     }
@@ -157,8 +157,8 @@ const BlockerRules::StaticRule::RulePiece*
     if (url_ch >= 'A' && url_ch <= 'Z') {
       url_ch += 32;
       iter = children_.constFind(url_ch);
-      while (iter != children_.constEnd()) {
-        auto ret = iter.value().CheckMatch(ctx, curr_index + i);
+      while (iter != children_.constEnd() && iter.key() == url_ch) {
+        auto ret = iter.value().CheckMatch(ctx, i);
         if (ret) return ret;
         ++iter;
       }
@@ -245,8 +245,12 @@ BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
   }
 
   // Check whether we need to add implicit wildcards
-  if (rule_bytes[0] != '|') rule_bytes.prepend('*');
-  if (rule_bytes[rule_bytes.length() - 1] != '|') rule_bytes += '*';
+  if (!rule_bytes.startsWith('|') && !rule_bytes.startsWith('*')) {
+    rule_bytes.prepend('*');
+  }
+  if (!rule_bytes.endsWith('|') && !rule_bytes.endsWith('*')) {
+    rule_bytes += '*';
+  }
 
   // Check whether there's a start domain
   if (rule_bytes.length() > 2 &&
@@ -275,7 +279,10 @@ BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
       if (ch == '|' || ch == '^' || ch == '*') break;
     }
     if (next_sep_index > curr_index) {
-      ret->pieces_ << rule_bytes.mid(curr_index, next_sep_index - curr_index);
+      auto piece = rule_bytes.mid(curr_index, next_sep_index - curr_index);
+      // If this is not case sensitive, we need to lowercase our check
+      if (!ret->case_sensitive_) piece = piece.toLower();
+      ret->pieces_ << piece;
     }
     if (next_sep_index < rule_bytes.length()) {
       ret->pieces_ << rule_bytes.mid(next_sep_index, 1);
@@ -453,17 +460,13 @@ BlockerRules::StaticRule* BlockerRules::FindStaticRuleInRefHostHash(
 BlockerRules::StaticRule* BlockerRules::FindStaticRuleInTargetHostHash(
     const StaticRule::MatchContext& ctx, const TargetHostHash& hash) const {
   if (hash.isEmpty()) return nullptr;
-  StaticRule::MatchContext* sub_host_ctx = nullptr;
   for (const auto& host : ctx.target_hosts) {
     auto& to_check = hash.value(host);
     if (!to_check.isEmpty()) {
-      // Lazily create the context as we need it
-      if (!sub_host_ctx) {
-        sub_host_ctx = &StaticRule::MatchContext(ctx);
-        sub_host_ctx->target_url =
-            ctx.target_url.mid(ctx.target_url_after_host_index);
-      }
-      auto rule = FindStaticRuleInRuleHash(*sub_host_ctx, to_check);
+      // TODO(cretz): Is this too slow creating this all the time?
+      auto sub_host_ctx = ctx.WithTargetUrlChanged(
+            ctx.target_url.mid(ctx.target_url_after_host_index));
+      auto rule = FindStaticRuleInRuleHash(sub_host_ctx, to_check);
       if (rule) return rule;
     }
   }

@@ -73,17 +73,23 @@ class BlockerRules {
     };
 
     struct MatchContext {
-      RequestType request_type;
-      RequestParty request_party;
-      QByteArray target_url;
+      MatchContext WithTargetUrlChanged(
+          const QByteArray& new_target_url) const {
+        return { request_type, request_party, new_target_url, target_hosts,
+                 target_url_after_host_index, ref_url, ref_hosts };
+      }
+
+      const RequestType request_type;
+      const RequestParty request_party;
+      const QByteArray target_url;
       // These are each sub host piece. So if the hostname is foo.bar.baz.com
       //  then this will have foo.bar.baz.com, bar.baz.com, and baz.bom in it.
-      QSet<QByteArray> target_hosts;
+      const QSet<QByteArray> target_hosts;
       // The character index of the first character after the hostname.
-      int target_url_after_host_index;
-      QByteArray ref_url;
+      const int target_url_after_host_index;
+      const QByteArray ref_url;
       // Same sub piece array as in target_hosts.
-      QSet<QByteArray> ref_hosts;
+      const QSet<QByteArray> ref_hosts;
     };
 
     class RulePiece {
