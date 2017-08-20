@@ -93,11 +93,13 @@ class BlockerRulesBenchmark : public QObject {
  private slots:  // NOLINT(whitespace/indent)
   void initTestCase() {
     EnsureEasyListLoaded();
+    //qDebug() << "Sleeping before parse...";
+    //QTest::qSleep(5000);
     easy_list_rules_ = ParsedRules(easy_list_);
     // Remove it from last_rules_ so it doesn't get auto-deleted
     last_rules_ = nullptr;
-    // qDebug() << "Sleeping to do simple mem check...";
-    // QTest::qSleep(5000);
+    //qDebug() << "Sleeping after parse...";
+    //QTest::qSleep(5000);
   }
 
   void cleanupTestCase() {
@@ -111,10 +113,9 @@ class BlockerRulesBenchmark : public QObject {
     cleanupLastRules();
   }
 
-  void benchmarkParseAndSqueeze() {
+  void benchmarkParse() {
     QBENCHMARK {
-      auto rules = ParsedRules(easy_list_);
-      rules->Squeeze();
+      ParsedRules(easy_list_);
     }
   }
 

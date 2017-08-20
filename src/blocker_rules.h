@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 #include <memory>
+#include <bitset>
 
 namespace doogie {
 
@@ -42,7 +43,8 @@ class BlockerRules {
   class StaticRule : public Rule {
    public:
     enum RequestType {
-      AllRequests,  // Only used for the hash, never inside the rule
+      // Only used for the hash, never inside the rule
+      AllRequests,
       Script,
       Image,
       Stylesheet,
@@ -96,7 +98,8 @@ class BlockerRules {
     };
 
     struct Info {
-      QSet<RequestType> not_request_types;
+      // We choose vectors here because of size constraints
+      std::bitset<Other> not_request_types;
       QSet<QByteArray> not_ref_domains;
       int file_index = -1;
       int line_num = -1;
@@ -108,12 +111,9 @@ class BlockerRules {
       explicit RulePiece(const QByteArray& piece);
       ~RulePiece();
 
-      bool IsNull() const { return piece_.isNull(); }
+      bool IsNull() const { return children_.isEmpty() && !rule_this_terminates_; }
       Info* RuleThisTerminates() const {
         return rule_this_terminates_;
-      }
-      void MakeRootIfNull() {
-        if (piece_.isNull()) piece_ = "*";
       }
       void AppendRule(StaticRule* rule, int piece_index = 0);
 
@@ -121,11 +121,11 @@ class BlockerRules {
                                   int curr_index = 0) const;
 
       void RuleTree(QJsonObject* obj) const;
-      void Squeeze();
 
       static const RulePiece& kNull;
 
      private:
+      // Empty piece means any
       QByteArray piece_;
       bool case_sensitive_ = false;
       // Key is 0 for any non-lit rules. Note, can have
@@ -186,14 +186,9 @@ class BlockerRules {
 
   QJsonObject RuleTree() const;
 
-  void Squeeze();
-
-  bool AddRules(QTextStream* stream,
-                int file_index,
-                bool squeeze_upon_completion = true);
+  bool AddRules(QTextStream* stream, int file_index);
   // This does not take ownership of any rules
-  void AddRules(const QList<Rule*>& rules,
-                bool squeeze_upon_completion = true);
+  void AddRules(const QList<Rule*>& rules);
 
   StaticRule::Info* FindStaticRule(
       const QString& target_url,

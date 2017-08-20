@@ -40,8 +40,8 @@ class BlockerRulesTest : public QObject {
         "||7pud.com^$third-party\n"
         "@@||speedtest.net^*/results.php$xmlhttprequest",
         0);
-    // qDebug().noquote() << "JSON:\n" <<
-    //                       QJsonDocument(rules->RuleTree()).toJson();
+    //qDebug().noquote() << "JSON:\n" <<
+    //                      QJsonDocument(rules->RuleTree()).toJson();
     auto rule = rules->FindStaticRule(
           "http://example.com/?foo=bar&adbannerid=35",
           "http://example.com/",

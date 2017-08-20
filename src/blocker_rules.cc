@@ -33,8 +33,13 @@ BlockerRules::CommentRule* BlockerRules::CommentRule::ParseRule(
 
 BlockerRules::StaticRule::RulePiece::RulePiece() { }
 
-BlockerRules::StaticRule::RulePiece::RulePiece(const QByteArray& piece)
-  : piece_(piece) { }
+BlockerRules::StaticRule::RulePiece::RulePiece(const QByteArray& piece) {
+  if (piece != "*") {
+    // Squeeze the piece size if needed
+    piece_ = piece;
+    if (piece_.size() != piece_.capacity()) piece_.squeeze();
+  }
+}
 
 BlockerRules::StaticRule::RulePiece::~RulePiece() {
   if (rule_this_terminates_) {
@@ -49,7 +54,8 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
   // As a shortcut, if we're the same piece and we have more indices,
   //  just go one deeper eagerly. This really only helps the root w/
   //  asterisks.
-  if (piece == piece_ && piece_index < rule->Pieces().length() - 1) {
+  if ((piece == piece_ || (piece == "*" && piece_.isNull())) &&
+      piece_index < rule->Pieces().length() - 1) {
     AppendRule(rule, piece_index + 1);
     return;
   }
@@ -62,11 +68,21 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
 
   auto update_child = [&](RulePiece& child) {
     // If we're the last, terminate and leave
-    if (piece_index == rule->Pieces().length() - 1) {
+    if (piece_index == rule->Pieces().length() - 1 ||
+        (piece_index == rule->Pieces().length() - 2 &&
+         rule->Pieces()[piece_index + 1] == "*")) {
       if (child.rule_this_terminates_) delete child.rule_this_terminates_;
       child.rule_this_terminates_ = new Info();
-      child.rule_this_terminates_->not_request_types = rule->NotRequestTypes();
-      child.rule_this_terminates_->not_ref_domains = rule->NotRefDomains();
+      for (const auto t : rule->NotRequestTypes()) {
+        child.rule_this_terminates_->not_request_types[t] = true;
+      }
+      if (!rule->NotRefDomains().isEmpty()) {
+        child.rule_this_terminates_->not_ref_domains.reserve(
+              rule->NotRefDomains().size());
+        for (auto d : rule->NotRefDomains()) {
+          child.rule_this_terminates_->not_ref_domains << d;
+        }
+      }
       child.rule_this_terminates_->file_index = rule->FileIndex();
       child.rule_this_terminates_->line_num = rule->LineNum();
       return;
@@ -87,6 +103,7 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
   }
   RulePiece child(piece);
   child.case_sensitive_ = rule->case_sensitive_;
+  children_.reserve(children_.size() + 1);
   iter = children_.insertMulti(first_chr, child);
   update_child(iter.value());
 }
@@ -95,53 +112,52 @@ const BlockerRules::StaticRule::RulePiece*
   BlockerRules::StaticRule::RulePiece::CheckMatch(
     const MatchContext& ctx, int curr_index) const {
   // Check if we match
-  auto is_any = false;
-  switch (piece_[0]) {
-    case '*':
-      is_any = true;
-      break;
-    case '|':
-      // Start or end only
-      if (curr_index != 0 &&
-          curr_index != ctx.target_url.length()) return nullptr;
-      break;
-    case '^':
-      // This matches only non-letter, non-digit, and not: _-.%
-      // That means non-existent (i.e. end) also matches
-      if (curr_index < ctx.target_url.length()) {
-        auto url_ch = ctx.target_url[curr_index];
-        if ((url_ch >= 'a' && url_ch <= 'z') ||
-            (url_ch >= '0' && url_ch <= '9') ||
-            url_ch == '_' || url_ch == '-' || url_ch == '.' || url_ch == '%') {
-          return nullptr;
-        }
-        curr_index++;
-      }
-      break;
-    default:
-      // Full piece must match
-      for (int i = 0; i < piece_.length(); i++) {
-        if (i + curr_index >= ctx.target_url.length()) return nullptr;
-        auto piece_ch = piece_[i];
-        auto url_ch = ctx.target_url[curr_index + i];
-        if (piece_ch != url_ch) {
-          // If it's not case-sensitive, we'll check the lower-case
-          //  version too. Note, we can assume that case-insensitive
-          //  pieces are all lowercase.
-          if (case_sensitive_ ||
-              url_ch < 'A' || url_ch > 'Z' || url_ch + 32 != piece_ch) {
+  auto is_any = piece_.isEmpty();
+  if (!is_any) {
+    switch (piece_[0]) {
+      case '|':
+        // Start or end only
+        if (curr_index != 0 &&
+            curr_index != ctx.target_url.length()) return nullptr;
+        break;
+      case '^':
+        // This matches only non-letter, non-digit, and not: _-.%
+        // That means non-existent (i.e. end) also matches
+        if (curr_index < ctx.target_url.length()) {
+          auto url_ch = ctx.target_url[curr_index];
+          if ((url_ch >= 'a' && url_ch <= 'z') ||
+              (url_ch >= '0' && url_ch <= '9') ||
+              url_ch == '_' || url_ch == '-' || url_ch == '.' || url_ch == '%') {
             return nullptr;
           }
+          curr_index++;
         }
-      }
-      curr_index += piece_.length();
+        break;
+      default:
+        // Full piece must match
+        for (int i = 0; i < piece_.length(); i++) {
+          if (i + curr_index >= ctx.target_url.length()) return nullptr;
+          auto piece_ch = piece_[i];
+          auto url_ch = ctx.target_url[curr_index + i];
+          if (piece_ch != url_ch) {
+            // If it's not case-sensitive, we'll check the lower-case
+            //  version too. Note, we can assume that case-insensitive
+            //  pieces are all lowercase.
+            if (case_sensitive_ ||
+                url_ch < 'A' || url_ch > 'Z' || url_ch + 32 != piece_ch) {
+              return nullptr;
+            }
+          }
+        }
+        curr_index += piece_.length();
+    }
   }
 
   // If we matched a rule ourself, we're done
   if (rule_this_terminates_) {
     // Everything else is usually checked at the rule level, but
     //  we choose to check "excluded domains" and "excluded types" here...
-    if (!rule_this_terminates_->not_request_types.contains(ctx.request_type) &&
+    if (!rule_this_terminates_->not_request_types.test(ctx.request_type) &&
         !ctx.ref_hosts.intersects(rule_this_terminates_->not_ref_domains)) {
       return this;
     }
@@ -182,8 +198,9 @@ const BlockerRules::StaticRule::RulePiece*
 }
 
 void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
+  auto piece = piece_.isEmpty() ? "*" : piece_;
   if (rule_this_terminates_) {
-    obj->insert(piece_, QString("Terminates for file %1 and line %2").
+    obj->insert(piece, QString("Terminates for file %1 and line %2").
         arg(rule_this_terminates_->file_index).
         arg(rule_this_terminates_->line_num));
     return;
@@ -197,32 +214,12 @@ void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
     child[key] = child_obj;
     ++i;
   }
-  obj->insert(piece_, child);
-}
-
-void BlockerRules::StaticRule::RulePiece::Squeeze() {
-  if (rule_this_terminates_) {
-    if (!rule_this_terminates_->not_ref_domains.isEmpty()) {
-      rule_this_terminates_->not_ref_domains.squeeze();
-    }
-    if (!rule_this_terminates_->not_request_types.isEmpty()) {
-      rule_this_terminates_->not_request_types.squeeze();
-    }
-  }
-  piece_.squeeze();
-  if (!children_.isEmpty()) {
-    children_.squeeze();
-    QHash<char, RulePiece>::iterator iter = children_.begin();
-    while (iter != children_.end()) {
-      iter.value().Squeeze();
-      iter++;
-    }
-  }
+  obj->insert(piece, child);
 }
 
 const BlockerRules::StaticRule::RulePiece&
   BlockerRules::StaticRule::RulePiece::kNull =
-    BlockerRules::StaticRule::RulePiece(QByteArray());
+    BlockerRules::StaticRule::RulePiece();
 
 BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
     const QString& line, int, int line_num) {
@@ -378,56 +375,20 @@ QJsonObject BlockerRules::RuleTree() const {
   return ret;
 }
 
-void BlockerRules::Squeeze() {
-  auto squeeze_party_hash = [](PartyOptionHash& hash) {
-    hash.squeeze();
-    QHash<StaticRule::RequestParty, RefHostHash>::iterator iter1 =
-        hash.begin();
-    while (iter1 != hash.end()) {
-      iter1.value().squeeze();
-      QHash<QByteArray, TargetHostHash>::iterator iter2 =
-          iter1.value().begin();
-      while (iter2 != iter1.value().end()) {
-        iter2.value().squeeze();
-        QHash<QByteArray, RuleHash>::iterator iter3 =
-            iter2.value().begin();
-        while (iter3 != iter2.value().end()) {
-          iter3.value().squeeze();
-          QHash<StaticRule::RequestType,
-                StaticRule::RulePiece>::iterator iter4 = iter3.value().begin();
-          while (iter4 != iter3.value().end()) {
-            iter4.value().Squeeze();
-            iter4++;
-          }
-          iter3++;
-        }
-        iter2++;
-      }
-      iter1++;
-    }
-  };
-  squeeze_party_hash(static_rules_);
-  squeeze_party_hash(static_rule_exceptions_);
-}
-
-bool BlockerRules::AddRules(QTextStream* stream,
-                            int file_index,
-                            bool squeeze_upon_completion) {
+bool BlockerRules::AddRules(QTextStream* stream, int file_index) {
   bool ok;
   auto rules = ParseRules(stream, file_index, &ok);
   if (!ok) return false;
-  AddRules(rules, squeeze_upon_completion);
+  AddRules(rules);
   qDeleteAll(rules);
   return true;
 }
 
-void BlockerRules::AddRules(const QList<Rule*>& rules,
-                            bool squeeze_upon_completion) {
+void BlockerRules::AddRules(const QList<Rule*>& rules) {
   for (const auto rule : rules) {
     auto st = rule->AsStatic();
     if (st) AddStaticRule(st);
   }
-  if (squeeze_upon_completion) Squeeze();
 }
 
 BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
@@ -592,12 +553,10 @@ void BlockerRules::AddStaticRuleToRuleHash(StaticRule* rule,
                                            RuleHash* hash) {
   if (rule->RequestTypes().isEmpty()) {
     auto& piece = (*hash)[StaticRule::AllRequests];
-    piece.MakeRootIfNull();
     piece.AppendRule(rule);
   } else {
     for (const auto request_type : rule->RequestTypes()) {
       auto& piece = (*hash)[request_type];
-      piece.MakeRootIfNull();
       piece.AppendRule(rule);
     }
   }
