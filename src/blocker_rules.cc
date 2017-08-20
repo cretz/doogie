@@ -311,6 +311,8 @@ const QHash<QByteArray, BlockerRules::StaticRule::RequestType>
   { "generichide", BlockerRules::StaticRule::RequestType::GenericHide },
   { "genericblock", BlockerRules::StaticRule::RequestType::GenericBlock },
   { "popup", BlockerRules::StaticRule::RequestType::Popup },
+  { "font", BlockerRules::StaticRule::RequestType::Font },
+  { "media", BlockerRules::StaticRule::RequestType::Media },
   { "other", BlockerRules::StaticRule::RequestType::Other }
 };
 

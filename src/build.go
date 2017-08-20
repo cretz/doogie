@@ -64,6 +64,8 @@ func start() error {
 		return lint()
 	case "unit-test":
 		return unitTest()
+	case "benchmark":
+		return benchmark()
 	default:
 		return fmt.Errorf("Unrecognized command '%v'", os.Args[1])
 	}
@@ -340,6 +342,17 @@ func unitTest() error {
 		return err
 	}
 	return execCmd(filepath.Join(target, exeExt("doogie-test")))
+}
+
+func benchmark() error {
+	if err := build("CONFIG+=benchmark"); err != nil {
+		return err
+	}
+	target, err := target()
+	if err != nil {
+		return err
+	}
+	return execCmd(filepath.Join(target, exeExt("doogie-benchmark")))
 }
 
 func target() (string, error) {

@@ -57,6 +57,8 @@ class BlockerRules {
       GenericHide,
       GenericBlock,
       Popup,
+      Font,
+      Media,
       Other
     };
 
