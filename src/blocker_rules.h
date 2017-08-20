@@ -34,6 +34,7 @@ class BlockerRules {
     static CommentRule* ParseRule(const QString& line);
 
     CommentRule* AsComment() override { return this; }
+
    private:
     QString line_;
   };
@@ -94,13 +95,23 @@ class BlockerRules {
       const QSet<QByteArray> ref_hosts;
     };
 
+    struct Info {
+      QSet<RequestType> not_request_types;
+      QSet<QByteArray> not_ref_domains;
+      int file_index = -1;
+      int line_num = -1;
+    };
+
     class RulePiece {
      public:
       RulePiece();
       explicit RulePiece(const QByteArray& piece);
+      ~RulePiece();
 
       bool IsNull() const { return piece_.isNull(); }
-      StaticRule* RuleThisTerminates() const { return rule_this_terminates_; }
+      Info* RuleThisTerminates() const {
+        return rule_this_terminates_;
+      }
       void MakeRootIfNull() {
         if (piece_.isNull()) piece_ = "*";
       }
@@ -110,6 +121,7 @@ class BlockerRules {
                                   int curr_index = 0) const;
 
       void RuleTree(QJsonObject* obj) const;
+      void Squeeze();
 
       static const RulePiece& kNull;
 
@@ -121,7 +133,7 @@ class BlockerRules {
       QHash<char, RulePiece> children_;
 
       // This is checked at the end for things like not-domain
-      StaticRule* rule_this_terminates_ = nullptr;
+      Info* rule_this_terminates_ = nullptr;
     };
 
     static StaticRule* ParseRule(const QString& line,
@@ -167,21 +179,26 @@ class BlockerRules {
     CosmeticRule* AsCosmetic() override { return this; }
   };
 
+  // Caller is responsible for deletion of these values
   static QList<Rule*> ParseRules(QTextStream* stream,
                                  int file_index,
                                  bool* parse_ok = nullptr);
 
-  ~BlockerRules();
-
   QJsonObject RuleTree() const;
 
-  bool AddRules(QTextStream* stream, int file_index);
-  // This takes ownership of all rules and will delete them on destruct
-  void AddRules(const QList<Rule*>& rules);
+  void Squeeze();
 
-  StaticRule* FindStaticRule(const QString& target_url,
-                             const QString& ref_url,
-                             StaticRule::RequestType request_type) const;
+  bool AddRules(QTextStream* stream,
+                int file_index,
+                bool squeeze_upon_completion = true);
+  // This does not take ownership of any rules
+  void AddRules(const QList<Rule*>& rules,
+                bool squeeze_upon_completion = true);
+
+  StaticRule::Info* FindStaticRule(
+      const QString& target_url,
+      const QString& ref_url,
+      StaticRule::RequestType request_type) const;
 
  private:
   // Keyed by the request type or AllRequests if it applies to all.
@@ -196,12 +213,12 @@ class BlockerRules {
   // Keyed by whether the rule is for first party, third party, or both
   typedef QHash<StaticRule::RequestParty, RefHostHash> PartyOptionHash;
 
-  StaticRule* FindStaticRule(const StaticRule::MatchContext& ctx) const;
-  StaticRule* FindStaticRuleInRefHostHash(
+  StaticRule::Info* FindStaticRule(const StaticRule::MatchContext& ctx) const;
+  StaticRule::Info* FindStaticRuleInRefHostHash(
       const StaticRule::MatchContext& ctx, const RefHostHash& hash) const;
-  StaticRule* FindStaticRuleInTargetHostHash(
+  StaticRule::Info* FindStaticRuleInTargetHostHash(
       const StaticRule::MatchContext& ctx, const TargetHostHash& hash) const;
-  StaticRule* FindStaticRuleInRuleHash(
+  StaticRule::Info* FindStaticRuleInRuleHash(
       const StaticRule::MatchContext& ctx, const RuleHash& hash) const;
 
   void AddStaticRule(StaticRule* rule);
@@ -216,9 +233,6 @@ class BlockerRules {
 
   PartyOptionHash static_rules_;
   PartyOptionHash static_rule_exceptions_;
-
-  // We only keep this so we can delete em all on destruct
-  QList<Rule*> known_rules_;
 };
 
 }  // namespace doogie

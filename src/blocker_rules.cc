@@ -36,6 +36,13 @@ BlockerRules::StaticRule::RulePiece::RulePiece() { }
 BlockerRules::StaticRule::RulePiece::RulePiece(const QByteArray& piece)
   : piece_(piece) { }
 
+BlockerRules::StaticRule::RulePiece::~RulePiece() {
+  if (rule_this_terminates_) {
+    delete rule_this_terminates_;
+    rule_this_terminates_ = nullptr;
+  }
+}
+
 void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
                                                      int piece_index) {
   auto& piece = rule->Pieces()[piece_index];
@@ -56,7 +63,12 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
   auto update_child = [&](RulePiece& child) {
     // If we're the last, terminate and leave
     if (piece_index == rule->Pieces().length() - 1) {
-      child.rule_this_terminates_ = rule;
+      if (child.rule_this_terminates_) delete child.rule_this_terminates_;
+      child.rule_this_terminates_ = new Info();
+      child.rule_this_terminates_->not_request_types = rule->NotRequestTypes();
+      child.rule_this_terminates_->not_ref_domains = rule->NotRefDomains();
+      child.rule_this_terminates_->file_index = rule->FileIndex();
+      child.rule_this_terminates_->line_num = rule->LineNum();
       return;
     }
     // Otherwise, go another deeper
@@ -129,9 +141,8 @@ const BlockerRules::StaticRule::RulePiece*
   if (rule_this_terminates_) {
     // Everything else is usually checked at the rule level, but
     //  we choose to check "excluded domains" and "excluded types" here...
-    if (!rule_this_terminates_->
-          not_request_types_.contains(ctx.request_type) &&
-        !ctx.ref_hosts.intersects(rule_this_terminates_->NotRefDomains())) {
+    if (!rule_this_terminates_->not_request_types.contains(ctx.request_type) &&
+        !ctx.ref_hosts.intersects(rule_this_terminates_->not_ref_domains)) {
       return this;
     }
   }
@@ -173,8 +184,8 @@ const BlockerRules::StaticRule::RulePiece*
 void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
   if (rule_this_terminates_) {
     obj->insert(piece_, QString("Terminates for file %1 and line %2").
-        arg(rule_this_terminates_->FileIndex()).
-        arg(rule_this_terminates_->LineNum()));
+        arg(rule_this_terminates_->file_index).
+        arg(rule_this_terminates_->line_num));
     return;
   }
   QJsonObject child;
@@ -189,12 +200,32 @@ void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
   obj->insert(piece_, child);
 }
 
+void BlockerRules::StaticRule::RulePiece::Squeeze() {
+  if (rule_this_terminates_) {
+    if (!rule_this_terminates_->not_ref_domains.isEmpty()) {
+      rule_this_terminates_->not_ref_domains.squeeze();
+    }
+    if (!rule_this_terminates_->not_request_types.isEmpty()) {
+      rule_this_terminates_->not_request_types.squeeze();
+    }
+  }
+  piece_.squeeze();
+  if (!children_.isEmpty()) {
+    children_.squeeze();
+    QHash<char, RulePiece>::iterator iter = children_.begin();
+    while (iter != children_.end()) {
+      iter.value().Squeeze();
+      iter++;
+    }
+  }
+}
+
 const BlockerRules::StaticRule::RulePiece&
   BlockerRules::StaticRule::RulePiece::kNull =
     BlockerRules::StaticRule::RulePiece(QByteArray());
 
 BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
-    const QString& line, int file_index, int line_num) {
+    const QString& line, int, int line_num) {
   if (line.isEmpty()) return nullptr;
   auto ret = new StaticRule();
   auto& rule_bytes = line.toLatin1();
@@ -340,10 +371,6 @@ QList<BlockerRules::Rule*> BlockerRules::ParseRules(QTextStream* stream,
   return ret;
 }
 
-BlockerRules::~BlockerRules() {
-  qDeleteAll(known_rules_);
-}
-
 QJsonObject BlockerRules::RuleTree() const {
   QJsonObject ret;
   ret["rules"] = RuleTreeForPartyHash(static_rules_);
@@ -351,23 +378,59 @@ QJsonObject BlockerRules::RuleTree() const {
   return ret;
 }
 
-bool BlockerRules::AddRules(QTextStream* stream, int file_index) {
+void BlockerRules::Squeeze() {
+  auto squeeze_party_hash = [](PartyOptionHash& hash) {
+    hash.squeeze();
+    QHash<StaticRule::RequestParty, RefHostHash>::iterator iter1 =
+        hash.begin();
+    while (iter1 != hash.end()) {
+      iter1.value().squeeze();
+      QHash<QByteArray, TargetHostHash>::iterator iter2 =
+          iter1.value().begin();
+      while (iter2 != iter1.value().end()) {
+        iter2.value().squeeze();
+        QHash<QByteArray, RuleHash>::iterator iter3 =
+            iter2.value().begin();
+        while (iter3 != iter2.value().end()) {
+          iter3.value().squeeze();
+          QHash<StaticRule::RequestType,
+                StaticRule::RulePiece>::iterator iter4 = iter3.value().begin();
+          while (iter4 != iter3.value().end()) {
+            iter4.value().Squeeze();
+            iter4++;
+          }
+          iter3++;
+        }
+        iter2++;
+      }
+      iter1++;
+    }
+  };
+  squeeze_party_hash(static_rules_);
+  squeeze_party_hash(static_rule_exceptions_);
+}
+
+bool BlockerRules::AddRules(QTextStream* stream,
+                            int file_index,
+                            bool squeeze_upon_completion) {
   bool ok;
   auto rules = ParseRules(stream, file_index, &ok);
   if (!ok) return false;
-  AddRules(rules);
+  AddRules(rules, squeeze_upon_completion);
+  qDeleteAll(rules);
   return true;
 }
 
-void BlockerRules::AddRules(const QList<Rule*>& rules) {
+void BlockerRules::AddRules(const QList<Rule*>& rules,
+                            bool squeeze_upon_completion) {
   for (const auto rule : rules) {
     auto st = rule->AsStatic();
     if (st) AddStaticRule(st);
   }
-  known_rules_ += rules;
+  if (squeeze_upon_completion) Squeeze();
 }
 
-BlockerRules::StaticRule* BlockerRules::FindStaticRule(
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
     const QString& target_url,
     const QString& ref_url,
     StaticRule::RequestType request_type) const {
@@ -425,7 +488,7 @@ BlockerRules::StaticRule* BlockerRules::FindStaticRule(
   return FindStaticRule(ctx);
 }
 
-BlockerRules::StaticRule* BlockerRules::FindStaticRule(
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
     const StaticRule::MatchContext& ctx) const {
   // Always check exceptions first since we'd have to check em anyways.
   // Check the specific party then the general one.
@@ -443,7 +506,7 @@ BlockerRules::StaticRule* BlockerRules::FindStaticRule(
   return rule;
 }
 
-BlockerRules::StaticRule* BlockerRules::FindStaticRuleInRefHostHash(
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRuleInRefHostHash(
     const StaticRule::MatchContext& ctx, const RefHostHash& hash) const {
   if (hash.isEmpty()) return nullptr;
   // Specific host pieces first, then the rest
@@ -459,7 +522,7 @@ BlockerRules::StaticRule* BlockerRules::FindStaticRuleInRefHostHash(
   return FindStaticRuleInTargetHostHash(ctx, to_check);
 }
 
-BlockerRules::StaticRule* BlockerRules::FindStaticRuleInTargetHostHash(
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRuleInTargetHostHash(
     const StaticRule::MatchContext& ctx, const TargetHostHash& hash) const {
   if (hash.isEmpty()) return nullptr;
   for (const auto& host : ctx.target_hosts) {
@@ -478,7 +541,7 @@ BlockerRules::StaticRule* BlockerRules::FindStaticRuleInTargetHostHash(
   return FindStaticRuleInRuleHash(ctx, to_check);
 }
 
-BlockerRules::StaticRule* BlockerRules::FindStaticRuleInRuleHash(
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRuleInRuleHash(
     const StaticRule::MatchContext& ctx, const RuleHash& hash) const {
   if (ctx.request_type != StaticRule::AllRequests) {
     auto& to_check = hash.value(ctx.request_type, StaticRule::RulePiece::kNull);

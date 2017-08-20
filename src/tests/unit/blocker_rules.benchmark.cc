@@ -58,6 +58,16 @@ class BlockerRulesBenchmark : public QObject {
     file.write(easy_list_);
   }
 
+  void SaveEasyListToJson() {
+    auto path = QDir(QStandardPaths::writableLocation(
+        QStandardPaths::TempLocation)).filePath("easylist.json");
+    QFile file(path);
+    if (file.open(QIODevice::Truncate | QIODevice::WriteOnly)) {
+      file.write(QJsonDocument(easy_list_rules_->RuleTree()).toJson());
+    }
+    qDebug() << "Saved JSON to" << path;
+  }
+
   // Auto deleted at end of each test case
   BlockerRules* ParsedRules(const QByteArray& data, int file_index = 1) {
     cleanupLastRules();
@@ -86,6 +96,8 @@ class BlockerRulesBenchmark : public QObject {
     easy_list_rules_ = ParsedRules(easy_list_);
     // Remove it from last_rules_ so it doesn't get auto-deleted
     last_rules_ = nullptr;
+    // qDebug() << "Sleeping to do simple mem check...";
+    // QTest::qSleep(5000);
   }
 
   void cleanupTestCase() {
@@ -99,22 +111,22 @@ class BlockerRulesBenchmark : public QObject {
     cleanupLastRules();
   }
 
-  void benchmarkEasyListParse() {
+  void benchmarkParseAndSqueeze() {
     QBENCHMARK {
-      ParsedRules(easy_list_);
+      auto rules = ParsedRules(easy_list_);
+      rules->Squeeze();
     }
   }
 
-  void benchmarkEasyListSimpleUrl() {
-    BlockerRules::StaticRule* rule = nullptr;
+  void benchmarkSimpleUrl() {
+    BlockerRules::StaticRule::Info* rule = nullptr;
     QBENCHMARK {
       rule = easy_list_rules_->FindStaticRule(
             "http://example.com/foo/bar/-adserver-/baz",
             "http://example.com",
             BlockerRules::StaticRule::Image);
     }
-    QVERIFY(rule &&
-            rule->Pieces() == QVector<QByteArray>({ "*", "-adserver-", "*" }));
+    QVERIFY(rule);
   }
 };
 
