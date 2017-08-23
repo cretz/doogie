@@ -96,6 +96,13 @@ class Profile {
     open_workspace_ids_ = open_workspace_ids;
   }
 
+  const QSet<qlonglong> EnabledBlockerListIds() const {
+    return enabled_blocker_list_ids_;
+  }
+  void SetEnabledBlockerListIds(QSet<qlonglong> enabled_blocker_list_ids) {
+    enabled_blocker_list_ids_ = enabled_blocker_list_ids;
+  }
+
   // TODO(cretz): IsOpenElsewhere - check PID on QSharedMemory and if
   //  still open, this returns true
 
@@ -129,6 +136,7 @@ class Profile {
   QList<Bubble> bubbles_;
   QHash<int, QList<QKeySequence>> shortcuts_;
   QList<qlonglong> open_workspace_ids_;
+  QSet<qlonglong> enabled_blocker_list_ids_;
 };
 \
 }  // namespace doogie

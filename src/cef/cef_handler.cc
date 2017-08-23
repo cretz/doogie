@@ -195,6 +195,17 @@ void CefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
                  QString::fromStdString(failed_url.ToString()));
 }
 
+CefRequestHandler::ReturnValue CefHandler::OnBeforeResourceLoad(
+    CefRefPtr<CefBrowser> browser,
+    CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefRequest> request,
+    CefRefPtr<CefRequestCallback> callback) {
+  if (resource_load_callback_ && !resource_load_callback_(frame, request)) {
+    return RV_CANCEL;
+  }
+  return RV_CONTINUE;
+}
+
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                                 CefRefPtr<CefFrame> frame,
                                 CefRefPtr<CefRequest> request,

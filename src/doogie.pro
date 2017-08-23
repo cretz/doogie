@@ -12,12 +12,14 @@ debug:CONFIG += console
 
 SOURCES += \
     action_manager.cc \
-    blocker.cc \
+    blocker_dock.cc \
+    blocker_list.cc \
     blocker_rules.cc \
     browser_stack.cc \
     browser_widget.cc \
     bubble.cc \
     bubble_settings_dialog.cc \
+    cosmetic_blocker.cc \
     dev_tools_dock.cc \
     download.cc \
     downloads_dock.cc \
@@ -43,12 +45,14 @@ SOURCES += \
 
 HEADERS += \
     action_manager.h \
-    blocker.h \
+    blocker_dock.h \
+    blocker_list.h \
     blocker_rules.h \
     browser_stack.h \
     browser_widget.h \
     bubble.h \
     bubble_settings_dialog.h \
+    cosmetic_blocker.h \
     dev_tools_dock.h \
     download.h \
     downloads_dock.h \

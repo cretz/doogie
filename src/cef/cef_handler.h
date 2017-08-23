@@ -187,6 +187,17 @@ class CefHandler :
                    const CefString& failedUrl) override;
 
   // Request handler overrides...
+  typedef std::function<bool(
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request)> ResourceLoadCallback;
+  void SetResourceLoadCallback(ResourceLoadCallback callback) {
+    resource_load_callback_ = callback;
+  }
+  ReturnValue OnBeforeResourceLoad(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request,
+      CefRefPtr<CefRequestCallback> callback) override;
   bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefRequest> request,
@@ -251,6 +262,7 @@ class CefHandler :
   bool load_start_js_no_op_to_create_context_ = true;
   bool popup_as_page_open_ = true;
   JsDialogCallback js_dialog_callback_;
+  ResourceLoadCallback resource_load_callback_;
 
   IMPLEMENT_REFCOUNTING(CefHandler)
 };

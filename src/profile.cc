@@ -326,6 +326,13 @@ Profile::Profile(const QString& path, const QJsonObject& obj)
       if (ok) open_workspace_ids_.append(id);
     }
   }
+  for (auto blocker_list_id : obj["enabledBlockerListIds"].toArray()) {
+    if (blocker_list_id.isString()) {
+      auto ok = false;
+      auto id = blocker_list_id.toString().toLongLong(&ok);
+      if (ok) enabled_blocker_list_ids_.insert(id);
+    }
+  }
 }
 
 void Profile::Init() {
@@ -344,6 +351,7 @@ void Profile::CopySettingsFrom(const Profile& profile) {
   bubbles_ = profile.bubbles_;
   shortcuts_ = profile.shortcuts_;
   open_workspace_ids_ = profile.open_workspace_ids_;
+  enabled_blocker_list_ids_ = profile.enabled_blocker_list_ids_;
 }
 
 int Profile::BubbleIndexFromName(const QString& name) const {
@@ -467,6 +475,11 @@ QJsonObject Profile::ToJson() const {
     open_workspace_ids.append(QString::number(id));
   }
   ret["openWorkspaceIds"] = open_workspace_ids;
+  QJsonArray enabled_blocker_list_ids;
+  for (auto id : enabled_blocker_list_ids_) {
+    enabled_blocker_list_ids.append(QString::number(id));
+  }
+  ret["enabledBlockerListIds"] = enabled_blocker_list_ids;
   return ret;
 }
 
@@ -511,7 +524,8 @@ bool Profile::operator==(const Profile& other) const {
       browser_settings_ == other.browser_settings_ &&
       bubbles_ == other.bubbles_ &&
       shortcuts_ == other.shortcuts_ &&
-      open_workspace_ids_ == other.open_workspace_ids_;
+      open_workspace_ids_ == other.open_workspace_ids_ &&
+      enabled_blocker_list_ids_ == other.enabled_blocker_list_ids_;
 }
 
 bool Profile::SetCurrent(Profile* profile) {

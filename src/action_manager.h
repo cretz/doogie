@@ -63,6 +63,7 @@ class ActionManager : public QObject {
     ToggleDevTools,
     LogsWindow,
     DownloadsWindow,
+    BlockerWindow,
     FocusPageTree,
     FocusAddressBar,
     FocusBrowser,

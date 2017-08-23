@@ -18,6 +18,8 @@ class BrowserStack : public QStackedWidget {
   BrowserWidget* CurrentBrowser() const;
   QList<BrowserWidget*> Browsers() const;
 
+  void SetResourceLoadCallback(BrowserWidget::ResourceLoadCallback callback);
+
  signals:
   void BrowserChanged(BrowserWidget* browser);
   void CurrentBrowserOrLoadingStateChanged();
@@ -31,6 +33,7 @@ class BrowserStack : public QStackedWidget {
   void SetupActions();
 
   const Cef& cef_;
+  BrowserWidget::ResourceLoadCallback resource_load_callback_;
 };
 
 }  // namespace doogie

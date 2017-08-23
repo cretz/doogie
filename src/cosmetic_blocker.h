@@ -1,5 +1,5 @@
-#ifndef DOOGIE_BLOCKER_H_
-#define DOOGIE_BLOCKER_H_
+#ifndef DOOGIE_COSMETIC_BLOCKER_H_
+#define DOOGIE_COSMETIC_BLOCKER_H_
 
 #include <QtWidgets>
 
@@ -7,7 +7,7 @@
 
 namespace doogie {
 
-class Blocker {
+class CosmeticBlocker {
  public:
   void OnFrameCreated(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
@@ -29,4 +29,4 @@ class Blocker {
 
 }  // namespace doogie
 
-#endif  // DOOGIE_BLOCKER_H_
+#endif  // DOOGIE_COSMETIC_BLOCKER_H_

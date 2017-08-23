@@ -241,6 +241,11 @@ void CefWidget::SetJsDialogCallback(CefHandler::JsDialogCallback callback) {
   handler_->SetJsDialogCallback(callback);
 }
 
+void CefWidget::SetResourceLoadCallback(
+    CefHandler::ResourceLoadCallback callback) {
+  handler_->SetResourceLoadCallback(callback);
+}
+
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
   // Only focus the browser if it has a document

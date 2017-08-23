@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 
+#include "blocker_list.h"
 #include "bubble.h"
 #include "profile.h"
 
@@ -12,7 +13,8 @@ class ProfileSettingsDialog : public QDialog {
   Q_OBJECT
 
  public:
-  explicit ProfileSettingsDialog(Profile* profile,
+  explicit ProfileSettingsDialog(const Cef& cef,
+                                 Profile* profile,
                                  QSet<QString> in_use_bubble_names,
                                  QWidget* parent = nullptr);
   bool NeedsRestart() const { return needs_restart_; }
@@ -26,6 +28,11 @@ class ProfileSettingsDialog : public QDialog {
   QWidget* CreateSettingsTab();
   QWidget* CreateShortcutsTab();
   QWidget* CreateBubblesTab();
+  QWidget* CreateBlockerTab(const Cef& cef);
+  void AddBlockerListUrl(const Cef& cef,
+                         const QString& default_url,
+                         std::function<void(BlockerList, bool)> callback);
+  bool BlockerChanged();
 
   Profile* orig_profile_;
   QSet<QString> in_use_bubble_names_;
@@ -33,11 +40,15 @@ class ProfileSettingsDialog : public QDialog {
   bool needs_restart_ = false;
   QList<Bubble> temp_bubbles_;
 
+  QList<BlockerList> orig_blocker_lists_;
+  // Keyed by url or local path
+  QHash<QString, BlockerList> temp_blocker_lists_;
+  // Value is url or local path
+  QSet<QString> enabled_blocker_lists_;
+  QList<qlonglong> blocker_list_ids_pending_refresh_;
+
  signals:
   void Changed();
-  void SettingsChangedUpdated();
-  void ShortcutsChangedUpdated();
-  void BubblesChangedUpdated();
 };
 
 }  // namespace doogie

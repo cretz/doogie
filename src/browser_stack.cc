@@ -16,6 +16,9 @@ BrowserStack::BrowserStack(const Cef& cef, QWidget* parent)
 BrowserWidget* BrowserStack::NewBrowser(const Bubble& bubble,
                                         const QString& url) {
   auto widg = new BrowserWidget(cef_, bubble, "", this);
+  if (resource_load_callback_) {
+    widg->SetResourceLoadCallback(resource_load_callback_);
+  }
   connect(widg, &BrowserWidget::LoadingStateChanged, [=]() {
     if (currentWidget() == widg) emit CurrentBrowserOrLoadingStateChanged();
   });
@@ -48,6 +51,14 @@ QList<BrowserWidget*> BrowserStack::Browsers() const {
     if (browser) ret.append(browser);
   }
   return ret;
+}
+
+void BrowserStack::SetResourceLoadCallback(
+    BrowserWidget::ResourceLoadCallback callback) {
+  resource_load_callback_ = callback;
+  for (auto& browser : Browsers()) {
+    browser->SetResourceLoadCallback(resource_load_callback_);
+  }
 }
 
 void BrowserStack::SetupActions() {

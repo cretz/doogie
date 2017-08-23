@@ -7,7 +7,8 @@
 
 namespace doogie {
 
-ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile,
+ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
+                                             Profile* profile,
                                              QSet<QString> in_use_bubble_names,
                                              QWidget* parent)
     : QDialog(parent),
@@ -25,6 +26,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile,
   tabs->addTab(CreateSettingsTab(), "Browser Settings");
   tabs->addTab(CreateShortcutsTab(), "Keyboard Shortcuts");
   tabs->addTab(CreateBubblesTab(), "Bubbles");
+  tabs->addTab(CreateBlockerTab(cef), "Blocker Lists");
   layout->addWidget(tabs, 1, 0, 1, 2);
   layout->setColumnStretch(0, 1);
 
@@ -40,7 +42,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(Profile* profile,
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
   connect(this, &ProfileSettingsDialog::Changed, [=]() {
-    ok->setEnabled(*orig_profile_ != profile_);
+    ok->setEnabled(*orig_profile_ != profile_ || BlockerChanged());
     if (ok->isEnabled() &&
         orig_profile_->RequiresRestartIfChangedTo(profile_)) {
       ok->setText("Save and Restart to Apply");
@@ -56,6 +58,21 @@ void ProfileSettingsDialog::done(int r) {
   if (r == Accepted) {
     Profile orig = *orig_profile_;
     needs_restart_ = orig_profile_->RequiresRestartIfChangedTo(profile_);
+    // We need to save the rule list stuff too
+    QSet<qlonglong> enabled_blocker_list_ids;
+    for (auto& list : temp_blocker_lists_.values()) {
+      if (list.Exists() &&
+          blocker_list_ids_pending_refresh_.contains(list.Id())) {
+        list.SetLastRefreshed(QDateTime());
+      }
+      // We just ignore the persistence failure and keep going
+      list.Persist();
+      if (enabled_blocker_lists_.contains(list.UrlOrLocalPath())) {
+        enabled_blocker_list_ids << list.Id();
+      }
+    }
+    profile_.SetEnabledBlockerListIds(enabled_blocker_list_ids);
+    // Now we can save the profile stuff
     orig_profile_->CopySettingsFrom(profile_);
     if (!orig_profile_->SavePrefs()) {
       QMessageBox::critical(nullptr, "Save Profile", "Error saving profile");
@@ -623,6 +640,265 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   auto widg = new QWidget;
   widg->setLayout(layout);
   return widg;
+}
+
+QWidget* ProfileSettingsDialog::CreateBlockerTab(const Cef& cef) {
+  auto layout = new QVBoxLayout;
+  layout->addWidget(new QLabel("Blocker Lists:"));
+
+  auto table = new QTableWidget;
+  table->setColumnCount(7);
+  table->setSelectionBehavior(QAbstractItemView::SelectRows);
+  table->setSelectionMode(QAbstractItemView::SingleSelection);
+  table->setHorizontalHeaderLabels(
+      { "", "Name", "Location", "Homepage", "Version",
+        "Expiration", "Last Refreshed", "Rule Count" });
+  table->verticalHeader()->setVisible(false);
+  table->horizontalHeader()->setSectionResizeMode(
+        QHeaderView::ResizeToContents);
+  layout->addWidget(table, 1);
+
+  layout->addWidget(
+      new QLabel("Note, upon save, lists regenerate in the background"));
+
+  auto string_item = [](const QString& text,
+                        bool editable = false) -> QTableWidgetItem* {
+    auto item = new QTableWidgetItem(text);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    if (editable) item->setFlags(item->flags() | Qt::ItemIsEditable);
+    return item;
+  };
+
+  auto add_blocker_list = [=](BlockerList list) {
+    temp_blocker_lists_[list.UrlOrLocalPath()] = list;
+    auto row = table->rowCount();
+    table->setRowCount(row + 1);
+    table->setSortingEnabled(false);
+
+    auto item0 = new QTableWidgetItem("");
+    item0->setFlags(Qt::ItemIsEnabled |
+                    Qt::ItemIsSelectable |
+                    Qt::ItemIsUserCheckable);
+    item0->setData(Qt::UserRole + 1, list.UrlOrLocalPath());
+    auto checked = list.Exists() &&
+        profile_.EnabledBlockerListIds().contains(list.Id());
+    item0->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+    table->setItem(row, 0, item0);
+    table->setItem(row, 1, string_item(list.Name(), list.IsLocalOnly()));
+    table->setItem(row, 2, string_item(list.UrlOrLocalPath()));
+    table->setItem(row, 3, string_item(list.Homepage()));
+    table->setItem(row, 4, string_item(
+        list.Version() == 0 ? "" : QString::number(list.Version())));
+    // TODO(cretz): respect sort
+    QString expiration = "never";
+    if (list.ExpirationHours() > 0) {
+      if (list.ExpirationHours() % 24 == 0) {
+        expiration = QString("%1 day(s)").arg(list.ExpirationHours() / 24);
+      } else {
+        expiration = QString("%1 hour(s)").arg(list.ExpirationHours());
+      }
+    }
+    table->setItem(row, 5, string_item(expiration));
+    table->setItem(row, 6, string_item(
+        list.LastRefreshed().isNull() ?
+            "(pending save)" : list.LastRefreshed().toLocalTime().toString()));
+    table->setItem(row, 7, string_item(
+        list.LastKnownRuleCount() == 0 ?
+            "" : QString::number(list.LastKnownRuleCount())));
+    table->setSortingEnabled(true);
+  };
+
+  auto button_layout = new QHBoxLayout;
+
+  auto add_url_button = new QToolButton;
+  add_url_button->setText("Add From URL");
+  button_layout->addWidget(add_url_button);
+  connect(add_url_button, &QToolButton::clicked, [=, &cef](bool) {
+    AddBlockerListUrl(cef, "", [=](BlockerList list, bool ok) {
+      if (ok) {
+        add_blocker_list(list);
+        emit Changed();
+      }
+    });
+  });
+
+  auto add_local_button = new QToolButton;
+  add_local_button->setText("Add From File");
+  button_layout->addWidget(add_local_button);
+  connect(add_local_button, &QToolButton::clicked, [=](bool) {
+    QString dir = QSettings().value(
+          "profileSettings/addBlockerLocalOpen").toString();
+    auto file = QFileDialog::getOpenFileName(this, "Add From File", dir);
+    if (file.isEmpty()) return;
+    file = QDir::toNativeSeparators(file);
+    QSettings().setValue("profileSettings/addBlockerLocalOpen",
+                         QFileInfo(file).dir().path());
+    if (temp_blocker_lists_.contains(file)) {
+      QMessageBox::warning(this, "Add Blocker List", "File already exists.");
+      QTimer::singleShot(0, [=]() { add_local_button->click(); });
+      return;
+    }
+    auto ok = false;
+    auto list = BlockerList::FromFile(file, &ok);
+    if (!ok) {
+      QMessageBox::warning(this, "Add Blocker List", "Failed to load list.");
+      QTimer::singleShot(0, [=]() { add_local_button->click(); });
+      return;
+    }
+    add_blocker_list(list);
+    emit Changed();
+  });
+
+  button_layout->addStretch(1);
+
+  auto selected_row = [=]() -> int {
+    auto rows = table->selectionModel()->selectedRows();
+    return rows.isEmpty() ? -1 : rows.first().row();
+  };
+
+  auto refresh_button = new QToolButton;
+  refresh_button->setText("Force Reload on Save");
+  refresh_button->setEnabled(false);
+  button_layout->addWidget(refresh_button);
+  connect(refresh_button, &QToolButton::clicked, [=](bool) {
+    auto row = selected_row();
+    if (row == -1) return;
+    auto key = table->item(row, 0)->data(Qt::UserRole + 1).toString();
+    blocker_list_ids_pending_refresh_ << temp_blocker_lists_.value(key).Id();
+    table->setItem(row, 5, string_item("(pending save)"));
+    refresh_button->setEnabled(false);
+    emit Changed();
+  });
+
+  auto delete_button = new QToolButton;
+  delete_button->setText("Delete");
+  delete_button->setEnabled(false);
+  button_layout->addWidget(delete_button);
+  connect(delete_button, &QToolButton::clicked, [=](bool) {
+    auto row = selected_row();
+    if (row == -1) return;
+    auto key = table->item(row, 0)->data(Qt::UserRole + 1).toString();
+    temp_blocker_lists_.remove(key);
+    enabled_blocker_lists_.remove(key);
+    table->removeRow(row);
+    emit Changed();
+  });
+
+  layout->addLayout(button_layout);
+
+  connect(table, &QTableWidget::itemSelectionChanged, [=]() {
+    refresh_button->setEnabled(false);
+    delete_button->setEnabled(false);
+    auto row = selected_row();
+    if (row == -1) return;
+    delete_button->setEnabled(true);
+    auto key = table->item(row, 0)->data(Qt::UserRole + 1).toString();
+    auto list = temp_blocker_lists_.value(key);
+    if (list.Exists() &&
+        !blocker_list_ids_pending_refresh_.contains(list.Id())) {
+      refresh_button->setEnabled(true);
+    }
+  });
+
+  connect(table, &QTableWidget::itemChanged, [=](QTableWidgetItem* item) {
+    if (table->column(item) != 0) return;
+    auto key = item->data(Qt::UserRole + 1).toString();
+    // Change the check state maybe
+    if (item->checkState() == Qt::Checked) {
+      enabled_blocker_lists_.insert(key);
+    } else {
+      enabled_blocker_lists_.remove(key);
+    }
+    emit Changed();
+  });
+
+  orig_blocker_lists_ = BlockerList::Lists();
+  for (const auto& orig_list : orig_blocker_lists_) {
+    add_blocker_list(orig_list);
+    if (profile_.EnabledBlockerListIds().contains(orig_list.Id())) {
+      enabled_blocker_lists_ << orig_list.UrlOrLocalPath();
+    }
+  }
+
+  auto widg = new QWidget;
+  widg->setLayout(layout);
+  return widg;
+}
+
+void ProfileSettingsDialog::AddBlockerListUrl(
+    const Cef& cef,
+    const QString& default_url,
+    std::function<void(BlockerList, bool)> callback) {
+  BlockerList empty;
+  auto url = QInputDialog::getText(
+      this, "Add Blocker List From URL", "List URL:",
+      QLineEdit::Normal, default_url, nullptr, Qt::WindowFlags(),
+      Qt::ImhUrlCharactersOnly);
+  if (url.isEmpty()) {
+    callback(empty, false);
+    return;
+  }
+  if (temp_blocker_lists_.contains(url)) {
+    QMessageBox::warning(this, "Add Blocker List", "URL already exists.");
+    QTimer::singleShot(0, [=, &cef, &callback]() {
+      AddBlockerListUrl(cef, url, callback);
+    });
+    return;
+  }
+  auto dialog = new QProgressDialog("Loading List", "Cancel Load", 0, 0);
+  auto cancel = BlockerList::FromUrl(
+        cef, url,
+        [=, &cef](BlockerList list, bool ok) {
+    dialog->reset();
+    dialog->deleteLater();
+    if (!ok) {
+      QMessageBox::warning(this, "Add Blocker List", "Failed to load list.");
+      QTimer::singleShot(0, [=, &cef]() {
+        AddBlockerListUrl(cef, url, callback);
+      });
+      return;
+    }
+    if (temp_blocker_lists_.contains(list.Url())) {
+      QMessageBox::warning(this, "Add Blocker List", "URL already exists.");
+      QTimer::singleShot(0, [=, &cef]() {
+        AddBlockerListUrl(cef, url, callback);
+      });
+      return;
+    }
+    callback(list, true);
+  });
+  connect(dialog, &QProgressDialog::canceled, [=]() {
+    qDebug() << "Progress cancelled";
+    cancel();
+  });
+  dialog->open();
+}
+
+bool ProfileSettingsDialog::BlockerChanged() {
+  if (!blocker_list_ids_pending_refresh_.isEmpty() ||
+      orig_blocker_lists_.size() != temp_blocker_lists_.size()) {
+    return true;
+  }
+  // They can change what is checked
+  if (enabled_blocker_lists_.size() !=
+      profile_.EnabledBlockerListIds().size()) {
+    return true;
+  }
+  for (const auto& enabled_key : enabled_blocker_lists_) {
+    auto list = temp_blocker_lists_[enabled_key];
+    if (!list.Exists()) return true;
+    if (!profile_.EnabledBlockerListIds().contains(list.Id())) {
+      return true;
+    }
+  }
+  // They can only change the name on local ones
+  for (const auto& orig_list : orig_blocker_lists_) {
+    if (orig_list.IsLocalOnly() && orig_list.Name() !=
+        temp_blocker_lists_.value(orig_list.UrlOrLocalPath()).Name()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace doogie

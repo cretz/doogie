@@ -1,6 +1,6 @@
 #include "cef/cef_app_handler.h"
 
-#include "blocker.h"
+#include "cosmetic_blocker.h"
 
 namespace doogie {
 

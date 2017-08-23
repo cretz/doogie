@@ -25,10 +25,22 @@ BlockerRules::Rule* BlockerRules::Rule::ParseRule(const QString& line,
 
 BlockerRules::CommentRule* BlockerRules::CommentRule::ParseRule(
     const QString& line) {
-  if (line.startsWith("! ")) return nullptr;
+  if (!line.startsWith("! ")) return nullptr;
   auto ret = new CommentRule();
   ret->line_ = line.mid(2);
   return ret;
+}
+
+QString BlockerRules::CommentRule::MetadataKey() const {
+  int colon_index = line_.indexOf(": ");
+  if (colon_index == -1) return QString();
+  return line_.left(colon_index);
+}
+
+QString BlockerRules::CommentRule::MetadataValue() const {
+  int colon_index = line_.indexOf(": ");
+  if (colon_index == -1) return QString();
+  return line_.mid(colon_index + 2);
 }
 
 BlockerRules::StaticRule::RulePiece::RulePiece() { }
@@ -361,9 +373,49 @@ QList<BlockerRules::Rule*> BlockerRules::ParseRules(QTextStream* stream,
     auto rule = Rule::ParseRule(line, file_index, line_num);
     if (rule) ret.append(rule);
   }
-  if (parse_ok) {
-    // TODO(cretz): checksum
-    *parse_ok = true;
+  // We intentionally choose not to check the embedded checksum here.
+  // Anyone who can inject filters can change the checksum. We might consider
+  //  returning the checksum so callers can check against an external source.
+  if (parse_ok) *parse_ok = true;
+  return ret;
+}
+
+BlockerRules::ListMetadata BlockerRules::GetMetadata(
+    const QList<Rule*>& rules) {
+  ListMetadata ret = {};
+  for (const auto rule : rules) {
+    auto comment = rule->AsComment();
+    if (!comment) {
+      ret.rule_count++;
+      continue;
+    }
+    auto key = comment->MetadataKey();
+    if (key.isEmpty()) continue;
+    auto value = comment->MetadataValue();
+    if (value.isEmpty()) continue;
+    if (key == "Homepage") {
+      ret.homepage = value;
+    } else if (key == "Title") {
+      ret.title = value;
+    } else if (key == "Expires") {
+      auto expires = value.split(' ');
+      if (expires.size() < 2) continue;
+      auto ok = false;
+      auto amount = expires[0].toInt(&ok);
+      if (!ok) continue;
+      if (expires[1] == "days" || expires[1] == "day") {
+        ret.expiration_hours = amount * 24;
+      } else if (expires[1] == "hours" || expires[1] == "hour") {
+        ret.expiration_hours = amount;
+      }
+    } else if (key == "Checksum") {
+      ret.checksum = value.toLatin1();
+    } else if (key == "Version") {
+      auto ok = false;
+      auto version = value.toLongLong(&ok);
+      if (!ok) continue;
+      ret.version = version;
+    }
   }
   return ret;
 }
@@ -395,16 +447,19 @@ BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
     const QString& target_url,
     const QString& ref_url,
     StaticRule::RequestType request_type) const {
-  // Url-ify both
   QUrl target_url_parsed(target_url, QUrl::StrictMode);
   QUrl ref_url_parsed(ref_url, QUrl::StrictMode);
+  return FindStaticRule(target_url_parsed, ref_url_parsed, request_type);
+}
+
+BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
+    const QUrl& target_url,
+    const QUrl& ref_url,
+    StaticRule::RequestType request_type) const {
   // We require URLs w/ schemes and hosts
-  if (!target_url_parsed.isValid() ||
-      !ref_url_parsed.isValid() ||
-      target_url_parsed.scheme().isEmpty() ||
-      ref_url_parsed.scheme().isEmpty() ||
-      target_url_parsed.host().isEmpty() ||
-      ref_url_parsed.host().isEmpty()) {
+  if (!target_url.isValid() || !ref_url.isValid() ||
+      target_url.scheme().isEmpty() || ref_url.scheme().isEmpty() ||
+      target_url.host().isEmpty() || ref_url.host().isEmpty()) {
     return nullptr;
   }
 
@@ -414,7 +469,7 @@ BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
         arg(url.host()).arg(url.port(url.scheme() == "http" ? 80 : 443));
   };
   auto same_origin =
-      url_origin(target_url_parsed) == url_origin(ref_url_parsed);
+      url_origin(target_url) == url_origin(ref_url);
 
   auto url_bytes = [](const QUrl& url) -> QByteArray {
     return url.toEncoded(QUrl::RemoveUserInfo | QUrl::FullyEncoded);
@@ -438,13 +493,13 @@ BlockerRules::StaticRule::Info* BlockerRules::FindStaticRule(
     request_type,  // request_type
     same_origin ? StaticRule::RequestParty::FirstParty :
         StaticRule::RequestParty::ThirdParty,  // request_party
-    url_bytes(target_url_parsed),  // target_url
-    hosts(target_url_parsed.host(QUrl::FullyEncoded)),  // target_hosts
-    target_url_parsed.scheme().length() + 3 +
-      target_url_parsed.
+    url_bytes(target_url),  // target_url
+    hosts(target_url.host(QUrl::FullyEncoded)),  // target_hosts
+    target_url.scheme().length() + 3 +
+      target_url.
         host(QUrl::FullyDecoded).length(),  // target_url_after_host_index
-    url_bytes(ref_url_parsed),  // ref_url
-    hosts(ref_url_parsed.host(QUrl::FullyEncoded))  // ref_hosts
+    url_bytes(ref_url),  // ref_url
+    hosts(ref_url.host(QUrl::FullyEncoded))  // ref_hosts
   };
   return FindStaticRule(ctx);
 }

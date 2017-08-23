@@ -3,7 +3,7 @@
 
 #include <QtWidgets>
 
-#include "blocker.h"
+#include "cosmetic_blocker.h"
 #include "cef/cef_base.h"
 
 namespace doogie {
@@ -50,7 +50,7 @@ class CefAppHandler :
   void OnWebKitInitialized() override;
 
  private:
-  Blocker blocker_;
+  CosmeticBlocker blocker_;
   std::function<bool(CefRefPtr<CefBrowser>,
                      CefRefPtr<CefFrame>,
                      CefRefPtr<CefRequest>,

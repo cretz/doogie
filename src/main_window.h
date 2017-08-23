@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 
+#include "blocker_dock.h"
 #include "browser_stack.h"
 #include "cef/cef.h"
 #include "cef/cef_widget.h"
@@ -43,6 +44,7 @@ class MainWindow : public QMainWindow {
   PageTreeDock* page_tree_dock_;
   DownloadsDock* downloads_dock_;
   DevToolsDock* dev_tools_dock_;
+  BlockerDock* blocker_dock_;
   LoggingDock* logging_dock_;
   bool attempting_to_close_ = false;
   bool ok_with_terminating_downloads_ = false;

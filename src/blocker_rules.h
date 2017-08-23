@@ -36,6 +36,9 @@ class BlockerRules {
 
     CommentRule* AsComment() override { return this; }
 
+    QString MetadataKey() const;
+    QString MetadataValue() const;
+
    private:
     QString line_;
   };
@@ -179,10 +182,23 @@ class BlockerRules {
     CosmeticRule* AsCosmetic() override { return this; }
   };
 
+  struct ListMetadata {
+    QString homepage;
+    QString title;
+    int expiration_hours = 0;
+    QByteArray checksum;
+    QString redirect;
+    qlonglong version = 0;
+    qlonglong rule_count = 0;
+  };
+
   // Caller is responsible for deletion of these values
   static QList<Rule*> ParseRules(QTextStream* stream,
                                  int file_index,
                                  bool* parse_ok = nullptr);
+
+  // This does not take ownership of any rules
+  static ListMetadata GetMetadata(const QList<Rule*>& rules);
 
   QJsonObject RuleTree() const;
 
@@ -193,6 +209,11 @@ class BlockerRules {
   StaticRule::Info* FindStaticRule(
       const QString& target_url,
       const QString& ref_url,
+      StaticRule::RequestType request_type) const;
+
+  StaticRule::Info* FindStaticRule(
+      const QUrl& target_url,
+      const QUrl& ref_url,
       StaticRule::RequestType request_type) const;
 
  private:

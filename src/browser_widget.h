@@ -14,6 +14,11 @@ class BrowserWidget : public QWidget {
   Q_OBJECT
 
  public:
+  typedef std::function<bool(
+      BrowserWidget* browser,
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request)> ResourceLoadCallback;
+
   enum ContextMenuCommand {
     ContextMenuOpenLinkChildPage = MENU_ID_USER_FIRST,
     ContextMenuOpenLinkChildPageBackground,
@@ -62,6 +67,8 @@ class BrowserWidget : public QWidget {
   bool Suspended() const;
   void SetSuspended(bool suspend, const QString& url_override = QString());
 
+  void SetResourceLoadCallback(ResourceLoadCallback callback);
+
   QJsonObject DebugDump() const;
 
  signals:
@@ -71,6 +78,9 @@ class BrowserWidget : public QWidget {
                          CefRefPtr<CefBeforeDownloadCallback> callback);
   void DownloadUpdated(const Download& download);
   void LoadingStateChanged();
+  void LoadResource(CefRefPtr<CefFrame> frame,
+                    CefRefPtr<CefRequest> request,
+                    CefRefPtr<CefRequestCallback> callback);
   void PageOpen(CefHandler::WindowOpenType type,
                 const QString& url,
                 bool user_gesture);
@@ -128,6 +138,7 @@ class BrowserWidget : public QWidget {
   CefRefPtr<CefSSLInfo> errored_ssl_info_;
   CefRefPtr<CefRequestCallback> errored_ssl_callback_;
   CefRefPtr<CefSSLStatus> ssl_status_;
+  CefHandler::ResourceLoadCallback resource_load_callback_;
 };
 
 }  // namespace doogie

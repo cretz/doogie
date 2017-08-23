@@ -279,6 +279,18 @@ void BrowserWidget::SetSuspended(bool suspend, const QString& url_override) {
   }
 }
 
+void BrowserWidget::SetResourceLoadCallback(ResourceLoadCallback callback) {
+  if (!callback) {
+    resource_load_callback_ = nullptr;
+  } else {
+    resource_load_callback_ = [=](CefRefPtr<CefFrame> frame,
+                                  CefRefPtr<CefRequest> request) -> bool {
+      return callback(this, frame, request);
+    };
+  }
+  cef_widg_->SetResourceLoadCallback(resource_load_callback_);
+}
+
 QJsonObject BrowserWidget::DebugDump() const {
   return {
     { "loading", loading_ },
@@ -318,6 +330,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
     cef_widg_->deleteLater();
   }
   cef_widg_ = new CefWidget(cef_, bubble_, url, this);
+  cef_widg_->SetResourceLoadCallback(resource_load_callback_);
   connect(cef_widg_, &CefWidget::PreContextMenu,
           this, &BrowserWidget::BuildContextMenu);
   connect(cef_widg_, &CefWidget::ContextMenuCommand,

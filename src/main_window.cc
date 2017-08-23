@@ -47,6 +47,11 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   downloads_dock_->setVisible(false);
   addDockWidget(Qt::LeftDockWidgetArea, downloads_dock_);
 
+  blocker_dock_ = new BlockerDock(cef, browser_stack_, this);
+  blocker_dock_->setObjectName("blocker_dock");
+  blocker_dock_->setVisible(false);
+  addDockWidget(Qt::LeftDockWidgetArea, blocker_dock_);
+
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
   page_tree_dock_->setObjectName("page_tree_dock");
   addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
@@ -70,7 +75,10 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   logging_dock_->setObjectName("logging_dock");
   logging_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, logging_dock_);
+  // We'll let the console log on debug
+  #ifndef QT_DEBUG
   qInstallMessageHandler(MainWindow::LogQtMessage);
+  #endif
 
   resizeDocks({ dev_tools_dock_, logging_dock_ }, { 300, 300 }, Qt::Vertical);
 
@@ -205,10 +213,17 @@ void MainWindow::SetupActions() {
     for (auto browser : browser_stack_->Browsers()) {
       in_use_names.insert(browser->CurrentBubble().Name());
     }
-    ProfileSettingsDialog dialog(Profile::Current(), in_use_names, this);
-    if (dialog.exec() == QDialog::Accepted && dialog.NeedsRestart()) {
-      launch_with_profile_on_close = Profile::Current()->Path();
-      this->close();
+    ProfileSettingsDialog dialog(cef_,
+                                 Profile::Current(),
+                                 in_use_names,
+                                 this);
+    if (dialog.exec() == QDialog::Accepted) {
+      if (QDialog::Accepted && dialog.NeedsRestart()) {
+        launch_with_profile_on_close = Profile::Current()->Path();
+        this->close();
+      } else {
+        blocker_dock_->ProfileUpdated(cef_);
+      }
     }
   });
   profile_settings->setText(QString("Profile Settings for '") +
@@ -239,6 +254,17 @@ void MainWindow::SetupActions() {
   connect(downloads_dock_, &QDockWidget::visibilityChanged, [=](bool visible) {
     downloads_action->setChecked(visible);
   });
+
+  auto blocker_action =
+      ActionManager::Action(ActionManager::BlockerWindow);
+  connect(blocker_action, &QAction::triggered, [=]() {
+    blocker_dock_->setVisible(!blocker_dock_->isVisible());
+  });
+  blocker_action->setCheckable(true);
+  connect(blocker_dock_, &QDockWidget::visibilityChanged, [=](bool visible) {
+    blocker_action->setChecked(visible);
+  });
+
   auto logs_action = ActionManager::Action(ActionManager::LogsWindow);
   connect(logs_action, &QAction::triggered, [=]() {
     logging_dock_->setVisible(!logging_dock_->isVisible());
@@ -281,6 +307,7 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::FocusBrowser);
   menu_action(menu, ActionManager::LogsWindow);
   menu_action(menu, ActionManager::DownloadsWindow);
+  menu_action(menu, ActionManager::BlockerWindow);
 
   // Non-visible actions
   addAction(ActionManager::Action(ActionManager::NewChildBackgroundPage));

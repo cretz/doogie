@@ -63,6 +63,7 @@ class CefWidget : public CefBaseWidget {
   void SetZoomLevel(double level);
 
   void SetJsDialogCallback(CefHandler::JsDialogCallback callback);
+  void SetResourceLoadCallback(CefHandler::ResourceLoadCallback callback);
 
  signals:
   void Closed();

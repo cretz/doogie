@@ -39,6 +39,21 @@ CREATE TABLE IF NOT EXISTS download (
   size INTEGER NOT NULL
 );
 
+-- Blocker list stuff
+--
+CREATE TABLE IF NOT EXISTS blocker_list (
+  id INTEGER PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  homepage TEXT,
+  url TEXT,
+  local_path TEXT NOT NULL,
+  version INTEGER,
+  -- Unix timestamp
+  last_refreshed INTEGER,
+  expiration_hours INTEGER,
+  last_known_rule_count INTEGER
+);
+
 -- Page index stuff
 --
 CREATE TABLE IF NOT EXISTS favicon (

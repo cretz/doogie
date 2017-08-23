@@ -1,8 +1,8 @@
-#include "blocker.h"
+#include "cosmetic_blocker.h"
 
 namespace doogie {
 
-void Blocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
+void CosmeticBlocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
                              CefRefPtr<CefFrame> frame,
                              CefRefPtr<CefV8Context> context) {
   // We are going to create a mutation callback function, use it,
@@ -11,7 +11,7 @@ void Blocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
   global->SetValue(
       "mutationCallback",
       CefV8Value::CreateFunction("mutationCallback",
-                                 new Blocker::MutationCallback()),
+                                 new CosmeticBlocker::MutationCallback()),
       V8_PROPERTY_ATTRIBUTE_NONE);
   frame->ExecuteJavaScript(
       "const obs = new MutationObserver(mutationCallback);\n"
@@ -21,7 +21,7 @@ void Blocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
       0);
 }
 
-bool Blocker::MutationCallback::Execute(const CefString& name,
+bool CosmeticBlocker::MutationCallback::Execute(const CefString& name,
                                         CefRefPtr<CefV8Value> object,
                                         const CefV8ValueList& arguments,
                                         CefRefPtr<CefV8Value>& retval,

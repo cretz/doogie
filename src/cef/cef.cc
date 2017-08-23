@@ -48,4 +48,80 @@ CefRefPtr<CefAppHandler> Cef::AppHandler() const {
   return app_handler_;
 }
 
+std::function<void()> Cef::Download(
+    const QString& url,
+    QIODevice* write_to,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_complete,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_data,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       uint64 current,
+                       uint64 total)> download_progress) const {
+  auto req = CefRequest::Create();
+  req->SetURL(CefString(url.toStdString()));
+  return Download(req, write_to, download_complete,
+                  download_data, download_progress);
+}
+
+std::function<void()> Cef::Download(
+    CefRefPtr<CefRequest> request,
+    QIODevice* write_to,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_complete,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_data,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       uint64 current,
+                       uint64 total)> download_progress) const {
+
+  CefRefPtr<Cef::CallbackFullDownload> client = new CallbackFullDownload(
+      write_to, download_complete, download_data, download_progress);
+  auto url_req = CefURLRequest::Create(request, client, nullptr);
+  return [=]() { if (url_req) url_req->Cancel(); };
+}
+
+Cef::CallbackFullDownload::CallbackFullDownload(
+    QIODevice* write_to,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_complete,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       QIODevice* device)> download_data,
+    std::function<void(CefRefPtr<CefURLRequest> request,
+                       uint64 current,
+                       uint64 total)> download_progress)
+    : write_to_(write_to),
+      download_complete_(download_complete),
+      download_data_(download_data),
+      download_progress_(download_progress) {
+}
+
+void Cef::CallbackFullDownload::OnDownloadProgress(
+    CefRefPtr<CefURLRequest> request,
+    int64 current,
+    int64 total) {
+  if (download_progress_) {
+    download_progress_(request, current, total);
+  }
+}
+
+void Cef::CallbackFullDownload::OnDownloadData(
+    CefRefPtr<CefURLRequest> request,
+    const void* data,
+    size_t data_length) {
+  if (write_to_) {
+    write_to_->write(static_cast<const char*>(data), data_length);
+  }
+  if (download_data_) {
+    download_data_(request, write_to_);
+  }
+}
+
+void Cef::CallbackFullDownload::OnRequestComplete(
+    CefRefPtr<CefURLRequest> request) {
+  if (download_complete_) {
+    download_complete_(request, write_to_);
+  }
+}
+
 }  // namespace doogie
