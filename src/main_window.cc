@@ -222,7 +222,7 @@ void MainWindow::SetupActions() {
         launch_with_profile_on_close = Profile::Current()->Path();
         this->close();
       } else {
-        blocker_dock_->ProfileUpdated(cef_);
+        blocker_dock_->ProfileUpdated();
       }
     }
   });

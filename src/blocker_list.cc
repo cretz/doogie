@@ -68,6 +68,10 @@ std::function<void()> BlockerList::FromUrl(
 
 BlockerList::BlockerList() { }
 
+BlockerList::BlockerList(qlonglong id) : id_(id) {
+  if (!Reload()) id_ = -1;
+}
+
 bool BlockerList::Persist() {
   // Make a local cache path if not there
   if (local_path_.isEmpty()) {
@@ -142,12 +146,26 @@ bool BlockerList::Delete() {
   return true;
 }
 
+bool BlockerList::Reload() {
+  if (!Exists()) return false;
+  QSqlQuery query;
+  auto record = Sql::ExecSingleParam(
+        &query,
+        "SELECT * FROM blocker_list WHERE id = ?",
+        { id_ });
+  if (record.isEmpty()) return false;
+  ApplySqlRecord(record);
+  return true;
+}
+
 std::function<void()> BlockerList::LoadRules(
     const Cef& cef,
     int file_index,
+    bool local_file_only,
     std::function<void(QList<BlockerRules::Rule*> rules, bool ok)> callback) {
   std::function<void()> cancel = []() { };
-  if (!NeedsUpdate() || url_.isEmpty()) {
+  if (local_file_only || !NeedsUpdate() || url_.isEmpty()) {
+    qDebug() << "Attempting to load rules from file" << local_path_ << "first";
     auto rules = RulesFromFile(local_path_, file_index);
     if (!rules.isEmpty()) {
       // If this doesn't have a URL, we consider this a persistable update
@@ -161,7 +179,12 @@ std::function<void()> BlockerList::LoadRules(
       callback(rules, true);
       return cancel;
     }
+    if (local_file_only) {
+      callback(QList<BlockerRules::Rule*>(), false);
+      return cancel;
+    }
   }
+  qDebug() << "Now trying to load rules from" << url_;
   return Update(cef, file_index, callback);
 }
 
@@ -174,19 +197,23 @@ std::function<void()> BlockerList::Update(
     callback(QList<BlockerRules::Rule*>(), false);
     return []() { };
   }
-  return DownloadRules(cef, url_, file_index, local_path_,
-                       [=](QList<BlockerRules::Rule*> rules) {
+  auto id = id_;
+  // Do NOT capture "this". We don't want to require its presence
+  return DownloadRules(
+        cef, url_, file_index, local_path_,
+        [id, callback](QList<BlockerRules::Rule*> rules) {
     if (rules.isEmpty()) {
       callback(rules, false);
       return;
     }
     // Load up the metadata and set known rule counts and what not
-    // TODO(cretz): Remove this and rework stuff. This unfortunately requires
-    //  "this" be around even after callback.
-    auto meta = BlockerRules::GetMetadata(rules);
-    UpdateFromMeta(meta);
-    last_refreshed_ = QDateTime::currentDateTimeUtc();
-    Persist();
+    BlockerList list(id);
+    if (list.Exists()) {
+      auto meta = BlockerRules::GetMetadata(rules);
+      list.UpdateFromMeta(meta);
+      list.SetLastRefreshed(QDateTime::currentDateTimeUtc());
+      list.Persist();
+    }
     callback(rules, true);
   });
 }
@@ -246,6 +273,7 @@ std::function<void()> BlockerList::DownloadRules(
         callback(QList<BlockerRules::Rule*>());
         return;
       } else {
+        file.write(buf->data());
         file.close();
       }
     }
@@ -265,6 +293,10 @@ std::function<void()> BlockerList::DownloadRules(
 }
 
 BlockerList::BlockerList(const QSqlRecord& record) {
+  ApplySqlRecord(record);
+}
+
+void BlockerList::ApplySqlRecord(const QSqlRecord& record) {
   id_ = record.value("id").toLongLong();
   name_ = record.value("name").toString();
   homepage_ = record.value("homepage").toString();

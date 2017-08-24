@@ -21,19 +21,23 @@ class BlockerList {
       std::function<void(BlockerList list, bool ok)> callback);
 
   BlockerList();
+  BlockerList(qlonglong id);
 
   bool Persist();
   bool Delete();
+  bool Reload();
 
   // Caller is owner of resulting rules and is expected to delete them.
-  // Caller is expected to make this live long enough for the callback.
+  // To get any of the metadata updates, callers must Reload after callback.
+  // Note, callback may be called before this returns.
   std::function<void()> LoadRules(
       const Cef& cef,
       int file_index,
+      bool local_file_only,
       std::function<void(QList<BlockerRules::Rule*> rules, bool ok)> callback);
 
   // Caller is owner of resulting rules and is expected to delete them.
-  // Caller is expected to make this live long enough for the callback.
+  // To get any of the metadata updates, callers must Reload after callback.
   std::function<void()> Update(
       const Cef& cef,
       int file_index,
@@ -84,6 +88,7 @@ class BlockerList {
       std::function<void(QList<BlockerRules::Rule*> rules)> callback);
 
   explicit BlockerList(const QSqlRecord& record);
+  void ApplySqlRecord(const QSqlRecord& record);
 
   void UpdateFromMeta(BlockerRules::ListMetadata meta);
 

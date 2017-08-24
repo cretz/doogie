@@ -7,9 +7,11 @@ namespace doogie {
 BlockerDock::BlockerDock(const Cef& cef,
                          BrowserStack* browser_stack,
                          QWidget* parent)
-    : QDockWidget("Request Blocker", parent) {
+    : QDockWidget("Request Blocker", parent), cef_(cef) {
 
   setFeatures(QDockWidget::AllDockWidgetFeatures);
+
+  rules_.store(nullptr);
 
   auto layout = new QVBoxLayout;
 
@@ -38,17 +40,24 @@ BlockerDock::BlockerDock(const Cef& cef,
   auto widg = new QWidget;
   widg->setLayout(layout);
   setWidget(widg);
-
-  ProfileUpdated(cef);
   browser_stack->SetResourceLoadCallback(
         [=](BrowserWidget* browser,
             CefRefPtr<CefFrame> frame,
             CefRefPtr<CefRequest> request) -> bool {
     return IsAllowedToLoad(browser, frame, request);
   });
+
+  // Do a local-file-only load to start with. Then we'll check
+  // for updates a few mins later.
+  ProfileUpdated(true);
+  // Check for updates after the normal timeout plus 10 seconds
+  QTimer::singleShot((kListLoadTimeoutSeconds + 10) * 1000,
+                     [=]() { CheckUpdate(); });
+  // And every so often
+  startTimer(kCheckUpdatesSeconds * 1000);
 }
 
-void BlockerDock::ProfileUpdated(const Cef& cef) {
+void BlockerDock::ProfileUpdated(bool load_local_file_only) {
   // As a shortcut, if there are no enabled blockers, just null out the
   //  rule set.
   if (Profile::Current()->EnabledBlockerListIds().isEmpty()) {
@@ -114,6 +123,8 @@ void BlockerDock::ProfileUpdated(const Cef& cef) {
       // We're ok w/ the non-atomicness of the lists here because
       //  we only look it up on GUI threads usually.
       lists_ = *new_lists;
+      // Go over each list and reload it
+      for (auto index : lists_.keys()) lists_[index].Reload();
       rules_ = new_rules;
     }
     delete new_lists;
@@ -125,7 +136,8 @@ void BlockerDock::ProfileUpdated(const Cef& cef) {
   for (auto list_index : new_lists->keys()) {
     auto& list = (*new_lists)[list_index];
     cancellations->insert(list_index, list.LoadRules(
-          cef, list_index, [=](QList<BlockerRules::Rule*> rules, bool ok) {
+          cef_, list_index, load_local_file_only,
+          [=](QList<BlockerRules::Rule*> rules, bool ok) {
       // Single shot to get back on proper thread in event loop
       QTimer::singleShot(0, [=]() {
         // Timer will be gone if timed out
@@ -147,6 +159,19 @@ void BlockerDock::ProfileUpdated(const Cef& cef) {
   timeout_timer->start(kListLoadTimeoutSeconds * 1000);
 }
 
+void BlockerDock::timerEvent(QTimerEvent*) {
+  CheckUpdate();
+}
+
+void BlockerDock::CheckUpdate() {
+  for (auto list : lists_.values()) {
+    if (list.NeedsUpdate()) {
+      ProfileUpdated();
+      return;
+    }
+  }
+}
+
 bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
                                   CefRefPtr<CefFrame> frame,
                                   CefRefPtr<CefRequest> request) {
@@ -164,7 +189,7 @@ bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
   auto type = TypeFromRequest(target_url, request);
   auto rule = rules->FindStaticRule(target_url, ref_url, type);
   if (rule) {
-    qDebug() << "Found rule for" << target_url_str
+    qDebug() << "Found blocking rule for" << target_url_str
              << "on line" << rule->line_num
              << "in" << timer.elapsed() << "ms";
   }
