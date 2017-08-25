@@ -96,6 +96,11 @@ win32 {
     # See http://magpcss.org/ceforum/viewtopic.php?f=6&t=14721
     CONFIG -= embed_manifest_exe
     RC_FILE = doogie.rc
+
+    # We have to ignore this compiler warning because MSVC
+    #  complains about > 255 type name lengths in debug which
+    #  we don't care about.
+    QMAKE_CXXFLAGS += /wd4503
 }
 
 unix {
@@ -112,6 +117,9 @@ unix {
 
 # include cef folder
 include(cef/cef.pri)
+
+# include vendor folder
+include(vendor/vendor.pri)
 
 # include tests
 include(tests/unit/tests.pri)

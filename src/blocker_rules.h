@@ -1,14 +1,17 @@
 #ifndef DOOGIE_BLOCKER_RULES_H_
 #define DOOGIE_BLOCKER_RULES_H_
 
-// This was determined the best to use after some tests
-//  with other map implementations.
- #define USE_QHASH 1
+// This was determined the best to use after some tests with other map
+//  implementations. The only other one of note was sparsepp. While it
+//  appeared to use similar mem, it was a good bit slower on initial
+//  creation. Not having it helps keep third-party libs to a minimum.
+#define USE_QHASH 1
 
 #include <QtWidgets>
-#include <memory>
 #include <bitset>
-// #include <forward_list>
+#include <memory>
+#include <string>
+#include <vector>
 // #include <sparsepp/spp.h>
 // #include <unordered_map>
 // #include <hopscotch_map.h>
@@ -22,7 +25,7 @@ class BlockerRules {
   template<typename K, typename V> using Hash = QHash<K, V>;
 #else
   template<typename K, typename V> using Hash = spp::sparse_hash_map<K, V>;
-  //template<typename K, typename V> using Hash = std::map<K, V>;
+  // template<typename K, typename V> using Hash = std::unordered_map<K, V>;
 #endif
 
   class CommentRule;
@@ -61,6 +64,10 @@ class BlockerRules {
 
   class StaticRule : public Rule {
    public:
+    class RulePiece;
+    // Keyed by piece ID + starting char
+    typedef Hash<quint64, std::vector<RulePiece>> PieceChildHash;
+
     enum RequestType {
       // Only used for the hash, never inside the rule
       AllRequests,
@@ -100,7 +107,8 @@ class BlockerRules {
       MatchContext WithTargetUrlChanged(
           const QByteArray& new_target_url) const {
         return { request_type, request_party, new_target_url, target_hosts,
-                 target_url_after_host_index, ref_url, ref_hosts };
+                 target_url_after_host_index, ref_url,
+                 ref_hosts, piece_children };
       }
 
       const RequestType request_type;
@@ -114,6 +122,8 @@ class BlockerRules {
       const QByteArray ref_url;
       // Same sub piece array as in target_hosts.
       const QSet<QByteArray> ref_hosts;
+
+      const PieceChildHash* piece_children;
     };
 
     struct Info {
@@ -122,6 +132,12 @@ class BlockerRules {
       QSet<QByteArray> not_ref_domains;
       int file_index = -1;
       int line_num = -1;
+    };
+
+    struct AppendContext {
+      StaticRule* rule;
+      Info* info;
+      PieceChildHash* piece_children;
     };
 
     struct FindResult {
@@ -141,23 +157,25 @@ class BlockerRules {
       explicit RulePiece(const QByteArray& piece);
 
       Info* RuleThisTerminates() const { return rule_this_terminates_; }
-      void AppendRule(StaticRule* rule, Info* info, int piece_index = 0);
+      void AppendRule(AppendContext& ctx,  // NOLINT(runtime/references)
+                      int piece_index = 0);
 
       // Caller is responsible for deletion of result.
       FindResult* CheckMatch(const MatchContext& ctx,
                              int curr_index = 0) const;
 
-      void RuleTree(QJsonObject* obj) const;
+      void RuleTree(QJsonObject* obj,
+                    const PieceChildHash* piece_children) const;
 
      private:
+      static quint64 id_counter_;
+
       typedef Hash<char, std::vector<RulePiece>> ChildMap;
 
       // Empty piece means any
+      quint64 id_;
       QByteArray piece_;
       bool case_sensitive_ = false;
-      // Key is 0 for any non-lit rules. Note, can have
-      //  multiple values per char
-      ChildMap children_;
 
       // This is checked at the end for things like not-domain. We know this
       //  pointer is frequently copied, but it's not owned by us.
@@ -269,15 +287,15 @@ class BlockerRules {
       const StaticRule::MatchContext& ctx, const RuleHash& hash) const;
 
   void AddStaticRule(StaticRule* rule);
-  void AddStaticRuleToRefHostHash(StaticRule* rule,
-                                  StaticRule::Info* info,
-                                  RefHostHash* hash);
-  void AddStaticRuleToTargetHostHash(StaticRule* rule,
-                                     StaticRule::Info* info,
-                                     TargetHostHash* hash);
-  void AddStaticRuleToRuleHash(StaticRule* rule,
-                               StaticRule::Info* info,
-                               RuleHash* hash);
+  void AddStaticRuleToRefHostHash(
+      StaticRule::AppendContext& ctx,  // NOLINT(runtime/references)
+      RefHostHash* hash);
+  void AddStaticRuleToTargetHostHash(
+      StaticRule::AppendContext& ctx,  // NOLINT(runtime/references)
+      TargetHostHash* hash);
+  void AddStaticRuleToRuleHash(
+      StaticRule::AppendContext& ctx,  // NOLINT(runtime/references)
+      RuleHash* hash);
 
   QJsonObject RuleTreeForPartyHash(const PartyOptionHash& hash) const;
   QJsonObject RuleTreeForRefHostHash(const RefHostHash& hash) const;
@@ -287,8 +305,7 @@ class BlockerRules {
   PartyOptionHash static_rules_;
   PartyOptionHash static_rule_exceptions_;
   std::vector<StaticRule::Info*> info_ptrs_;
-
-
+  StaticRule::PieceChildHash piece_children_;
 };
 
 }  // namespace doogie

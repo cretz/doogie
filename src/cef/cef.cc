@@ -74,7 +74,6 @@ std::function<void()> Cef::Download(
     std::function<void(CefRefPtr<CefURLRequest> request,
                        uint64 current,
                        uint64 total)> download_progress) const {
-
   CefRefPtr<Cef::CallbackFullDownload> client = new CallbackFullDownload(
       write_to, download_complete, download_data, download_progress);
   auto url_req = CefURLRequest::Create(request, client, nullptr);

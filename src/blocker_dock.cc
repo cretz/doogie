@@ -54,9 +54,11 @@ BlockerDock::BlockerDock(const Cef& cef,
   table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
   table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
   table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
-  table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+  table_->horizontalHeader()->setSectionResizeMode(
+        5, QHeaderView::ResizeToContents);
   table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
-  table_->horizontalHeader()->setSectionResizeMode(7, QHeaderView::ResizeToContents);
+  table_->horizontalHeader()->setSectionResizeMode(
+        7, QHeaderView::ResizeToContents);
   table_->verticalHeader()->setVisible(false);
   table_->sortByColumn(7, Qt::DescendingOrder);
   layout->addWidget(table_, 1);

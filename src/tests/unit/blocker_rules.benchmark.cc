@@ -94,18 +94,15 @@ class BlockerRulesBenchmark : public QObject {
   void initTestCase() {
     EnsureEasyListLoaded();
     // Some sleeps to observe memory...
-    qDebug() << "Sleeping before parse...";
-    QTest::qSleep(5000);
-    try {
-    easy_list_rules_ = ParsedRules(easy_list_);
-    } catch (const std::exception& e) {
-      qDebug() << "NO!!" << e.what();
-    }
+    // qDebug() << "Sleeping before parse...";
+    // QTest::qSleep(5000);
 
+    easy_list_rules_ = ParsedRules(easy_list_);
     // Remove it from last_rules_ so it doesn't get auto-deleted
     last_rules_ = nullptr;
-    qDebug() << "Sleeping after parse...";
-    QTest::qSleep(5000);
+
+    // qDebug() << "Sleeping after parse...";
+    // QTest::qSleep(5000);
   }
 
   void cleanupTestCase() {

@@ -21,7 +21,7 @@ class BlockerList {
       std::function<void(BlockerList list, bool ok)> callback);
 
   BlockerList();
-  BlockerList(qlonglong id);
+  explicit BlockerList(qlonglong id);
 
   bool Persist();
   bool Delete();

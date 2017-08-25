@@ -12,7 +12,6 @@ namespace doogie {
 #ifdef USE_QHASH
 #define ITER_KEY(_ITER) _ITER.key()
 #define ITER_VAL(_ITER) _ITER.value()
-
 #else
 #define ITER_KEY(_ITER) _ITER->first
 #define ITER_VAL(_ITER) _ITER->second
@@ -91,7 +90,10 @@ QString BlockerRules::StaticRule::FindResult::ToRuleString() const {
   return ret;
 }
 
-BlockerRules::StaticRule::RulePiece::RulePiece() { }
+BlockerRules::StaticRule::RulePiece::RulePiece() {
+  id_ = id_counter_;
+  id_counter_ += 256;
+}
 
 BlockerRules::StaticRule::RulePiece::RulePiece(const QByteArray& piece) {
   if (piece != "*") {
@@ -99,18 +101,19 @@ BlockerRules::StaticRule::RulePiece::RulePiece(const QByteArray& piece) {
     piece_ = piece;
     if (piece_.size() != piece_.capacity()) piece_.squeeze();
   }
+  id_ = id_counter_;
+  id_counter_ += 256;
 }
 
-void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
-                                                     StaticRule::Info* info,
-                                                     int piece_index) {
-  auto& piece = rule->Pieces()[piece_index];
+void BlockerRules::StaticRule::RulePiece::AppendRule(
+    StaticRule::AppendContext& ctx, int piece_index) {
+  auto& piece = ctx.rule->Pieces()[piece_index];
   // As a shortcut, if we're the same piece and we have more indices,
   //  just go one deeper eagerly. This really only helps the root w/
   //  asterisks.
   if ((piece == piece_ || (piece == "*" && piece_.isNull())) &&
-      piece_index < rule->Pieces().length() - 1) {
-    AppendRule(rule, info, piece_index + 1);
+      piece_index < ctx.rule->Pieces().length() - 1) {
+    AppendRule(ctx, piece_index + 1);
     return;
   }
 
@@ -122,18 +125,18 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
 
   auto update_child = [&](RulePiece& child) {
     // If we're the last, terminate and leave. Otherwise go another deeper.
-    if (piece_index == rule->Pieces().length() - 1 ||
-        (piece_index == rule->Pieces().length() - 2 &&
-         rule->Pieces()[piece_index + 1] == "*")) {
-      child.rule_this_terminates_ = info;
+    if (piece_index == ctx.rule->Pieces().length() - 1 ||
+        (piece_index == ctx.rule->Pieces().length() - 2 &&
+         ctx.rule->Pieces()[piece_index + 1] == "*")) {
+      child.rule_this_terminates_ = ctx.info;
     } else {
-      child.AppendRule(rule, info, piece_index + 1);
+      child.AppendRule(ctx, piece_index + 1);
     }
   };
 
   // We check all the children to see if there are any we already match
   //  and if there are, we just add our next to their next
-  auto& vec = children_[first_chr];
+  auto& vec = (*ctx.piece_children)[id_ + first_chr];
   for (auto& child : vec) {
     if (child.piece_ == piece) {
       update_child(child);
@@ -142,13 +145,8 @@ void BlockerRules::StaticRule::RulePiece::AppendRule(StaticRule* rule,
   }
   // Nope, need a new rule piece
   vec.emplace_back(piece);
-  vec.back().case_sensitive_ = rule->case_sensitive_;
+  vec.back().case_sensitive_ = ctx.rule->case_sensitive_;
   update_child(vec.back());
-  /*
-  vec.emplace_front(piece);
-  vec.front().case_sensitive_ = rule->case_sensitive_;
-  update_child(vec.front());
-  */
 }
 
 BlockerRules::StaticRule::FindResult*
@@ -170,7 +168,8 @@ BlockerRules::StaticRule::FindResult*
           auto url_ch = ctx.target_url[curr_index];
           if ((url_ch >= 'a' && url_ch <= 'z') ||
               (url_ch >= '0' && url_ch <= '9') ||
-              url_ch == '_' || url_ch == '-' || url_ch == '.' || url_ch == '%') {
+              url_ch == '_' || url_ch == '-' ||
+              url_ch == '.' || url_ch == '%') {
             return nullptr;
           }
           curr_index++;
@@ -217,8 +216,8 @@ BlockerRules::StaticRule::FindResult*
 
   // Try all char-0's (i.e. any and seps)
   FindResult* result = nullptr;
-  ChildMap::const_iterator iter = children_.find(0);
-  if (iter != children_.cend()) {
+  PieceChildHash::const_iterator iter = ctx.piece_children->find(id_);
+  if (iter != ctx.piece_children->cend()) {
     for (const auto& child : ITER_VAL(iter)) {
       result = child.CheckMatch(ctx, curr_index);
       if (result) break;
@@ -228,8 +227,8 @@ BlockerRules::StaticRule::FindResult*
   // We have to try next string chars
   for (int i = curr_index; !result && i < ctx.target_url.length(); i++) {
     char url_ch = ctx.target_url[i];
-    iter = children_.find(url_ch);
-    if (iter != children_.cend()) {
+    iter = ctx.piece_children->find(id_ + url_ch);
+    if (iter != ctx.piece_children->cend()) {
       for (const auto& child : ITER_VAL(iter)) {
         result = child.CheckMatch(ctx, i);
         if (result) break;
@@ -238,8 +237,8 @@ BlockerRules::StaticRule::FindResult*
     // If it's upper case, we also need to check the lower case char
     if (!result && url_ch >= 'A' && url_ch <= 'Z') {
       url_ch += 32;
-      iter = children_.find(url_ch);
-      if (iter != children_.cend()) {
+      iter = ctx.piece_children->find(id_ + url_ch);
+      if (iter != ctx.piece_children->cend()) {
         for (const auto& child : ITER_VAL(iter)) {
           result = child.CheckMatch(ctx, i);
           if (result) break;
@@ -256,7 +255,8 @@ BlockerRules::StaticRule::FindResult*
   return result;
 }
 
-void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
+void BlockerRules::StaticRule::RulePiece::RuleTree(
+    QJsonObject* obj, const PieceChildHash* piece_children) const {
   auto piece = piece_.isEmpty() ? "*" : piece_;
   if (rule_this_terminates_) {
     obj->insert(piece, QString("Terminates for file %1 and line %2").
@@ -265,16 +265,20 @@ void BlockerRules::StaticRule::RulePiece::RuleTree(QJsonObject* obj) const {
     return;
   }
   QJsonObject child;
-  for (auto it = children_.cbegin(); it != children_.cend(); it++) {
-    QString key = ITER_KEY(it) == 0 ? "special" : QString(ITER_KEY(it));
+  for (int i = 0; i < 256; i++) {
+    PieceChildHash::const_iterator it = piece_children->find(id_ + i);
+    if (it == piece_children->cend()) continue;
+    QString key = i == 0 ? "special" : QString(static_cast<char>(i));
     auto child_obj = child[key].toObject();
     for (const auto& child : ITER_VAL(it)) {
-      child.RuleTree(&child_obj);
+      child.RuleTree(&child_obj, piece_children);
     }
     child[key] = child_obj;
   }
   obj->insert(piece, child);
 }
+
+quint64 BlockerRules::StaticRule::RulePiece::id_counter_ = 0;
 
 BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
     const QString& line, int, int line_num) {
@@ -342,7 +346,8 @@ BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
     //  hostname char or the end
     for (int i = 2; i < rule_bytes.length(); i++) {
       auto ch = rule_bytes[i];
-      if ((ch >= 'a' && ch <= 'z') || ch == '.' || ch == '-') {
+      if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') ||
+          ch == '.' || ch == '-') {
         ret->target_domain_name_ += ch;
       } else {
         break;
@@ -560,7 +565,8 @@ BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRule(
       target_url.
         host(QUrl::FullyDecoded).length(),  // target_url_after_host_index
     url_bytes(ref_url),  // ref_url
-    hosts(ref_url.host(QUrl::FullyEncoded))  // ref_hosts
+    hosts(ref_url.host(QUrl::FullyEncoded)),  // ref_hosts
+    &piece_children_  // piece_children
   };
   return FindStaticRule(ctx);
 }
@@ -661,69 +667,60 @@ BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRuleInRuleHash(
 void BlockerRules::AddStaticRule(StaticRule* rule) {
   // Create info that will be used inside rule and save pointer
   //  for later deletion
-  auto info = new StaticRule::Info();
-  for (const auto t : rule->NotRequestTypes()) {
-    info->not_request_types[t] = true;
+  StaticRule::AppendContext ctx = {};
+  ctx.rule = rule;
+  ctx.info = new StaticRule::Info();
+  for (const auto t : ctx.rule->NotRequestTypes()) {
+    ctx.info->not_request_types[t] = true;
   }
-  if (!rule->NotRefDomains().isEmpty()) {
-    info->not_ref_domains.reserve(rule->NotRefDomains().size());
-    for (auto d : rule->NotRefDomains()) {
-      info->not_ref_domains << d;
+  if (!ctx.rule->NotRefDomains().isEmpty()) {
+    ctx.info->not_ref_domains.reserve(ctx.rule->NotRefDomains().size());
+    for (auto d : ctx.rule->NotRefDomains()) {
+      ctx.info->not_ref_domains << d;
     }
   }
-  info->file_index = rule->FileIndex();
-  info->line_num = rule->LineNum();
-  info_ptrs_.push_back(info);
+  ctx.info->file_index = ctx.rule->FileIndex();
+  ctx.info->line_num = ctx.rule->LineNum();
+  info_ptrs_.push_back(ctx.info);
+  ctx.piece_children = &piece_children_;
 
-  if (rule->Exception()) {
-    AddStaticRuleToRefHostHash(rule,
-                               info,
-                               &static_rule_exceptions_[rule->ReqParty()]);
+  if (ctx.rule->Exception()) {
+    AddStaticRuleToRefHostHash(ctx,
+                               &static_rule_exceptions_[ctx.rule->ReqParty()]);
   } else {
-    AddStaticRuleToRefHostHash(rule,
-                               info,
-                               &static_rules_[rule->ReqParty()]);
+    AddStaticRuleToRefHostHash(ctx,
+                               &static_rules_[ctx.rule->ReqParty()]);
   }
 }
 
-void BlockerRules::AddStaticRuleToRefHostHash(StaticRule* rule,
-                                              StaticRule::Info* info,
+void BlockerRules::AddStaticRuleToRefHostHash(StaticRule::AppendContext& ctx,
                                               RefHostHash* hash) {
-  if (rule->RefDomains().isEmpty()) {
-    AddStaticRuleToTargetHostHash(rule, info, &(*hash)[""]);
+  if (ctx.rule->RefDomains().isEmpty()) {
+    AddStaticRuleToTargetHostHash(ctx, &(*hash)[""]);
   } else {
-    for (const auto& ref_domain : rule->RefDomains()) {
-      auto str = ref_domain.toStdString();
-      str.shrink_to_fit();
-      AddStaticRuleToTargetHostHash(rule,
-                                    info,
-                                    &(*hash)[str]);
+    for (const auto& ref_domain : ctx.rule->RefDomains()) {
+      AddStaticRuleToTargetHostHash(ctx, &(*hash)[ref_domain.toStdString()]);
     }
   }
 }
 
-void BlockerRules::AddStaticRuleToTargetHostHash(StaticRule* rule,
-                                                 StaticRule::Info* info,
-                                                 TargetHostHash* hash) {
-  if (rule->TargetDomainName().isEmpty()) {
-    AddStaticRuleToRuleHash(rule, info, &(*hash)[""]);
+void BlockerRules::AddStaticRuleToTargetHostHash(
+    StaticRule::AppendContext& ctx, TargetHostHash* hash) {
+  if (ctx.rule->TargetDomainName().isEmpty()) {
+    AddStaticRuleToRuleHash(ctx, &(*hash)[""]);
   } else {
-    auto str = rule->TargetDomainName().toStdString();
-    str.shrink_to_fit();
-    AddStaticRuleToRuleHash(rule,
-                            info,
-                            &(*hash)[str]);
+    AddStaticRuleToRuleHash(
+          ctx, &(*hash)[ctx.rule->TargetDomainName().toStdString()]);
   }
 }
 
-void BlockerRules::AddStaticRuleToRuleHash(StaticRule* rule,
-                                           StaticRule::Info* info,
+void BlockerRules::AddStaticRuleToRuleHash(StaticRule::AppendContext& ctx,
                                            RuleHash* hash) {
-  if (rule->RequestTypes().isEmpty()) {
-    (*hash)[StaticRule::AllRequests].AppendRule(rule, info);
+  if (ctx.rule->RequestTypes().isEmpty()) {
+    (*hash)[StaticRule::AllRequests].AppendRule(ctx);
   } else {
-    for (const auto request_type : rule->RequestTypes()) {
-      (*hash)[request_type].AppendRule(rule, info);
+    for (const auto request_type : ctx.rule->RequestTypes()) {
+      (*hash)[request_type].AppendRule(ctx);
     }
   }
 }
@@ -732,8 +729,9 @@ QJsonObject BlockerRules::RuleTreeForPartyHash(
     const PartyOptionHash& hash) const {
   QJsonObject ret;
   for (auto iter = hash.cbegin(); iter != hash.cend(); iter++) {
-    QString key = ITER_KEY(iter) == StaticRule::AnyParty ? "any party" :
-        (ITER_KEY(iter) == StaticRule::ThirdParty ? "third party" : "first party");
+    QString key = ITER_KEY(iter) == StaticRule::AnyParty ?
+        "any party" : (ITER_KEY(iter) == StaticRule::ThirdParty ?
+            "third party" : "first party");
     ret[key] = RuleTreeForRefHostHash(ITER_VAL(iter));
   }
   return ret;
@@ -770,7 +768,7 @@ QJsonObject BlockerRules::RuleTreeForRuleHash(
     RuleHash::const_iterator citer = hash.find(iter.value());
     if (citer != hash.cend()) {
       QJsonObject piece_json;
-      ITER_VAL(citer).RuleTree(&piece_json);
+      ITER_VAL(citer).RuleTree(&piece_json, &piece_children_);
       ret[iter.key()] = piece_json;
     }
     ++iter;

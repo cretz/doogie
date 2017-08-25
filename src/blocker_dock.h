@@ -1,8 +1,8 @@
 #ifndef DOOGIE_BLOCKER_DOCK_H_
 #define DOOGIE_BLOCKER_DOCK_H_
 
-#include <atomic>
 #include <QtWidgets>
+#include <atomic>
 
 #include "blocker_list.h"
 #include "blocker_rules.h"
@@ -12,6 +12,7 @@ namespace doogie {
 
 class BlockerDock : public QDockWidget {
   Q_OBJECT
+
  public:
   explicit BlockerDock(const Cef& cef,
                        BrowserStack* browser_stack,
@@ -23,7 +24,6 @@ class BlockerDock : public QDockWidget {
   void timerEvent(QTimerEvent* event) override;
 
  private:
-
   struct BlockedRequest {
     BrowserWidget* browser;
     QUrl target_url;
