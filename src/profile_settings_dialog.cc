@@ -647,7 +647,7 @@ QWidget* ProfileSettingsDialog::CreateBlockerTab(const Cef& cef) {
   layout->addWidget(new QLabel("Blocker Lists:"));
 
   auto table = new QTableWidget;
-  table->setColumnCount(7);
+  table->setColumnCount(8);
   table->setSelectionBehavior(QAbstractItemView::SelectRows);
   table->setSelectionMode(QAbstractItemView::SingleSelection);
   table->setHorizontalHeaderLabels(

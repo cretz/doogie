@@ -54,7 +54,7 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
 
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
   page_tree_dock_->setObjectName("page_tree_dock");
-  addDockWidget(Qt::LeftDockWidgetArea, page_tree_dock_);
+  addDockWidget(Qt::BottomDockWidgetArea, page_tree_dock_);
   // If we're attempting to close and the stack becomes empty,
   //  try the close again
   connect(page_tree_dock_, &PageTreeDock::TreeEmpty, [=]() {
@@ -80,7 +80,9 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   qInstallMessageHandler(MainWindow::LogQtMessage);
   #endif
 
-  resizeDocks({ dev_tools_dock_, logging_dock_ }, { 300, 300 }, Qt::Vertical);
+  resizeDocks({ blocker_dock_, dev_tools_dock_, logging_dock_ },
+              { 300, 300, 300 },
+              Qt::Vertical);
 
   // We choose for verticle windows to occupy the corners
   setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea);

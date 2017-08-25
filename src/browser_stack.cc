@@ -33,6 +33,9 @@ BrowserWidget* BrowserStack::NewBrowser(const Bubble& bubble,
           this, &BrowserStack::DownloadRequested);
   connect(widg, &BrowserWidget::DownloadUpdated,
           this, &BrowserStack::DownloadUpdated);
+  connect(widg, &BrowserWidget::destroyed, [=](QObject*) {
+    emit BrowserDestroyed(widg);
+  });
   // We load the URL separately so we can have the loading icon and what not
   if (!url.isEmpty()) widg->LoadUrl(url);
   widg->resize(size());

@@ -93,13 +93,19 @@ class BlockerRulesBenchmark : public QObject {
  private slots:  // NOLINT(whitespace/indent)
   void initTestCase() {
     EnsureEasyListLoaded();
-    //qDebug() << "Sleeping before parse...";
-    //QTest::qSleep(5000);
+    // Some sleeps to observe memory...
+    qDebug() << "Sleeping before parse...";
+    QTest::qSleep(5000);
+    try {
     easy_list_rules_ = ParsedRules(easy_list_);
+    } catch (const std::exception& e) {
+      qDebug() << "NO!!" << e.what();
+    }
+
     // Remove it from last_rules_ so it doesn't get auto-deleted
     last_rules_ = nullptr;
-    //qDebug() << "Sleeping after parse...";
-    //QTest::qSleep(5000);
+    qDebug() << "Sleeping after parse...";
+    QTest::qSleep(5000);
   }
 
   void cleanupTestCase() {
@@ -120,7 +126,7 @@ class BlockerRulesBenchmark : public QObject {
   }
 
   void benchmarkSimpleUrl() {
-    BlockerRules::StaticRule::Info* rule = nullptr;
+    BlockerRules::StaticRule::FindResult* rule = nullptr;
     QBENCHMARK {
       rule = easy_list_rules_->FindStaticRule(
             "http://example.com/foo/bar/-adserver-/baz",

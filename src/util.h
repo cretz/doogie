@@ -31,6 +31,8 @@ class Util {
   static QString FriendlyByteSize(double num);
   static QString FriendlyTimeSpan(qint64 seconds);
 
+  static void RunOnMainThread(std::function<void()> fn);
+
   static bool OpenContainingFolder(const QString& path);
 };
 

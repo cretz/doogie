@@ -1,14 +1,30 @@
 #ifndef DOOGIE_BLOCKER_RULES_H_
 #define DOOGIE_BLOCKER_RULES_H_
 
+// This was determined the best to use after some tests
+//  with other map implementations.
+ #define USE_QHASH 1
+
 #include <QtWidgets>
 #include <memory>
 #include <bitset>
+// #include <forward_list>
+// #include <sparsepp/spp.h>
+// #include <unordered_map>
+// #include <hopscotch_map.h>
+// #include <sparsehash/sparse_hash_map>
 
 namespace doogie {
 
 class BlockerRules {
  public:
+#ifdef USE_QHASH
+  template<typename K, typename V> using Hash = QHash<K, V>;
+#else
+  template<typename K, typename V> using Hash = spp::sparse_hash_map<K, V>;
+  //template<typename K, typename V> using Hash = std::map<K, V>;
+#endif
+
   class CommentRule;
   class StaticRule;
   class CosmeticRule;
@@ -108,34 +124,43 @@ class BlockerRules {
       int line_num = -1;
     };
 
+    struct FindResult {
+      QString ToRuleString() const;
+
+      QList<QByteArray> pieces;
+      Info info;
+      RequestParty party = AnyParty;
+      QString ref_host;
+      QString target_host;
+      RequestType request_type = AllRequests;
+    };
+
     class RulePiece {
      public:
       RulePiece();
       explicit RulePiece(const QByteArray& piece);
-      ~RulePiece();
 
-      bool IsNull() const { return children_.isEmpty() && !rule_this_terminates_; }
-      Info* RuleThisTerminates() const {
-        return rule_this_terminates_;
-      }
-      void AppendRule(StaticRule* rule, int piece_index = 0);
+      Info* RuleThisTerminates() const { return rule_this_terminates_; }
+      void AppendRule(StaticRule* rule, Info* info, int piece_index = 0);
 
-      const RulePiece* CheckMatch(const MatchContext& ctx,
-                                  int curr_index = 0) const;
+      // Caller is responsible for deletion of result.
+      FindResult* CheckMatch(const MatchContext& ctx,
+                             int curr_index = 0) const;
 
       void RuleTree(QJsonObject* obj) const;
 
-      static const RulePiece& kNull;
-
      private:
+      typedef Hash<char, std::vector<RulePiece>> ChildMap;
+
       // Empty piece means any
       QByteArray piece_;
       bool case_sensitive_ = false;
       // Key is 0 for any non-lit rules. Note, can have
       //  multiple values per char
-      QHash<char, RulePiece> children_;
+      ChildMap children_;
 
-      // This is checked at the end for things like not-domain
+      // This is checked at the end for things like not-domain. We know this
+      //  pointer is frequently copied, but it's not owned by us.
       Info* rule_this_terminates_ = nullptr;
     };
 
@@ -158,7 +183,8 @@ class BlockerRules {
     const QByteArray& TargetDomainName() const { return target_domain_name_; }
     const QVector<QByteArray>& Pieces() const { return pieces_; }
 
-    static const QHash<QByteArray, RequestType> kRequestTypeStrings;
+    static const QHash<QByteArray, RequestType> kStringToRequestType;
+    static const QHash<RequestType, QByteArray> kRequestTypeToString;
 
    private:
     QSet<RequestType> request_types_;
@@ -200,47 +226,58 @@ class BlockerRules {
   // This does not take ownership of any rules
   static ListMetadata GetMetadata(const QList<Rule*>& rules);
 
+  ~BlockerRules();
+
   QJsonObject RuleTree() const;
 
   bool AddRules(QTextStream* stream, int file_index);
   // This does not take ownership of any rules
   void AddRules(const QList<Rule*>& rules);
 
-  StaticRule::Info* FindStaticRule(
+  // Caller is responsible for deletion of result.
+  StaticRule::FindResult* FindStaticRule(
       const QString& target_url,
       const QString& ref_url,
       StaticRule::RequestType request_type) const;
 
-  StaticRule::Info* FindStaticRule(
+  // Caller is responsible for deletion of result.
+  StaticRule::FindResult* FindStaticRule(
       const QUrl& target_url,
       const QUrl& ref_url,
       StaticRule::RequestType request_type) const;
 
  private:
   // Keyed by the request type or AllRequests if it applies to all.
-  typedef QHash<StaticRule::RequestType, StaticRule::RulePiece> RuleHash;
+  typedef Hash<StaticRule::RequestType, StaticRule::RulePiece> RuleHash;
   // Keyed by the target domain. The rules within expect to have the scheme
   //  and the domain removed. If the rule is not domain specific, it's in
   //  the empty string form and the domain does not need to be removed.
-  typedef QHash<QByteArray, RuleHash> TargetHostHash;
+  typedef Hash<std::string, RuleHash> TargetHostHash;
   // Keyed by the ref domain. Non-ref-domain-specific rules are in the empty
   //  string key.
-  typedef QHash<QByteArray, TargetHostHash> RefHostHash;
+  typedef Hash<std::string, TargetHostHash> RefHostHash;
   // Keyed by whether the rule is for first party, third party, or both
-  typedef QHash<StaticRule::RequestParty, RefHostHash> PartyOptionHash;
+  typedef Hash<StaticRule::RequestParty, RefHostHash> PartyOptionHash;
 
-  StaticRule::Info* FindStaticRule(const StaticRule::MatchContext& ctx) const;
-  StaticRule::Info* FindStaticRuleInRefHostHash(
+  StaticRule::FindResult* FindStaticRule(
+      const StaticRule::MatchContext& ctx) const;
+  StaticRule::FindResult* FindStaticRuleInRefHostHash(
       const StaticRule::MatchContext& ctx, const RefHostHash& hash) const;
-  StaticRule::Info* FindStaticRuleInTargetHostHash(
+  StaticRule::FindResult* FindStaticRuleInTargetHostHash(
       const StaticRule::MatchContext& ctx, const TargetHostHash& hash) const;
-  StaticRule::Info* FindStaticRuleInRuleHash(
+  StaticRule::FindResult* FindStaticRuleInRuleHash(
       const StaticRule::MatchContext& ctx, const RuleHash& hash) const;
 
   void AddStaticRule(StaticRule* rule);
-  void AddStaticRuleToRefHostHash(StaticRule* rule, RefHostHash* hash);
-  void AddStaticRuleToTargetHostHash(StaticRule* rule, TargetHostHash* hash);
-  void AddStaticRuleToRuleHash(StaticRule* rule, RuleHash* hash);
+  void AddStaticRuleToRefHostHash(StaticRule* rule,
+                                  StaticRule::Info* info,
+                                  RefHostHash* hash);
+  void AddStaticRuleToTargetHostHash(StaticRule* rule,
+                                     StaticRule::Info* info,
+                                     TargetHostHash* hash);
+  void AddStaticRuleToRuleHash(StaticRule* rule,
+                               StaticRule::Info* info,
+                               RuleHash* hash);
 
   QJsonObject RuleTreeForPartyHash(const PartyOptionHash& hash) const;
   QJsonObject RuleTreeForRefHostHash(const RefHostHash& hash) const;
@@ -249,6 +286,9 @@ class BlockerRules {
 
   PartyOptionHash static_rules_;
   PartyOptionHash static_rule_exceptions_;
+  std::vector<StaticRule::Info*> info_ptrs_;
+
+
 };
 
 }  // namespace doogie

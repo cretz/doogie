@@ -176,6 +176,7 @@ std::function<void()> BlockerList::LoadRules(
         last_refreshed_ = QDateTime::currentDateTimeUtc();
         Persist();
       }
+      qDebug() << "Rules successfully loaded from file" << local_path_;
       callback(rules, true);
       return cancel;
     }
@@ -221,7 +222,7 @@ std::function<void()> BlockerList::Update(
 bool BlockerList::NeedsUpdate() {
   // An empty last-refreshed means we do need an update
   if (last_refreshed_.isNull()) return true;
-  return expiration_hours_ > 0 && QDateTime::currentSecsSinceEpoch() <
+  return expiration_hours_ > 0 && QDateTime::currentSecsSinceEpoch() >=
       (last_refreshed_.toSecsSinceEpoch() + (expiration_hours_ * 3600));
 }
 

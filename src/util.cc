@@ -124,4 +124,12 @@ QString Util::FriendlyTimeSpan(qint64 seconds) {
       arg(after_hour_seconds % 60);
 }
 
+void Util::RunOnMainThread(std::function<void()> fn) {
+  // A bit ghetto to rely on the stack destruction but meh
+  // Ref: https://stackoverflow.com/questions/21646467/how-to-execute-a-functor-or-a-lambda-in-a-given-thread-in-qt-gcd-style
+  QObject obj;
+  QObject::connect(&obj, &QObject::destroyed, QApplication::instance(),
+                   fn, Qt::QueuedConnection);
+}
+
 }  // namespace doogie

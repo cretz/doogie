@@ -23,8 +23,20 @@ class BlockerDock : public QDockWidget {
   void timerEvent(QTimerEvent* event) override;
 
  private:
+
+  struct BlockedRequest {
+    BrowserWidget* browser;
+    QUrl target_url;
+    QUrl ref_url;
+    QString rule_list;
+    qlonglong line_number = -1;
+    QString rule;
+    QDateTime time;
+  };
+
   static const int kListLoadTimeoutSeconds = 2 * 60;
   static const int kCheckUpdatesSeconds = 30 * 60;
+  static const int kMaxTableCount = 1000;
 
   void CheckUpdate();
   bool IsAllowedToLoad(
@@ -32,15 +44,26 @@ class BlockerDock : public QDockWidget {
         CefRefPtr<CefFrame> frame,
         CefRefPtr<CefRequest> request);
 
+  void RebuildTable();
+
+  // Expects sorting to be off
+  void AppendTableRow(const BlockedRequest& request);
+
   BlockerRules::StaticRule::RequestType TypeFromRequest(
       const QUrl& target_url,
       CefRefPtr<CefRequest> request);
 
   const Cef& cef_;
   QTableWidget* table_;
+  QCheckBox* current_only_;
   QHash<int, BlockerList> lists_;
   std::atomic<BlockerRules*> rules_;
   qlonglong next_rule_set_unique_num_ = 0;
+
+  BrowserWidget* current_browser_;
+  QHash<BrowserWidget*, QVector<BlockedRequest>> blocked_requests_by_browser_;
+  // We'd rather keep this than traverse the above
+  QVector<BlockedRequest> blocked_requests_;
 };
 
 }  // namespace doogie

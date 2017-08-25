@@ -46,12 +46,12 @@ class BlockerRulesTest : public QObject {
           "http://example.com/?foo=bar&adbannerid=35",
           "http://example.com/",
           BlockerRules::StaticRule::AllRequests);
-    QVERIFY(rule && rule->line_num == 1);
+    QVERIFY(rule && rule->info.line_num == 1);
     rule = rules->FindStaticRule(
           "http://example.com/foo/ads/profile/bar",
           "http://example.com/",
           BlockerRules::StaticRule::AllRequests);
-    QVERIFY(rule && rule->line_num == 2);
+    QVERIFY(rule && rule->info.line_num == 2);
     rule = rules->FindStaticRule(
           "http://example.com/advert-whatever",
           "http://advert-technology.com/",
@@ -61,12 +61,12 @@ class BlockerRulesTest : public QObject {
           "http://example.com/advert-whatever",
           "http://example.com/",
           BlockerRules::StaticRule::AllRequests);
-    QVERIFY(rule && rule->line_num == 3);
+    QVERIFY(rule && rule->info.line_num == 3);
     rule = rules->FindStaticRule(
           "http://foo.7pud.com/whatever",
           "http://example.com/",
           BlockerRules::StaticRule::AllRequests);
-    QVERIFY(rule && rule->line_num == 4);
+    QVERIFY(rule && rule->info.line_num == 4);
     rule = rules->FindStaticRule(
           "http://foo.7pud.com/whatever",
           "http://foo.7pud.com/",
@@ -76,7 +76,7 @@ class BlockerRulesTest : public QObject {
           "http://speedtest.net/ads/profile/results.php",
           "http://speedtest.net/",
           BlockerRules::StaticRule::AllRequests);
-    QVERIFY(rule && rule->line_num == 2);
+    QVERIFY(rule && rule->info.line_num == 2);
     rule = rules->FindStaticRule(
           "http://speedtest.net/ads/profile/results.php",
           "http://speedtest.net/",

@@ -1,5 +1,8 @@
 #include "blocker_dock.h"
 
+#include <iterator>
+#include <set>
+
 #include "profile.h"
 
 namespace doogie {
@@ -7,7 +10,8 @@ namespace doogie {
 BlockerDock::BlockerDock(const Cef& cef,
                          BrowserStack* browser_stack,
                          QWidget* parent)
-    : QDockWidget("Request Blocker", parent), cef_(cef) {
+    : QDockWidget("Request Blocker", parent),
+      cef_(cef) {
 
   setFeatures(QDockWidget::AllDockWidgetFeatures);
 
@@ -16,30 +20,89 @@ BlockerDock::BlockerDock(const Cef& cef,
   auto layout = new QVBoxLayout;
 
   auto top_layout = new QHBoxLayout;
-  top_layout->addWidget(new QLabel("Blocked Requests:"), 1);
+  top_layout->addWidget(
+      new QLabel(QString("Blocked Requests (max %1):").
+                 arg(kMaxTableCount)), 1);
+
+  current_only_ = new QCheckBox("Current Page");
+  current_only_->setToolTip("Only show requests for current page");
+  top_layout->addWidget(current_only_);
+
+  auto clear_button = new QToolButton;
+  clear_button->setToolTip("Clear Requests");
+  clear_button->setIcon(QIcon(":/res/images/fontawesome/ban.png"));
+  clear_button->setAutoRaise(true);
+  top_layout->addWidget(clear_button);
+
   auto settings_button = new QToolButton;
   settings_button->setToolTip("Profile Blocker Settings");
   settings_button->setIcon(QIcon(":/res/images/fontawesome/cogs.png"));
   settings_button->setAutoRaise(true);
   top_layout->addWidget(settings_button);
+
   layout->addLayout(top_layout);
 
   table_ = new QTableWidget;
+  table_->setColumnCount(8);
+  table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+  table_->setSelectionMode(QAbstractItemView::SingleSelection);
+  table_->setHorizontalHeaderLabels(
+      { "Target Domain", "Target URL", "Referrer Domain", "Referrer URL",
+        "Rule List", "Line Number", "Rule", "Time" });
+  table_->setTextElideMode(Qt::ElideRight);
+  table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+  table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+  table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+  table_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+  table_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::ResizeToContents);
+  table_->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Stretch);
+  table_->horizontalHeader()->setSectionResizeMode(7, QHeaderView::ResizeToContents);
+  table_->verticalHeader()->setVisible(false);
+  table_->sortByColumn(7, Qt::DescendingOrder);
   layout->addWidget(table_, 1);
-
-  auto bottom_layout = new QHBoxLayout;
-  auto persist_checkbox = new QCheckBox("Persist");
-  persist_checkbox->setToolTip("Persist between page loads");
-  bottom_layout->addWidget(persist_checkbox);
-  auto current_checkbox = new QCheckBox("Current Page");
-  current_checkbox->setToolTip("Only show requests for current page");
-  bottom_layout->addWidget(current_checkbox);
-  bottom_layout->addStretch(1);
-  layout->addLayout(bottom_layout);
 
   auto widg = new QWidget;
   widg->setLayout(layout);
   setWidget(widg);
+
+  auto remove_browser_requests = [=](BrowserWidget* widg) {
+    // Remove the browser-specific part
+    blocked_requests_by_browser_.remove(widg);
+    // Remove the general ones (backwards to save indices)
+    for (int i = blocked_requests_.size() - 1; i >= 0; i--) {
+      if (blocked_requests_[i].browser == widg) blocked_requests_.remove(i);
+    }
+  };
+
+  // Rebuild on current change
+  connect(current_only_, &QCheckBox::toggled, [=](bool) { RebuildTable(); });
+  // Clear on clear press
+  connect(clear_button, &QToolButton::clicked, [=](bool) {
+    // If it's current only, just get rid of the current
+    if (current_only_->isChecked()) {
+      remove_browser_requests(current_browser_);
+    } else {
+      // Get rid of everything everywhere
+      blocked_requests_by_browser_.clear();
+      blocked_requests_.clear();
+    }
+    RebuildTable();
+  });
+  // Remove the refs when destroyed
+  connect(browser_stack, &BrowserStack::BrowserDestroyed,
+          [=](BrowserWidget* widg) {
+    remove_browser_requests(widg);
+    // Rebuild if we're generic
+    if (!current_only_->isChecked()) RebuildTable();
+  });
+  // When current changes and the current is set, we need to rebuild
+  connect(browser_stack, &BrowserStack::BrowserChanged,
+          [=](BrowserWidget* widg) {
+    current_browser_ = widg;
+    if (current_only_->isChecked()) RebuildTable();
+  });
+
+  // Set callback to this to check the rule
   browser_stack->SetResourceLoadCallback(
         [=](BrowserWidget* browser,
             CefRefPtr<CefFrame> frame,
@@ -70,8 +133,8 @@ void BlockerDock::ProfileUpdated(bool load_local_file_only) {
   // We have to be thread safe here. So what we will do is load the list
   //  info here and store in a bunch of local vars and work on those until
   //  the end. We have to make sure we are on the same thread doing work
-  //  w/ local members, so we QTimer::singleShot things. We also need a
-  //  timeout.
+  //  w/ local members, so we run some things on the main thread. We also
+  //  need a timeout.
   // This unique number is how we know at the end we're still around.
   next_rule_set_unique_num_++;
   auto my_rule_set_num = next_rule_set_unique_num_;
@@ -138,8 +201,8 @@ void BlockerDock::ProfileUpdated(bool load_local_file_only) {
     cancellations->insert(list_index, list.LoadRules(
           cef_, list_index, load_local_file_only,
           [=](QList<BlockerRules::Rule*> rules, bool ok) {
-      // Single shot to get back on proper thread in event loop
-      QTimer::singleShot(0, [=]() {
+      // Get back on proper thread in event loop
+      Util::RunOnMainThread([=]() {
         // Timer will be gone if timed out
         if (timeout_timer) {
           if (ok) {
@@ -184,16 +247,115 @@ bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
   // Ref is same as target if not present
   auto ref_url_str = QString::fromStdString(
         request->GetReferrerURL().ToString());
-  QUrl ref_url = ref_url_str.isEmpty() ? target_url :
+  auto ref_url = ref_url_str.isEmpty() ? target_url :
                                          QUrl(ref_url_str, QUrl::StrictMode);
   auto type = TypeFromRequest(target_url, request);
-  auto rule = rules->FindStaticRule(target_url, ref_url, type);
-  if (rule) {
-    qDebug() << "Found blocking rule for" << target_url_str
-             << "on line" << rule->line_num
-             << "in" << timer.elapsed() << "ms";
+  auto result = rules->FindStaticRule(target_url, ref_url, type);
+  if (!result) return true;
+
+  // Add a few more details before deleting the result
+  auto req_file_index = result->info.file_index;
+  auto req_line_number = result->info.line_num;
+  auto req_rule = result->ToRuleString();
+  auto req_time = QDateTime::currentDateTime();
+  delete result;
+  result = nullptr;
+
+  // We choose to defer the rest of this to the event loop to get to
+  //  the common thread.
+  Util::RunOnMainThread([=]() {
+    BlockedRequest req = {};
+    req.browser = browser;
+    req.target_url = target_url;
+    req.ref_url = ref_url;
+    // Add the list name here to make sure lists_ is good.
+    if (lists_.contains(req_file_index)) {
+      req.rule_list = lists_[req_file_index].Name();
+    }
+    req.line_number = req_line_number;
+    req.rule = req_rule;
+    qDebug() << "Blocked " << req.target_url;
+    req.time = req_time;
+
+    // Now add it to the browser-specific and general vectors
+    auto& by_browser = blocked_requests_by_browser_[browser];
+    by_browser << req;
+    if (by_browser.size() > kMaxTableCount) by_browser.removeFirst();
+    blocked_requests_ << req;
+    if (blocked_requests_.size() > kMaxTableCount) {
+      blocked_requests_.removeFirst();
+    }
+
+    // Now add it to the table if it applies to us
+    if (!current_only_->isChecked() || current_browser_ == req.browser) {
+      bool was_sorted = table_->isSortingEnabled();
+      table_->setSortingEnabled(false);
+      // First, we need to remove the least recent if it will get oversized.
+      //  The way we will do this is to capture the current sort, sort by the
+      //  date column, take the first, the put the sort back.
+      if (table_->rowCount() == kMaxTableCount) {
+        auto prev_sort_col =
+            table_->horizontalHeader()->sortIndicatorSection();
+        auto prev_sort_ord = table_->horizontalHeader()->sortIndicatorOrder();
+        table_->sortItems(7, Qt::DescendingOrder);
+        table_->removeRow(table_->rowCount() - 1);
+        // Only if it was sorted, if it wasn't, well it is now :-)
+        if (was_sorted) table_->sortItems(prev_sort_col, prev_sort_ord);
+      }
+      AppendTableRow(req);
+      table_->setSortingEnabled(true);
+    }
+  });
+
+  return false;
+}
+
+void BlockerDock::RebuildTable() {
+  table_->setSortingEnabled(false);
+  table_->setRowCount(0);
+
+  QVector<BlockedRequest>& to_render = current_only_->isChecked() ?
+        blocked_requests_by_browser_.value(current_browser_) :
+        blocked_requests_;
+
+  for (const auto& req : to_render) AppendTableRow(req);
+
+  table_->setSortingEnabled(true);
+}
+
+void BlockerDock::AppendTableRow(const BlockedRequest& request) {
+  auto row = table_->rowCount();
+  table_->setRowCount(row + 1);
+  auto str_item = [](const QString& s) {
+    auto item = new QTableWidgetItem(s);
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setToolTip(s);
+    return item;
+  };
+  auto long_item = [](const QString& s, qlonglong i) {
+    auto item = new QTableWidgetItem;
+    item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    item->setData(Qt::EditRole, i);
+    item->setData(Qt::DisplayRole, s);
+    item->setToolTip(s);
+    return item;
+  };
+
+  table_->setItem(row, 0, str_item(request.target_url.host()));
+  table_->setItem(row, 1, str_item(request.target_url.toString()));
+  table_->setItem(row, 2, str_item(request.ref_url.host()));
+  table_->setItem(row, 3, str_item(request.ref_url.toString()));
+  if (request.rule_list.isEmpty()) {
+    table_->setItem(row, 4, str_item("<unknown>"));
+    table_->setItem(row, 5, str_item(""));
+  } else {
+    table_->setItem(row, 4, str_item(request.rule_list));
+    table_->setItem(row, 5, long_item(
+        QString::number(request.line_number), request.line_number));
   }
-  return rule == nullptr;
+  table_->setItem(row, 6, str_item(request.rule));
+  table_->setItem(row, 7, long_item(request.time.toString(),
+                                    request.time.toMSecsSinceEpoch()));
 }
 
 BlockerRules::StaticRule::RequestType BlockerDock::TypeFromRequest(
