@@ -51,12 +51,12 @@ CREATE TABLE IF NOT EXISTS workspace_page (
   icon BLOB,
   title TEXT,
   url TEXT,
+  -- This is intentionally not FK'd
   bubble_id INTEGER NOT NULL,
   suspended BOOLEAN,
   expanded BOOLEAN,
   FOREIGN KEY(workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
-  FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE,
-  FOREIGN KEY(bubble_id) REFERENCES bubble(id) ON DELETE CASCADE
+  FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE
 );
 
 -- Download stuff

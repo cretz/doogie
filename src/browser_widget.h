@@ -71,6 +71,12 @@ class BrowserWidget : public QWidget {
 
   QJsonObject DebugDump() const;
 
+  CefRefPtr<CefSSLInfo> ErroredSslInfo() const { return errored_ssl_info_; }
+  CefRefPtr<CefRequestCallback> ErroredSslCallback() const {
+    return errored_ssl_callback_;
+  }
+  CefRefPtr<CefSSLStatus> SslStatus() const { return ssl_status_; }
+
  signals:
   void TitleChanged();
   void FaviconChanged();
@@ -111,7 +117,6 @@ class BrowserWidget : public QWidget {
                  const QString& error_text,
                  CefRefPtr<CefFrame> frame = nullptr);
   void UpdateSslStatus(bool check_errored);
-  void ShowSslInfo() const;
 
   const Cef& cef_;
   Bubble bubble_;

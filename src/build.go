@@ -402,6 +402,7 @@ func copyResourcesLinux(qmakePath string, target string) error {
 	err := copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
 		"libQt5Core.so",
 		"libQt5Gui.so",
+		"libQt5Sql.so",
 		"libQt5Widgets.so",
 	)
 	if err != nil {
@@ -456,7 +457,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	// Debug libs are d.dll
 	if target == "debug" {
 		// Only need web sockets during debug
-		qtDlls = append(qtDlls, "Qt5WebSockets.dll", "Qt5Network.dll")
+		qtDlls = append(qtDlls, "Qt5WebSockets.dll", "Qt5Network.dll", "Qt5Test.dll")
 		for i := range qtDlls {
 			qtDlls[i] = strings.Replace(qtDlls[i], ".dll", "d.dll", -1)
 		}

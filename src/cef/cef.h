@@ -40,6 +40,8 @@ class Cef {
                          uint64 current,
                          uint64 total)> download_progress = nullptr) const;
 
+  bool ShowCertDialog(CefRefPtr<CefX509Certificate> cert) const;
+
  private:
   class CallbackFullDownload : public CefURLRequestClient {
    public:
@@ -86,6 +88,8 @@ class Cef {
   };
 
   cef_main_args_t MainArgs(int argc, char* argv[]);
+
+  QByteArray CefBinToByteArray(CefRefPtr<CefBinaryValue> bin) const;
 
   int early_exit_code_;
   CefRefPtr<CefAppHandler> app_handler_;

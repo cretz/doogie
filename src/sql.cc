@@ -3,7 +3,7 @@
 namespace doogie {
 
 // Easy on/off for debugging
-#ifndef QT_DEBUG
+#ifdef QT_DEBUG
 const bool kSqlLoggingEnabled = true;
 #else
 const bool kSqlLoggingEnabled = false;

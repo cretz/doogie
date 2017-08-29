@@ -2,6 +2,7 @@
 
 #include "page_index.h"
 #include "util.h"
+#include "ssl_info_action.h"
 
 namespace doogie {
 
@@ -37,7 +38,8 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   ssl_button_ = new QToolButton;
   ssl_button_->setAutoRaise(true);
   ssl_button_->setDisabled(true);
-  connect(ssl_button_, &QToolButton::clicked, [=](bool) { ShowSslInfo(); });
+  ssl_button_->setPopupMode(QToolButton::InstantPopup);
+  ssl_button_->addAction(new SslInfoAction(cef_, this));
 
   url_edit_ = new UrlEdit(this);
   connect(url_edit_, &UrlEdit::returnPressed, [=]() {
@@ -720,10 +722,6 @@ void BrowserWidget::UpdateSslStatus(bool check_errored) {
       }
     }
   }
-}
-
-void BrowserWidget::ShowSslInfo() const {
-  // TODO(cretz): this
 }
 
 }  // namespace doogie

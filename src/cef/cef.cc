@@ -123,4 +123,11 @@ void Cef::CallbackFullDownload::OnRequestComplete(
   }
 }
 
+QByteArray Cef::CefBinToByteArray(CefRefPtr<CefBinaryValue> bin) const {
+  QByteArray bytes;
+  bytes.resize(static_cast<int>(bin->GetSize()));
+  bin->GetData(bytes.data(), bin->GetSize(), 0);
+  return bytes;
+}
+
 }  // namespace doogie

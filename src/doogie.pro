@@ -38,6 +38,7 @@ SOURCES += \
     profile_settings_dialog.cc \
     settings_widget.cc \
     sql.cc \
+    ssl_info_action.cc \
     url_edit.cc \
     util.cc \
     workspace.cc \
@@ -71,6 +72,7 @@ HEADERS += \
     profile_settings_dialog.h \
     settings_widget.h \
     sql.h \
+    ssl_info_action.h \
     url_edit.h \
     util.h \
     workspace.h \
@@ -89,7 +91,7 @@ release:PROFILE = Release
 debug:PROFILE = Debug
 
 win32 {
-    LIBS += -luser32
+    LIBS += -luser32 -lcrypt32 -lcryptui
 
     SOURCES += \
         util_win.cc
