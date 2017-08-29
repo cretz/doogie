@@ -10,6 +10,9 @@ class Workspace {
  public:
   class WorkspacePage {
    public:
+    static bool BubbleInUse(qlonglong bubble_id);
+    static bool BubbleDeleted(qlonglong bubble_id);
+
     explicit WorkspacePage(qlonglong id = -1);
     explicit WorkspacePage(const QSqlRecord& record);
 
@@ -35,14 +38,14 @@ class Workspace {
     void SetTitle(const QString& title) { title_ = title; }
     QString Url() const { return url_; }
     void SetUrl(const QString& url) { url_ = url; }
-    QString Bubble() const { return bubble_; }
-    void SetBubble(const QString& bubble) { bubble_ = bubble; }
+    qlonglong BubbleId() const { return bubble_id_; }
+    void SetBubbleId(qlonglong bubble_id) { bubble_id_ = bubble_id; }
     bool Suspended() const { return suspended_; }
     void SetSuspended(bool suspended) { suspended_ = suspended; }
     bool Expanded() const { return expanded_; }
     void SetExpanded(bool expanded) { expanded_ = expanded; }
 
-    bool Save();
+    bool Persist();
     // Automatically deletes children
     bool Delete();
 
@@ -57,13 +60,15 @@ class Workspace {
     QByteArray serialized_icon_;
     QString title_ = "";
     QString url_ = "";
-    QString bubble_ = "";
+    qlonglong bubble_id_ = -1;
     bool suspended_ = false;
     bool expanded_ = false;
   };
 
   // Ordered by name
   static QList<Workspace> Workspaces();
+  // Ordered by index
+  static QList<Workspace> OpenWorkspaces();
   // Ordered by last opened desc
   static QList<Workspace> RecentWorkspaces(QSet<qlonglong> excluding,
                                            int count);
@@ -73,6 +78,8 @@ class Workspace {
   static QString NextUnusedWorkspaceName();
 
   static bool NameInUse(const QString& name);
+
+  static bool UpdateOpenWorkspaces(QList<qlonglong> ids);
 
   explicit Workspace(qlonglong id = -1);
   explicit Workspace(const QSqlRecord& record);
@@ -87,7 +94,7 @@ class Workspace {
   qlonglong LastOpened() const { return last_opened_; }
   void SetLastOpened(qlonglong msecs) { last_opened_ = msecs; }
 
-  bool Save();
+  bool Persist();
   // Automatically deletes children
   bool Delete();
 

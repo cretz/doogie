@@ -97,6 +97,7 @@ class PageTree : public QTreeWidget {
   QList<PageTreeItem*> SelectedItemsOnlyHighestLevel();
   QList<PageTreeItem*> SameHostPages(PageTreeItem* to_comp);
   QList<Workspace> Workspaces() const;
+  QList<qlonglong> WorkspaceIds() const;
   const Workspace& WorkspaceToAddUnder() const;
   WorkspaceTreeItem* WorkspaceTreeItemToAddUnder() const;
   void MakeWorkspaceExplicitIfPossible();

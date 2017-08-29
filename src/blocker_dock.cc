@@ -12,10 +12,7 @@ BlockerDock::BlockerDock(const Cef& cef,
                          QWidget* parent)
     : QDockWidget("Request Blocker", parent),
       cef_(cef) {
-
   setFeatures(QDockWidget::AllDockWidgetFeatures);
-
-  rules_.store(nullptr);
 
   auto layout = new QVBoxLayout;
 
@@ -122,12 +119,22 @@ BlockerDock::BlockerDock(const Cef& cef,
   startTimer(kCheckUpdatesSeconds * 1000);
 }
 
+BlockerDock::~BlockerDock() {
+  QMutexLocker locker(&rules_mutex_);
+  if (rules_) {
+    delete rules_;
+    rules_ = nullptr;
+  }
+}
+
 void BlockerDock::ProfileUpdated(bool load_local_file_only) {
   // As a shortcut, if there are no enabled blockers, just null out the
   //  rule set.
-  if (Profile::Current()->EnabledBlockerListIds().isEmpty()) {
+  if (Profile::Current().EnabledBlockerListIds().isEmpty()) {
     next_rule_set_unique_num_++;
     lists_.clear();
+    QMutexLocker locker(&rules_mutex_);
+    if (rules_) delete rules_;
     rules_ = nullptr;
     return;
   }
@@ -144,7 +151,7 @@ void BlockerDock::ProfileUpdated(bool load_local_file_only) {
   // Load up the list into the hash w/ file index. Deleted at the end
   auto new_lists = new QHash<int, BlockerList>();
   auto db_lists =
-      BlockerList::Lists(Profile::Current()->EnabledBlockerListIds());
+      BlockerList::Lists(Profile::Current().EnabledBlockerListIds());
   for (auto& list : db_lists) {
     // Try to use the existing index for existing list
     auto new_index = -1;
@@ -190,6 +197,9 @@ void BlockerDock::ProfileUpdated(bool load_local_file_only) {
       lists_ = *new_lists;
       // Go over each list and reload it
       for (auto index : lists_.keys()) lists_[index].Reload();
+      // Set new rules
+      QMutexLocker locker(&rules_mutex_);
+      if (rules_) delete rules_;
       rules_ = new_rules;
     }
     delete new_lists;
@@ -240,8 +250,8 @@ void BlockerDock::CheckUpdate() {
 bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
                                   CefRefPtr<CefFrame> frame,
                                   CefRefPtr<CefRequest> request) {
-  auto rules = rules_.load();
-  if (!rules) return true;
+  QMutexLocker locker(&rules_mutex_);
+  if (!rules_) return true;
   QElapsedTimer timer;
   timer.start();
   auto target_url_str = QString::fromStdString(request->GetURL().ToString());
@@ -252,7 +262,7 @@ bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
   auto ref_url = ref_url_str.isEmpty() ? target_url :
                                          QUrl(ref_url_str, QUrl::StrictMode);
   auto type = TypeFromRequest(target_url, request);
-  auto result = rules->FindStaticRule(target_url, ref_url, type);
+  auto result = rules_->FindStaticRule(target_url, ref_url, type);
   if (!result) return true;
 
   // Add a few more details before deleting the result

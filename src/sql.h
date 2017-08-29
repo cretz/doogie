@@ -27,10 +27,9 @@ class Sql {
   static bool Prepare(QSqlQuery* query, const QString& sql);
   static bool Exec(QSqlQuery* query);
   static bool Exec(QSqlQuery* query, const QString& sql);
+  static QSqlRecord ExecSingle(QSqlQuery* query, const QString& sql);
 
  private:
-  // Easy on/off for debugging
-  static const bool kLoggingEnabled = false;
   static const QLoggingCategory kLoggingCat;
 
   static QDebug DebugLog() { return qDebug(kLoggingCat).noquote(); }

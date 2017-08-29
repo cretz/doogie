@@ -4,6 +4,23 @@
 
 namespace doogie {
 
+bool Workspace::WorkspacePage::BubbleInUse(qlonglong bubble_id) {
+  QSqlQuery query;
+  QString sql = "SELECT EXISTS( "
+                " SELECT 1 FROM workspace_page WHERE bubble_id = ? LIMIT 1 "
+                ")";
+  auto record = Sql::ExecSingleParam(&query, sql, { bubble_id });
+  return record.value(0).toInt() == 1;
+}
+
+bool Workspace::WorkspacePage::BubbleDeleted(qlonglong bubble_id) {
+  QSqlQuery query;
+  return Sql::ExecParam(
+        &query,
+        "UPDATE workspace_page SET bubble_id = -1 WHERE bubble_id = ?",
+        { bubble_id });
+}
+
 Workspace::WorkspacePage::WorkspacePage(qlonglong id) {
   if (id < 0) return;
   QSqlQuery query;
@@ -34,7 +51,7 @@ void Workspace::WorkspacePage::SetIcon(const QIcon& icon) {
   serialized_icon_.clear();
 }
 
-bool Workspace::WorkspacePage::Save() {
+bool Workspace::WorkspacePage::Persist() {
   // If serialized icon is not there but an icon is, we create it
   if (serialized_icon_.isNull() && !icon_.isNull()) {
     QBuffer buffer(&serialized_icon_);
@@ -54,21 +71,21 @@ bool Workspace::WorkspacePage::Save() {
           " icon = ?, "
           " title = ?, "
           " url = ?, "
-          " bubble = ?, "
+          " bubble_id = ?, "
           " suspended = ?, "
           " expanded = ? "
           "WHERE id = ?",
           { workspace_id_, parent_id, pos_, serialized_icon_,
-            title_, url_, bubble_, suspended_, expanded_, id_ });
+            title_, url_, bubble_id_, suspended_, expanded_, id_ });
   }
   auto ok = Sql::ExecParam(
       &query,
       "INSERT INTO workspace_page ( "
       "   workspace_id, parent_id, pos, icon, "
-      "   title, url, bubble, suspended, expanded "
+      "   title, url, bubble_id, suspended, expanded "
       ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       { workspace_id_, parent_id, pos_, serialized_icon_,
-        title_, url_, bubble_, suspended_, expanded_ });
+        title_, url_, bubble_id_, suspended_, expanded_ });
   if (!ok) return false;
   id_ = query.lastInsertId().toLongLong();
   return true;
@@ -94,7 +111,7 @@ void Workspace::WorkspacePage::FromRecord(const QSqlRecord& record) {
   serialized_icon_ = record.value("icon").toByteArray();
   title_ = record.value("title").toString();
   url_ = record.value("url").toString();
-  bubble_ = record.value("bubble").toString();
+  bubble_id_ = record.value("bubble_id").toLongLong();
   suspended_ = record.value("suspended").toBool();
   expanded_ = record.value("expanded").toBool();
 }
@@ -103,6 +120,17 @@ QList<Workspace> Workspace::Workspaces() {
   QList<Workspace> ret;
   QSqlQuery query;
   if (!Sql::Exec(&query, "SELECT * FROM workspace ORDER BY name")) return ret;
+  while (query.next()) ret.append(Workspace(query.record()));
+  return ret;
+}
+
+QList<Workspace> Workspace::OpenWorkspaces() {
+  QList<Workspace> ret;
+  QSqlQuery query;
+  if (!Sql::Exec(&query,
+                 "SELECT * FROM workspace "
+                 "WHERE open_index IS NOT NULL "
+                 "ORDER BY open_index")) return ret;
   while (query.next()) ret.append(Workspace(query.record()));
   return ret;
 }
@@ -145,6 +173,21 @@ bool Workspace::NameInUse(const QString& name) {
                                { name }).isEmpty();
 }
 
+bool Workspace::UpdateOpenWorkspaces(QList<qlonglong> ids) {
+  QSqlQuery query;
+  if (!Sql::Exec(&query, "UPDATE workspace SET open_index = NULL")) {
+    return false;
+  }
+  for (int i = 0; i < ids.size(); i++) {
+    if (!Sql::Exec(&query, QString("UPDATE workspace "
+                                   "SET open_index = %1 "
+                                   "WHERE id = %2").arg(i).arg(ids[i]))) {
+        return false;
+    }
+  }
+  return true;
+}
+
 Workspace::Workspace(qlonglong id) {
   if (id < 0) return;
   QSqlQuery query;
@@ -158,7 +201,7 @@ Workspace::Workspace(const QSqlRecord& record) {
   FromRecord(record);
 }
 
-bool Workspace::Save() {
+bool Workspace::Persist() {
   QSqlQuery query;
   if (Exists()) {
     return Sql::ExecParam(

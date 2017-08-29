@@ -5,11 +5,11 @@
 namespace doogie {
 
 ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
-  auto profile = Profile::Current();
+  const auto& profile = Profile::Current();
   auto layout = new QGridLayout;
   layout->setSizeConstraint(QLayout::SetFixedSize);
   layout->addWidget(new QLabel("Current Profile:"), 0, 0);
-  layout->addWidget(new QLabel(profile->FriendlyName()), 0, 1);
+  layout->addWidget(new QLabel(profile.FriendlyName()), 0, 1);
   layout->addWidget(new QLabel("New/Existing Profile:"), 1, 0);
 
   selector_ = new QComboBox;
@@ -18,12 +18,12 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   // Show all last ten but the current
   auto found_in_mem = false;
   for (auto other_path : Profile::LastTenProfilePaths()) {
-    if (other_path != profile->Path()) {
+    if (other_path != profile.Path()) {
       if (other_path == Profile::kInMemoryPath) found_in_mem = true;
       selector_->addItem(Profile::FriendlyName(other_path), other_path);
     }
   }
-  if (!found_in_mem && !profile->InMemory()) {
+  if (!found_in_mem && !profile.InMemory()) {
     selector_->addItem(Profile::FriendlyName(Profile::kInMemoryPath),
                       Profile::kInMemoryPath);
   }
@@ -31,10 +31,10 @@ ProfileChangeDialog::ProfileChangeDialog(QWidget* parent) : QDialog(parent) {
   selector_->lineEdit()->setPlaceholderText("Get or Create Profile...");
   selector_->setCurrentIndex(-1);
   connect(selector_, static_cast<void(QComboBox::*)(int)>(
-            &QComboBox::currentIndexChanged), [=](int index) {
+            &QComboBox::currentIndexChanged), [=, &profile](int index) {
     // If they clicked the last index, we pop open a file dialog
     if (index == selector_->count() - 1) {
-      auto open_dir = QDir(profile->Path());
+      auto open_dir = QDir(profile.Path());
       open_dir.cdUp();
       auto path = QFileDialog::getExistingDirectory(
             nullptr, "Choose Profile Directory", open_dir.path());

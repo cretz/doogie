@@ -13,68 +13,51 @@ namespace doogie {
 const QString Profile::kInMemoryPath = "<in-mem>";
 const QString Profile::kAppDataPath = QDir::toNativeSeparators(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-Profile* Profile::current_ = nullptr;
-QList<Profile::BrowserSetting> Profile::possible_browser_settings_ = {};
+Profile Profile::current_(kInMemoryPath);
 
 bool Profile::CreateOrLoadProfile(const QString& path, bool set_current) {
   if (path == kInMemoryPath) return CreateProfile(path, set_current);
   auto abs_path = QDir::toNativeSeparators(
         QDir(QDir(kAppDataPath).filePath("Doogie/profiles")).filePath(path));
-  if (!QDir(abs_path).exists("settings.doogie.json")) {
+  if (!QDir(abs_path).exists("doogie.db")) {
     return CreateProfile(abs_path, set_current);
   }
   return LoadProfile(abs_path, set_current);
 }
 
 bool Profile::CreateProfile(const QString& path, bool set_current) {
+  auto abs_path = kInMemoryPath;
   // If the path is in-mem (or empty), it is a special case of mem-only
-  if (path.isEmpty() || path == kInMemoryPath) {
-    if (set_current) return SetCurrent(new Profile(path, QJsonObject()));
-    return true;
+  if (!path.isEmpty() && path != kInMemoryPath) {
+    abs_path = QDir::toNativeSeparators(
+          QDir(QDir(kAppDataPath).filePath("Doogie/profiles")).filePath(path));
+    // Make sure DB isn't already there
+    if (QDir(abs_path).exists("doogie.db")) return false;
+    // Attempt to create the path
+    if (!QDir().mkpath(abs_path)) return false;
   }
-  auto abs_path = QDir::toNativeSeparators(
-        QDir(QDir(kAppDataPath).filePath("Doogie/profiles")).filePath(path));
-  // Make sure settings.doogie.json isn't already there
-  if (QDir(abs_path).exists("settings.doogie.json")) {
-    return false;
+  Profile profile(abs_path);
+  profile.ApplyDefaults();
+  if (set_current) {
+    if (!SetCurrent(profile)) return false;
+    // Save the current ref here
+    return Profile::Current().Persist();
   }
-  // Attempt to create the path
-  if (!QDir().mkpath(abs_path)) {
-    return false;
-  }
-  auto profile = new Profile(abs_path, QJsonObject());
-  // Try to save
-  if (!profile->SavePrefs()) {
-    return false;
-  }
-  if (set_current) return SetCurrent(profile);
-  return true;
+  return profile.Persist();
 }
 
 bool Profile::LoadProfile(const QString& path, bool set_current) {
   auto abs_path = QDir::toNativeSeparators(
         QDir(QDir(kAppDataPath).filePath("Doogie/profiles")).filePath(path));
-  if (!QDir(abs_path).exists("settings.doogie.json")) {
-    return false;
+  if (!QDir(abs_path).exists("doogie.db")) return false;
+  // Create and try to load if setting current
+  Profile profile(abs_path);
+  if (set_current) {
+    if (!SetCurrent(profile)) return false;
+    // Reload the current ref here
+    return Profile::Current().Reload();
   }
-  QFile file(QDir(abs_path).filePath("settings.doogie.json"));\
-  // Open for read only here, but we make sure we can save before continuing
-  if (!file.open(QIODevice::ReadOnly)) {
-    return false;
-  }
-  auto json = QJsonDocument::fromJson(file.readAll());
-  file.close();
-  if (!json.isObject()) {
-    return false;
-  }
-  // Create and try to save
-  auto profile = new Profile(abs_path, json.object());
-  // Try to save
-  if (!profile->SavePrefs()) {
-    return false;
-  }
-  if (set_current) return SetCurrent(profile);
-  return true;
+  return profile.Reload();
 }
 
 bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
@@ -109,8 +92,7 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     // If in-memory was last, it's ok
     if (profile_path != kInMemoryPath) {
       // Make sure it's there
-      if (!profile_path.isEmpty() &&
-          !QDir(profile_path).exists("settings.doogie.json")) {
+      if (!profile_path.isEmpty() && !QDir(profile_path).exists("doogie.db")) {
         qInfo() << "Last profile path " << profile_path <<
                    " no longer exists with settings, falling back to default";
         profile_path = "";
@@ -130,8 +112,7 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
     }
   }
 
-  // Try to load if the settings.doogie.json exists, otherwise
-  // create
+  // Try to load if exists, otherwise create
   bool success = false;
   qDebug() << "Loading profile: " << profile_path;
   if (!profile_path.isEmpty() && profile_path != kInMemoryPath) {
@@ -196,172 +177,70 @@ QString Profile::FriendlyName(const QString& path) {
   return ret;
 }
 
-QList<Profile::BrowserSetting> Profile::PossibleBrowserSettings() {
-  // We know this is not thread safe; fine w/ us
-  if (possible_browser_settings_.isEmpty()) {
-    possible_browser_settings_.append({
-      Profile::BrowserSetting {
-        "Application Cache?",
-        "Controls whether the application cache can be used.",
-        "applicationCache" },
-      Profile::BrowserSetting {
-        "Databases?",
-        "Controls whether databases can be used.",
-        "databases" },
-      Profile::BrowserSetting {
-        "File Access From File URLs?",
-        "Controls whether file URLs will have access to other file URLs.",
-        "fileAccessFromFileUrls" },
-      Profile::BrowserSetting {
-        "Image Loading?",
-        "Controls whether image URLs will be loaded from the network.",
-        "imageLoading" },
-      Profile::BrowserSetting {
-        "Image Fit To Page?",
-        "Controls whether standalone images will be shrunk to fit the page.",
-        "imageShrinkStandaloneToFit" },
-      Profile::BrowserSetting {
-        "JavaScript?",
-        "Controls whether JavaScript can be executed.",
-        "javascript" },
-      Profile::BrowserSetting {
-        "JavaScript Clipboard Access?",
-        "Controls whether JavaScript can access the clipboard.",
-        "javascriptAccessClipboard" },
-      Profile::BrowserSetting {
-        "JavaScript DOM Paste?",
-        "Controls whether DOM pasting is supported in the editor via "
-        "execCommand(\"paste\"). Requires JavaScript clipboaard access.",
-        "javascriptDomPaste" },
-      Profile::BrowserSetting {
-        "JavaScript Open Windows?",
-        "Controls whether JavaScript can be used for opening windows.",
-        "javascriptOpenWindows" },
-      Profile::BrowserSetting {
-        "Local Storage?",
-        "Controls whether local storage can be used.",
-        "localStorage" },
-      Profile::BrowserSetting {
-        "Browser Plugins?",
-        "Controls whether any plugins will be loaded.",
-        "plugins" },
-      Profile::BrowserSetting {
-        "Remote Fonts?",
-        "Controls the loading of fonts from remote sources.",
-        "remoteFonts" },
-      Profile::BrowserSetting {
-        "Tabs to Links?",
-        "Controls whether the tab key can advance focus to links.",
-        "tabToLinks" },
-      Profile::BrowserSetting {
-        "Text Area Resize?",
-        "Controls whether text areas can be resized.",
-        "textAreaResize" },
-      Profile::BrowserSetting {
-        "Universal Access From File URLs?",
-        "Controls whether file URLs will have access to all URLs.",
-        "universalAccessFromFileUrls" },
-      Profile::BrowserSetting {
-        "Web Security?",
-        "Controls whether web security restrictions (same-origin policy) "
-        "will be enforced.",
-        "webSecurity" },
-      Profile::BrowserSetting {
-        "WebGL?",
-        "Controls whether WebGL can be used.",
-        "webgl" }
-    });
-  }
-  return possible_browser_settings_;
-}
-
 QStringList Profile::LastTenProfilePaths() {
   return QSettings("cretz", "Doogie").value("profile/lastTen").toStringList();
 }
 
-Profile::Profile(const QString& path, const QJsonObject& obj)
-    : path_(QDir::toNativeSeparators(path)) {
-  cache_path_ = obj["cachePath"].toString();
-  enable_net_sec_ = obj["enableNetSecurityExpiration"].toBool(false);
-  // Default is true
-  persist_user_prefs_ = obj["persistUserPreferences"].toBool(true);
-  user_agent_ = obj["userAgent"].toString();
-  user_data_path_ = obj["userDataPath"].toString();
-  for (auto setting : PossibleBrowserSettings()) {
-    if (obj.contains(setting.field)) {
-      browser_settings_[setting.field] = obj[setting.field].toBool();
+bool Profile::Persist() {
+  // Just delete and re-insert
+  QSqlQuery query;
+  if (!Sql::Exec(&query, "DELETE FROM profile")) return false;
+  if (!Sql::Exec(&query, "DELETE FROM action_shortcut")) return false;
+
+  auto ok = Sql::ExecParam(
+        &query,
+        "INSERT INTO profile ( "
+        "  cache_path, user_agent, user_data_path "
+        ") VALUES (?, ?, ?)",
+        { cache_path_, user_agent_, user_data_path_ });
+  if (!ok) return false;
+  if (!shortcuts_.isEmpty()) {
+    QStringList values;
+    for (auto key : shortcuts_.keys()) {
+      values << QString("('%1', '%2')").
+                arg(ActionManager::TypeToString(key)).
+                arg(QKeySequence::listToString(shortcuts_[key]).
+                    replace('\'', "''"));
     }
+    ok = Sql::Exec(&query,
+                   QString("INSERT INTO action_shortcut "
+                           "(key, shortcuts) VALUES %1").
+                   arg(values.join(',')));
+    if (!ok) return false;
   }
-  QSet<QString> already_seen_names;
-  for (auto bubble_json : obj["bubbles"].toArray()) {
-    Bubble bubble(bubble_json.toObject());
-    if (already_seen_names.contains(bubble.Name())) {
-      qWarning() << "Duplicate bubble name: " << bubble.Name();
-    } else {
-      bubbles_.append(bubble);
-    }
-  }
-  // If this is empty, we must have a single do-nothing bubble
-  if (bubbles_.isEmpty()) {
-    bubbles_.append(Bubble(QJsonObject()));
-  }
-  // Shortcuts can be key names or numbers
-  auto shortcuts_obj = obj["shortcuts"].toObject();
-  for (auto key : shortcuts_obj.keys()) {
-    auto type = ActionManager::StringToType(key);
-    if (type != -1) {
-      QList<QKeySequence> seqs;
-      for (auto val : shortcuts_obj[key].toArray()) {
-        auto seq = Util::KeySequenceOrEmpty(val.toString());
-        if (!seq.isEmpty()) seqs.append(seq);
-      }
-      shortcuts_[type] = seqs;
-    }
-  }
-  // String list to longlong
-  for (auto workspace_id : obj["openWorkspaceIds"].toArray()) {
-    if (workspace_id.isString()) {
-      auto ok = false;
-      auto id = workspace_id.toString().toLongLong(&ok);
-      if (ok) open_workspace_ids_.append(id);
-    }
-  }
-  for (auto blocker_list_id : obj["enabledBlockerListIds"].toArray()) {
-    if (blocker_list_id.isString()) {
-      auto ok = false;
-      auto id = blocker_list_id.toString().toLongLong(&ok);
-      if (ok) enabled_blocker_list_ids_.insert(id);
-    }
-  }
+  return Bubble::PersistBrowserSettings(browser_settings_) &&
+      Bubble::PersistEnabledBlockerListIds(enabled_blocker_list_ids_);
 }
 
-void Profile::Init() {
-  for (auto& bubble : bubbles_) {
-    bubble.Init();
+bool Profile::Reload() {
+  QSqlQuery query;
+  auto record = Sql::ExecSingle(&query, "SELECT * FROM profile");
+  if (record.isEmpty()) return false;
+  cache_path_ = record.value("cache_path").toString();
+  user_agent_ = record.value("user_agent").toString();
+  user_data_path_ = record.value("user_data_path").toString();
+  shortcuts_.clear();
+  if (!Sql::Exec(&query, "SELECT * FROM action_shortcut")) return false;
+  while (query.next()) {
+    shortcuts_[ActionManager::StringToType(query.value("key").toString())] =
+        QKeySequence::listFromString(query.value("shortcuts").toString());
   }
+  browser_settings_ = Bubble::LoadBrowserSettings();
+  enabled_blocker_list_ids_ = Bubble::LoadEnabledBlockerListIds();
+  return true;
 }
 
-void Profile::CopySettingsFrom(const Profile& profile) {
-  cache_path_ = profile.cache_path_;
-  enable_net_sec_ = profile.enable_net_sec_;
-  persist_user_prefs_ = profile.persist_user_prefs_;
-  user_agent_ = profile.user_agent_;
-  user_data_path_ = profile.user_data_path_;
-  browser_settings_ = profile.browser_settings_;
-  bubbles_ = profile.bubbles_;
-  shortcuts_ = profile.shortcuts_;
-  open_workspace_ids_ = profile.open_workspace_ids_;
-  enabled_blocker_list_ids_ = profile.enabled_blocker_list_ids_;
-}
-
-int Profile::BubbleIndexFromName(const QString& name) const {
-  for (int i = 0; i < bubbles_.size(); i++) {
-    if (bubbles_[i].Name() == name) return i;
-  }
-  return -1;
+void Profile::CopySettingsFrom(const Profile& other) {
+  path_ = other.path_;
+  user_agent_ = other.user_agent_;
+  user_data_path_ = other.user_data_path_;
+  browser_settings_ = other.browser_settings_;
+  shortcuts_ = other.shortcuts_;
+  enabled_blocker_list_ids_ = other.enabled_blocker_list_ids_;
 }
 
 void Profile::ApplyCefSettings(CefSettings* settings) const {
+  Bubble::ApplyBrowserSettings(browser_settings_, settings);
   settings->no_sandbox = true;
   // Enable remote debugging on debug version
 #ifdef QT_DEBUG
@@ -380,14 +259,6 @@ void Profile::ApplyCefSettings(CefSettings* settings) const {
     }
   }
   CefString(&settings->cache_path) = cache_path.toStdString();
-
-  if (enable_net_sec_) {
-    settings->enable_net_security_expiration = 1;
-  }
-
-  if (persist_user_prefs_) {
-    settings->persist_user_preferences = 1;
-  }
 
   if (!user_agent_.isEmpty()) {
     CefString(&settings->user_agent) = user_agent_.toStdString();
@@ -409,29 +280,7 @@ void Profile::ApplyCefSettings(CefSettings* settings) const {
 }
 
 void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) const {
-  auto state = [=](cef_state_t& state, const QString& field) {
-    if (browser_settings_.contains(field)) {
-      state = browser_settings_[field] ? STATE_ENABLED : STATE_DISABLED;
-    }
-  };
-
-  state(settings->application_cache, "applicationCache");
-  state(settings->databases, "databases");
-  state(settings->file_access_from_file_urls, "fileAccessFromFileUrls");
-  state(settings->image_loading, "imageLoading");
-  state(settings->image_shrink_standalone_to_fit, "imageShrinkStandaloneToFit");
-  state(settings->javascript, "javascript");
-  state(settings->javascript_access_clipboard, "javascriptAccessClipboard");
-  state(settings->javascript_dom_paste, "javascriptDomPaste");
-  state(settings->local_storage, "localStorage");
-  state(settings->plugins, "plugins");
-  state(settings->remote_fonts, "remoteFonts");
-  state(settings->tab_to_links, "tabToLinks");
-  state(settings->text_area_resize, "textAreaResize");
-  state(settings->universal_access_from_file_urls,
-        "universalAccessFromFileUrls");
-  state(settings->web_security, "webSecurity");
-  state(settings->webgl, "webgl");
+  Bubble::ApplyBrowserSettings(browser_settings_, settings);
 }
 
 void Profile::ApplyActionShortcuts() const {
@@ -443,71 +292,15 @@ void Profile::ApplyActionShortcuts() const {
   }
 }
 
-QJsonObject Profile::ToJson() const {
-  QJsonObject ret;
-  if (!cache_path_.isNull()) ret["cachePath"] = cache_path_;
-  if (enable_net_sec_) ret["enableNetSecurityExpiration"] = true;
-  if (!persist_user_prefs_) ret["persistUserPreferences"] = false;
-  if (!user_agent_.isEmpty()) ret["userAgent"] = user_agent_;
-  if (!user_data_path_.isNull()) ret["userDataPath"] = user_data_path_;
-  for (auto setting_field : browser_settings_.keys()) {
-    ret[setting_field] = browser_settings_[setting_field];
-  }
-  QJsonArray bubbles;
-  for (const auto bubble : bubbles_) {
-    bubbles.append(bubble.ToJson());
-  }
-  // If it's a single-bubble w/ an empty object, we don't add it
-  if (bubbles.size() > 1 || !bubbles.first().toObject().isEmpty()) {
-    ret["bubbles"] = bubbles;
-  }
-  QJsonObject shortcuts;
-  for (auto type : shortcuts_.keys()) {
-    QJsonArray seqs;
-    for (auto seq : shortcuts_[type]) {
-      seqs.append(seq.toString());
-    }
-    shortcuts[ActionManager::TypeToString(type)] = seqs;
-  }
-  if (!shortcuts.isEmpty()) ret["shortcuts"] = shortcuts;
-  QJsonArray open_workspace_ids;
-  for (auto id : open_workspace_ids_) {
-    open_workspace_ids.append(QString::number(id));
-  }
-  ret["openWorkspaceIds"] = open_workspace_ids;
-  QJsonArray enabled_blocker_list_ids;
-  for (auto id : enabled_blocker_list_ids_) {
-    enabled_blocker_list_ids.append(QString::number(id));
-  }
-  ret["enabledBlockerListIds"] = enabled_blocker_list_ids;
-  return ret;
-}
-
-bool Profile::SavePrefs() const {
-  // In memory saves nothing...
-  if (InMemory()) return true;
-
-  QFile file(QDir(path_).filePath("settings.doogie.json"));
-  qDebug() << "Saving profile prefs to " << file.fileName();
-  if (!file.open(QIODevice::WriteOnly)) {
-    qCritical() << "Unable to open "<<
-                   file.fileName() << " to save profile at";
-    return false;
-  }
-  if (file.write(QJsonDocument(ToJson()).
-                 toJson(QJsonDocument::Indented)) == -1) {\
-    qCritical() << "Unable to write JSON to "<<
-                   file.fileName() << " to save profile";
-    return false;
-  }
-  return true;
-}
-
 bool Profile::RequiresRestartIfChangedTo(const Profile& other) const {
   return cache_path_ != other.cache_path_ ||
       cache_path_.isNull() != other.cache_path_.isNull() ||
-      enable_net_sec_ != other.enable_net_sec_ ||
-      persist_user_prefs_ != other.persist_user_prefs_ ||
+      browser_settings_.value(BrowserSetting::EnableNetSecurityExpiration) !=
+        other.browser_settings_.value(
+          BrowserSetting::EnableNetSecurityExpiration) ||
+      browser_settings_.value(BrowserSetting::PersistUserPreferences) !=
+        other.browser_settings_.value(
+          BrowserSetting::PersistUserPreferences) ||
       user_agent_ != other.user_agent_ ||
       user_data_path_ != other.user_data_path_ ||
       user_data_path_.isNull() != other.user_data_path_.isNull();
@@ -516,29 +309,24 @@ bool Profile::RequiresRestartIfChangedTo(const Profile& other) const {
 bool Profile::operator==(const Profile& other) const {
   return cache_path_ == other.cache_path_ &&
       cache_path_.isNull() == other.cache_path_.isNull() &&
-      enable_net_sec_ == other.enable_net_sec_ &&
-      persist_user_prefs_ == other.persist_user_prefs_ &&
       user_agent_ == other.user_agent_ &&
       user_data_path_ == other.user_data_path_ &&
       user_data_path_.isNull() == other.user_data_path_.isNull() &&
       browser_settings_ == other.browser_settings_ &&
-      bubbles_ == other.bubbles_ &&
       shortcuts_ == other.shortcuts_ &&
-      open_workspace_ids_ == other.open_workspace_ids_ &&
       enabled_blocker_list_ids_ == other.enabled_blocker_list_ids_;
 }
 
-bool Profile::SetCurrent(Profile* profile) {
-  if (current_) delete current_;
+bool Profile::SetCurrent(const Profile& profile) {
   current_ = profile;
 
   // We want to try to open a sqlite DB
   auto db = QSqlDatabase::addDatabase("QSQLITE");
-  if (profile->InMemory()) {
+  if (current_.InMemory()) {
     db.setDatabaseName(":memory:");
   } else {
     db.setDatabaseName(QDir::toNativeSeparators(
-        QDir(profile->Path()).filePath("doogie.db")));
+        QDir(current_.path_).filePath("doogie.db")));
   }
   if (!db.open()) {
     qCritical() << "Unable to open doogie.db";
@@ -550,12 +338,22 @@ bool Profile::SetCurrent(Profile* profile) {
   }
 
   QSettings settings("cretz", "Doogie");
-  settings.setValue("profile/lastLoaded", profile->path_);
+  settings.setValue("profile/lastLoaded", current_.path_);
   auto prev = settings.value("profile/lastTen").toStringList();
-  prev.removeAll(profile->path_);
-  prev.prepend(profile->path_);
+  prev.removeAll(current_.path_);
+  prev.prepend(current_.path_);
   settings.setValue("profile/lastTen", prev);
   return true;
+}
+
+Profile::Profile(const QString& path) {
+  path_ = path;
+  if (path_.isEmpty()) path_ = kInMemoryPath;
+}
+
+void Profile::ApplyDefaults() {
+  // Only user prefs for now
+  browser_settings_[BrowserSetting::PersistUserPreferences] = true;
 }
 
 }  // namespace doogie

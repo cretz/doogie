@@ -17,6 +17,7 @@ class BlockerDock : public QDockWidget {
   explicit BlockerDock(const Cef& cef,
                        BrowserStack* browser_stack,
                        QWidget* parent = nullptr);
+  ~BlockerDock();
 
   void ProfileUpdated(bool load_local_file_only = false);
 
@@ -57,7 +58,8 @@ class BlockerDock : public QDockWidget {
   QTableWidget* table_;
   QCheckBox* current_only_;
   QHash<int, BlockerList> lists_;
-  std::atomic<BlockerRules*> rules_;
+  QMutex rules_mutex_;
+  BlockerRules* rules_ = nullptr;
   qlonglong next_rule_set_unique_num_ = 0;
 
   BrowserWidget* current_browser_;

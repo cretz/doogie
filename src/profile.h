@@ -4,7 +4,7 @@
 #include <QtWidgets>
 
 #include "action_manager.h"
-#include "bubble.h"
+#include "browser_setting.h"
 #include "cef/cef.h"
 #include "util.h"
 #include "workspace.h"
@@ -13,15 +13,10 @@ namespace doogie {
 
 class Profile {
  public:
-  struct BrowserSetting {
-    QString name;
-    QString desc;
-    QString field;
-  };
-
   static const QString kInMemoryPath;
 
-  static Profile* Current() { return current_; }
+  static Profile& Current() { return current_; }
+
   // False on failure
   static bool CreateOrLoadProfile(const QString& path,
                                   bool set_current = true);
@@ -36,17 +31,14 @@ class Profile {
   static bool LaunchWithProfile(const QString& profile_path);
 
   static QString FriendlyName(const QString& path);
-  static QList<BrowserSetting> PossibleBrowserSettings();
 
   static QStringList LastTenProfilePaths();
 
-  Profile(const QString& path = kInMemoryPath,
-          const QJsonObject& obj = QJsonObject());
-
-  // Must be called after Application is constructed
-  void Init();
-
-  void CopySettingsFrom(const Profile& profile);
+  // This must be current for this to work.
+  bool Persist();
+  // This must be current for this to work.
+  bool Reload();
+  void CopySettingsFrom(const Profile& other);
 
   QString Path() const { return path_; }
   QString FriendlyName() const { return FriendlyName(path_); }
@@ -55,48 +47,28 @@ class Profile {
   // Null means default, empty means no cache
   QString CachePath() const { return cache_path_; }
   void SetCachePath(const QString& cache_path) { cache_path_ = cache_path; }
-  bool EnableNetSec() { return enable_net_sec_; }
-  void SetEnableNetSec(bool enabled) { enable_net_sec_ = enabled; }
-  bool PersistUserPrefs() { return persist_user_prefs_; }
-  void SetPersistUserPrefs(bool enabled) { persist_user_prefs_ = enabled; }
   QString UserAgent() const { return user_agent_; }
   void SetUserAgent(const QString& user_agent) { user_agent_ = user_agent; }
   // Null means Doogie default, empty means platform default
   QString UserDataPath() const { return user_data_path_; }
   void SetUserDataPath(const QString& path) { user_data_path_ = path; }
-  Util::SettingState GetBrowserSetting(const QString& field) const {
-    if (!browser_settings_.contains(field)) return Util::Default;
-    return browser_settings_[field] ? Util::Enabled : Util::Disabled;
+  QHash<BrowserSetting::SettingKey, bool> BrowserSettings() const {
+    return browser_settings_;
   }
-  void SetBrowserSetting(const QString& field, Util::SettingState state) {
-    if (state == Util::Default) {
-      browser_settings_.remove(field);
-    } else {
-      browser_settings_[field] = state == Util::Enabled;
-    }
+  void SetBrowserSettings(
+      const QHash<BrowserSetting::SettingKey, bool>& browser_settings) {
+    browser_settings_ = browser_settings;
   }
-  const QList<Bubble> Bubbles() const { return bubbles_; }
-  // Note, this will reuse bubble instances of the same name
-  void SetBubbles(QList<Bubble> bubbles) { bubbles_ = bubbles; }
-  const Bubble& DefaultBubble() const { return bubbles_.first(); }
-  int BubbleIndexFromName(const QString& name) const;
 
   // Keyed by action type
-  const QHash<int, QList<QKeySequence>> Shortcuts() const {
+  QHash<int, QList<QKeySequence>> Shortcuts() const {
     return shortcuts_;
   }
   void SetShortcuts(QHash<int, QList<QKeySequence>> shortcuts) {
     shortcuts_ = shortcuts;
   }
 
-  const QList<qlonglong> OpenWorkspaceIds() const {
-    return open_workspace_ids_;
-  }
-  void SetOpenWorkspaceIds(QList<qlonglong> open_workspace_ids) {
-    open_workspace_ids_ = open_workspace_ids;
-  }
-
-  const QSet<qlonglong> EnabledBlockerListIds() const {
+  QSet<qlonglong> EnabledBlockerListIds() const {
     return enabled_blocker_list_ids_;
   }
   void SetEnabledBlockerListIds(QSet<qlonglong> enabled_blocker_list_ids) {
@@ -111,31 +83,25 @@ class Profile {
 
   void ApplyActionShortcuts() const;
 
-  QJsonObject ToJson() const;
-  bool SavePrefs() const;
-
   bool RequiresRestartIfChangedTo(const Profile& other) const;
   bool operator==(const Profile& other) const;
   bool operator!=(const Profile& other) const { return !operator==(other); }
 
  private:
   static const QString kAppDataPath;
+  static bool SetCurrent(const Profile& profile);
 
-  static bool SetCurrent(Profile* profile);
+  explicit Profile(const QString& path);
+  void ApplyDefaults();
 
-  static Profile* current_;
-  static QList<BrowserSetting> possible_browser_settings_;
+  static Profile current_;
 
   QString path_;
   QString cache_path_;
-  bool enable_net_sec_;
-  bool persist_user_prefs_;
   QString user_agent_;
   QString user_data_path_;
-  QHash<QString, bool> browser_settings_;
-  QList<Bubble> bubbles_;
+  QHash<BrowserSetting::SettingKey, bool> browser_settings_;
   QHash<int, QList<QKeySequence>> shortcuts_;
-  QList<qlonglong> open_workspace_ids_;
   QSet<qlonglong> enabled_blocker_list_ids_;
 };
 \

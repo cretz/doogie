@@ -2,8 +2,15 @@
 
 namespace doogie {
 
+// Easy on/off for debugging
+#ifndef QT_DEBUG
+const bool kSqlLoggingEnabled = true;
+#else
+const bool kSqlLoggingEnabled = false;
+#endif
+
 const QLoggingCategory Sql::kLoggingCat(
-    "sql", Sql::kLoggingEnabled ? QtDebugMsg : QtInfoMsg);
+    "sql", kSqlLoggingEnabled ? QtDebugMsg : QtInfoMsg);
 
 bool Sql::EnsureDatabaseSchema() {
   QFile file(":/res/schema.sql");
@@ -46,7 +53,9 @@ bool Sql::ExecParam(QSqlQuery* query,
                     QVariantList params) {
   DebugLog() << "Executing " << sql << " with params: " << params;
   if (!Prepare(query, sql)) return false;
-  for (const auto& param : params) query->addBindValue(param);
+  for (const auto& param : params) {
+    query->addBindValue(param);
+  }
   return Exec(query);
 }
 
@@ -84,6 +93,15 @@ bool Sql::Exec(QSqlQuery* query, const QString& sql) {
     return false;
   }
   return true;
+}
+
+QSqlRecord Sql::ExecSingle(QSqlQuery* query, const QString& sql) {
+  if (!Exec(query, sql)) return QSqlRecord();
+  if (!query->next()) {
+    DebugLog() << "Single value not found";
+    return QSqlRecord();
+  }
+  return query->record();
 }
 
 Sql::Sql() { }

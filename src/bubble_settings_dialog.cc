@@ -1,28 +1,30 @@
 #include "bubble_settings_dialog.h"
 
+#include "browser_setting.h"
 #include "profile.h"
 #include "settings_widget.h"
 #include "util.h"
 
 namespace doogie {
 
-QString BubbleSettingsDialog::NewBubble(QWidget* parent) {
+qlonglong BubbleSettingsDialog::NewBubble(QWidget* parent) {
   QSet<QString> invalid_names;
-  for (auto& bubble : Profile::Current()->Bubbles()) {
+  for (auto& bubble : Bubble::CachedBubbles()) {
     invalid_names.insert(bubble.Name());
   }
   Bubble bubble;
   if (!UpdateBubble(&bubble, invalid_names, parent)) {
-    return QString();
+    return -1;
   }
-  // Add it to the current profile and save
-  auto bubbles = Profile::Current()->Bubbles();
-  bubbles.append(bubble);
-  Profile::Current()->SetBubbles(bubbles);
-  if (!Profile::Current()->SavePrefs()) {
+  // Save it and clear the cache
+  if (!bubble.Persist()) {
     qCritical() << "Failed to save current profile after bubble add";
+    return -1;
   }
-  return bubble.Name();
+
+  Bubble::InvalidateCachedBubbles();
+
+  return bubble.Id();
 }
 
 bool BubbleSettingsDialog::UpdateBubble(Bubble* bubble,
@@ -293,7 +295,7 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
     if (existing.isEmpty()) {
       existing = QSettings().value("bubbleSettings/cachePathOpen").toString();
     }
-    if (existing.isEmpty()) existing = Profile::Current()->Path();
+    if (existing.isEmpty()) existing = Profile::Current().Path();
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  "Choose Cache Path",
                                                  existing);
@@ -308,46 +310,27 @@ QLayoutItem* BubbleSettingsDialog::CreateSettingsSection() {
         cache_path_widg);
   settings->AddSettingBreak();
 
-  auto enable_net_sec = settings->AddComboBoxSetting(
-      "Enable Net Security Expiration",
-      "Enable date-based expiration of built in network security information "
-      "(i.e. certificate transparency logs, HSTS preloading and pinning "
-      "information). Enabling this option improves network security but may "
-      "cause HTTPS load failures when using CEF binaries built more than 10 "
-      "weeks in the past. See https://www.certificate-transparency.org/ and "
-      "https://www.chromium.org/hsts for details.",
-      { "Same as profile", "Enabled", "Disabled" },
-      bubble_.EnableNetSec());
-  connect(enable_net_sec, &QComboBox::currentTextChanged, [=]() {
-    bubble_.SetEnableNetSec(
-        static_cast<Util::SettingState>(enable_net_sec->currentIndex()));
-    emit Changed();
-  });
-
-  auto user_prefs = settings->AddComboBoxSetting(
-        "Persist User Preferences",
-        "Whether to persist user preferences as a JSON file "
-        "in the cache path. Requires cache to be enabled.",
-        { "Same as profile", "Enabled", "Disabled" },
-        bubble_.PersistUserPrefs());
-  connect(user_prefs, &QComboBox::currentTextChanged, [=]() {
-    bubble_.SetPersistUserPrefs(
-        static_cast<Util::SettingState>(user_prefs->currentIndex()));
-    emit Changed();
-  });
-  settings->AddSettingBreak();
-
-  for (auto& setting : Profile::PossibleBrowserSettings()) {
+  auto curr_settings = bubble_.BrowserSettings();
+  for (auto& setting : BrowserSetting::kSettings) {
     settings->AddSettingBreak();
 
+    auto selected = 0;
+    if (curr_settings.contains(setting.Key())) {
+      selected = curr_settings[setting.Key()] ? 1 : 2;
+    }
+
     auto box = settings->AddComboBoxSetting(
-          setting.name, setting.desc,
+          setting.Name(), setting.Desc(),
           { "Same as profile", "Enabled", "Disabled" },
-          bubble_.BrowserSetting(setting.field));
+          selected);
     connect(box, &QComboBox::currentTextChanged, [=]() {
-      bubble_.SetBrowserSetting(
-            setting.field,
-            static_cast<Util::SettingState>(box->currentIndex()));
+      auto new_settings = bubble_.BrowserSettings();
+      if (box->currentIndex() == 0) {
+        new_settings.remove(setting.Key());
+      } else {
+        new_settings[setting.Key()] = box->currentIndex() == 1;
+      }
+      bubble_.SetBrowserSettings(new_settings);
       emit Changed();
     });
   }

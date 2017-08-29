@@ -48,7 +48,7 @@ void WorkspaceTreeItem::TextChanged() {
       return;
     }
     workspace_.SetName(text(0));
-    workspace_.Save();
+    workspace_.Persist();
   }
 }
 

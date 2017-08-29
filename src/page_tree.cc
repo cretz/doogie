@@ -127,10 +127,9 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
 
   connect(this, &PageTree::WorkspaceClosed, [=](qlonglong id) {
     // Remove the workspace from the open list
-    auto list = Profile::Current()->OpenWorkspaceIds();
-    list.removeAll(id);
-    Profile::Current()->SetOpenWorkspaceIds(list);
-    Profile::Current()->SavePrefs();
+    auto ids = WorkspaceIds();
+    ids.removeAll(id);
+    Workspace::UpdateOpenWorkspaces(ids);
     // Make the current one implicit if necessary
     MakeWorkspaceImplicitIfPossible();
   });
@@ -170,10 +169,10 @@ PageTreeItem* PageTree::NewPage(const QString &url,
   if (parent) {
     page.SetWorkspaceId(parent->WorkspacePage().WorkspaceId());
     page.SetParentId(parent->WorkspacePage().Id());
-    page.SetBubble(parent->Browser()->CurrentBubble().Name());
+    page.SetBubbleId(parent->Browser()->CurrentBubble().Id());
   } else {
     page.SetWorkspaceId(WorkspaceToAddUnder().Id());
-    page.SetBubble(Profile::Current()->DefaultBubble().Name());
+    page.SetBubbleId(Bubble::DefaultBubble().Id());
   }
   page.SetUrl(url);
   return NewPage(&page, parent, make_current);
@@ -182,20 +181,15 @@ PageTreeItem* PageTree::NewPage(const QString &url,
 PageTreeItem* PageTree::NewPage(Workspace::WorkspacePage* page,
                                 PageTreeItem* parent,
                                 bool make_current) {
-  auto bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
+  auto ok = false;
+  auto bubble = Bubble::FromId(page->BubbleId(), &ok);
   auto start_url = page->Url();
-  if (bubble_index == -1) {
-    QMessageBox::warning(
-          nullptr, "Load Workspace",
-          QString("Workspace page used bubble '%1' "
-                  "which doesn't exist anymore, "
-                  "using default and suspending").arg(page->Bubble()));
-    page->SetBubble(Profile::Current()->DefaultBubble().Name());
-    bubble_index = Profile::Current()->BubbleIndexFromName(page->Bubble());
+  if (!ok) {
+    bubble = Bubble::DefaultBubble();
+    page->SetBubbleId(bubble.Id());
     page->SetSuspended(true);
   }
   if (page->Suspended()) start_url = "";
-  auto bubble = Profile::Current()->Bubbles()[bubble_index];
   auto browser = browser_stack_->NewBrowser(bubble, start_url);
   auto item = AddBrowser(browser, page, parent, make_current);
   if (page->Suspended()) browser->SetSuspended(true, page->Url());
@@ -216,7 +210,7 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
       break;
     }
   }
-  for (auto& bubble : Profile::Current()->Bubbles()) {
+  for (auto& bubble : Bubble::CachedBubbles()) {
     auto action = menu->addAction(bubble.Icon(), bubble.FriendlyName());
     if (!common_bubble_name.isNull() && common_bubble_name == bubble.Name()) {
       action->setCheckable(true);
@@ -232,10 +226,9 @@ void PageTree::ApplyBubbleSelectMenu(QMenu* menu,
   }
   menu->addSeparator();
   menu->addAction("New Bubble...", [=]() {
-    auto bubble_name = BubbleSettingsDialog::NewBubble(window());
-    if (!bubble_name.isNull()) {
-      auto bubble = Profile::Current()->
-          Bubbles()[Profile::Current()->BubbleIndexFromName(bubble_name)];
+    auto bubble_id = BubbleSettingsDialog::NewBubble(window());
+    if (bubble_id >= 0) {
+      auto bubble = Bubble::FromId(bubble_id);
       for (auto item : apply_to_items) {
         item->SetCurrentBubbleIfDifferent(bubble);
       }
@@ -260,29 +253,27 @@ void PageTree::ApplyWorkspaceMenu(QMenu* menu,
   menu->addAction("Change name", [=]() {
     EditWorkspaceName(item);
   });
-  auto ids = Profile::Current()->OpenWorkspaceIds();
+  auto ids = WorkspaceIds();
   auto curr_index = ids.indexOf(workspace.Id());
   menu->addAction("Move Up", [=]() {
     auto item = takeTopLevelItem(curr_index);
     auto expanded = item->isExpanded();
     insertTopLevelItem(curr_index - 1, item);
     item->setExpanded(expanded);
-    auto ids = Profile::Current()->OpenWorkspaceIds();
+    auto ids = WorkspaceIds();
     ids.removeAll(workspace.Id());
     ids.insert(curr_index - 1, workspace.Id());
-    Profile::Current()->SetOpenWorkspaceIds(ids);
-    Profile::Current()->SavePrefs();
+    Workspace::UpdateOpenWorkspaces(ids);
   })->setEnabled(item && curr_index > 0);
   menu->addAction("Move Down", [=]() {
     auto item = takeTopLevelItem(curr_index);
     auto expanded = item->isExpanded();
     insertTopLevelItem(curr_index + 1, item);
     item->setExpanded(expanded);
-    auto ids = Profile::Current()->OpenWorkspaceIds();
+    auto ids = WorkspaceIds();
     ids.removeAll(workspace.Id());
     ids.insert(curr_index + 1, workspace.Id());
-    Profile::Current()->SetOpenWorkspaceIds(ids);
-    Profile::Current()->SavePrefs();
+    Workspace::UpdateOpenWorkspaces(ids);
   })->setEnabled(item && curr_index < ids.length() - 1);
   menu->addSeparator();
   menu->addAction("Close", [=]() {
@@ -319,16 +310,15 @@ WorkspaceTreeItem* PageTree::OpenWorkspace(Workspace* workspace) {
 
   // Mark as opened
   workspace->SetLastOpened(QDateTime::currentMSecsSinceEpoch());
-  workspace->Save();
+  workspace->Persist();
   auto item = new WorkspaceTreeItem(*workspace);
   addTopLevelItem(item);
 
-  // Save that it's open in the profile
-  auto opened_list = Profile::Current()->OpenWorkspaceIds();
-  opened_list.removeAll(workspace->Id());
-  opened_list.append(workspace->Id());
-  Profile::Current()->SetOpenWorkspaceIds(opened_list);
-  Profile::Current()->SavePrefs();
+  // Save that it's open
+  auto ids = WorkspaceIds();
+  ids.removeAll(workspace->Id());
+  ids.append(workspace->Id());
+  Workspace::UpdateOpenWorkspaces(ids);
 
   // Let's add the children
   QHash<qlonglong, PageTreeItem*> items_by_page_id;
@@ -433,7 +423,7 @@ void PageTree::EditWorkspaceName(WorkspaceTreeItem* item) {
           failed_try_again = true;
         } else {
           implicit_workspace_.SetName(new_name);
-          implicit_workspace_.Save();
+          implicit_workspace_.Persist();
           emit WorkspaceImplicitnessChanged();
         }
       }
@@ -1133,7 +1123,7 @@ void PageTree::SetupActions() {
     // Create the workspace w/ the next name
     Workspace workspace;
     workspace.SetName(Workspace::NextUnusedWorkspaceName());
-    workspace.Save();
+    workspace.Persist();
     auto item = OpenWorkspace(&workspace);
     EditWorkspaceName(item);
   });
@@ -1151,27 +1141,21 @@ void PageTree::SetupActions() {
 }
 
 void PageTree::SetupInitialWorkspaces() {
-  auto found_any = false;
-  for (auto id : Profile::Current()->OpenWorkspaceIds()) {
-    Workspace workspace(id);
-    if (workspace.Exists()) {
-      found_any = true;
-      qDebug() << "Opening previous workspace ID " << id;
-      OpenWorkspace(&workspace);
+  auto open_workspaces = Workspace::OpenWorkspaces();
+  if (open_workspaces.isEmpty()) {
+    qDebug() << "Trying to open the most recent workspace";
+    open_workspaces = Workspace::RecentWorkspaces({}, 1);
+    // If there is nothing there, we just have to create a default one
+    if (open_workspaces.isEmpty()) {
+      qDebug() << "Opening default workspace";
+      Workspace workspace;
+      workspace.Persist();
+      open_workspaces = { workspace };
     }
   }
-  if (!found_any) {
-    // Just try the most recent
-    auto recent = Workspace::RecentWorkspaces({}, 1);
-    if (!recent.isEmpty()) {
-      qDebug() << "Using most recent workspace";
-      OpenWorkspace(&recent.first());
-    } else {
-      // Just create a default one
-      Workspace workspace;
-      qDebug() << "Opening default workspace";
-      OpenWorkspace(&workspace);
-    }
+  for (auto& workspace : open_workspaces) {
+    qDebug() << "Opening workspace ID " << workspace.FriendlyName();
+    OpenWorkspace(&workspace);
   }
   MakeWorkspaceImplicitIfPossible();
 }
@@ -1182,7 +1166,7 @@ PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
                                    bool make_current) {
   // Create the tree item
   page->SetPos(parent ? parent->childCount() : topLevelItemCount());
-  page->Save();
+  page->Persist();
   auto browser_item = new PageTreeItem(browser, *page);
 
   // Put as top level or as child
@@ -1341,6 +1325,14 @@ QList<Workspace> PageTree::Workspaces() const {
     if (item) ret.append(item->CurrentWorkspace());
   }
   return ret;
+}
+
+QList<qlonglong> PageTree::WorkspaceIds() const {
+  QList<qlonglong> open_ids;
+  for (const auto& workspace : Workspaces()) {
+    open_ids << workspace.Id();
+  }
+  return open_ids;
 }
 
 const Workspace& PageTree::WorkspaceToAddUnder() const {

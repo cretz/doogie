@@ -14,8 +14,7 @@ class ProfileSettingsDialog : public QDialog {
 
  public:
   explicit ProfileSettingsDialog(const Cef& cef,
-                                 Profile* profile,
-                                 QSet<QString> in_use_bubble_names,
+                                 QSet<qlonglong> in_use_bubble_ids,
                                  QWidget* parent = nullptr);
   bool NeedsRestart() const { return needs_restart_; }
   void done(int r) override;
@@ -25,6 +24,11 @@ class ProfileSettingsDialog : public QDialog {
   void keyPressEvent(QKeyEvent* event) override;
 
  private:
+  // Needs to be executed in a transaction
+  bool Save();
+  bool SettingsChanged() const;
+  bool BlockerChanged() const;
+
   QWidget* CreateSettingsTab();
   QWidget* CreateShortcutsTab();
   QWidget* CreateBubblesTab();
@@ -32,10 +36,8 @@ class ProfileSettingsDialog : public QDialog {
   void AddBlockerListUrl(const Cef& cef,
                          const QString& default_url,
                          std::function<void(BlockerList, bool)> callback);
-  bool BlockerChanged();
 
-  Profile* orig_profile_;
-  QSet<QString> in_use_bubble_names_;
+  QSet<qlonglong> in_use_bubble_ids_;
   Profile profile_;
   bool needs_restart_ = false;
   QList<Bubble> temp_bubbles_;

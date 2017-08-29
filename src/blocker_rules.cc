@@ -198,8 +198,11 @@ BlockerRules::StaticRule::FindResult*
   // If we matched a rule ourself, we're done
   if (rule_this_terminates_) {
     // Everything else is usually checked at the rule level, but
-    //  we choose to check "excluded domains" and "excluded types" here...
-    if (!rule_this_terminates_->not_request_types.test(ctx.request_type) &&
+    //  we choose to check excluded file indexes, "excluded domains", and
+    //  "excluded types" here...
+    if (!ctx.ignored_file_indexes.contains(
+          rule_this_terminates_->file_index) &&
+        !rule_this_terminates_->not_request_types.test(ctx.request_type) &&
         !ctx.ref_hosts.intersects(rule_this_terminates_->not_ref_domains)) {
       auto result = new FindResult();
       result->info = *rule_this_terminates_;
@@ -512,16 +515,21 @@ void BlockerRules::AddRules(const QList<Rule*>& rules) {
 BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRule(
     const QString& target_url,
     const QString& ref_url,
-    StaticRule::RequestType request_type) const {
+    StaticRule::RequestType request_type,
+    const QSet<int>& ignored_file_indexes) const {
   QUrl target_url_parsed(target_url, QUrl::StrictMode);
   QUrl ref_url_parsed(ref_url, QUrl::StrictMode);
-  return FindStaticRule(target_url_parsed, ref_url_parsed, request_type);
+  return FindStaticRule(target_url_parsed,
+                        ref_url_parsed,
+                        request_type,
+                        ignored_file_indexes);
 }
 
 BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRule(
     const QUrl& target_url,
     const QUrl& ref_url,
-    StaticRule::RequestType request_type) const {
+    StaticRule::RequestType request_type,
+    const QSet<int>& ignored_file_indexes) const {
   // We require URLs w/ schemes and hosts
   if (!target_url.isValid() || !ref_url.isValid() ||
       target_url.scheme().isEmpty() || ref_url.scheme().isEmpty() ||
@@ -566,7 +574,8 @@ BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRule(
         host(QUrl::FullyDecoded).length(),  // target_url_after_host_index
     url_bytes(ref_url),  // ref_url
     hosts(ref_url.host(QUrl::FullyEncoded)),  // ref_hosts
-    &piece_children_  // piece_children
+    &piece_children_,  // piece_children
+    ignored_file_indexes  // ignored_file_indexes
   };
   return FindStaticRule(ctx);
 }

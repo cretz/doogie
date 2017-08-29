@@ -1,6 +1,7 @@
 #include "profile_settings_dialog.h"
 
 #include "action_manager.h"
+#include "browser_setting.h"
 #include "bubble_settings_dialog.h"
 #include "settings_widget.h"
 #include "util.h"
@@ -8,18 +9,16 @@
 namespace doogie {
 
 ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
-                                             Profile* profile,
-                                             QSet<QString> in_use_bubble_names,
+                                             QSet<qlonglong> in_use_bubble_ids,
                                              QWidget* parent)
     : QDialog(parent),
-      orig_profile_(profile),
-      in_use_bubble_names_(in_use_bubble_names) {
-  profile_.CopySettingsFrom(*profile);
-  temp_bubbles_ = profile_.Bubbles();
+      in_use_bubble_ids_(in_use_bubble_ids),
+      profile_(Profile::Current()) {
+  temp_bubbles_ = Bubble::CachedBubbles();
   auto layout = new QGridLayout;
   layout->addWidget(
         new QLabel(QString("Current Profile: '") +
-                   profile->FriendlyName() + "'"),
+                   Profile::Current().FriendlyName() + "'"),
         0, 0, 1, 2);
 
   auto tabs = new QTabWidget;
@@ -42,9 +41,9 @@ ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
   connect(ok, &QPushButton::clicked, this, &QDialog::accept);
   connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
   connect(this, &ProfileSettingsDialog::Changed, [=]() {
-    ok->setEnabled(*orig_profile_ != profile_ || BlockerChanged());
+    ok->setEnabled(SettingsChanged());
     if (ok->isEnabled() &&
-        orig_profile_->RequiresRestartIfChangedTo(profile_)) {
+        Profile::Current().RequiresRestartIfChangedTo(profile_)) {
       ok->setText("Save and Restart to Apply");
     } else {
       ok->setText("Save");
@@ -55,32 +54,27 @@ ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
 }
 
 void ProfileSettingsDialog::done(int r) {
-  if (r == Accepted) {
-    Profile orig = *orig_profile_;
-    needs_restart_ = orig_profile_->RequiresRestartIfChangedTo(profile_);
-    // We need to save the rule list stuff too
-    QSet<qlonglong> enabled_blocker_list_ids;
-    for (auto& list : temp_blocker_lists_.values()) {
-      if (list.Exists() &&
-          blocker_list_ids_pending_refresh_.contains(list.Id())) {
-        list.SetLastRefreshed(QDateTime());
-      }
-      // We just ignore the persistence failure and keep going
-      list.Persist();
-      if (enabled_blocker_lists_.contains(list.UrlOrLocalPath())) {
-        enabled_blocker_list_ids << list.Id();
-      }
-    }
-    profile_.SetEnabledBlockerListIds(enabled_blocker_list_ids);
-    // Now we can save the profile stuff
-    orig_profile_->CopySettingsFrom(profile_);
-    if (!orig_profile_->SavePrefs()) {
-      QMessageBox::critical(nullptr, "Save Profile", "Error saving profile");
-      orig_profile_->CopySettingsFrom(orig);
+  if (r == Accepted) {\
+    needs_restart_ = Profile::Current().RequiresRestartIfChangedTo(profile_);
+
+    // Save in a transaction
+    auto db = QSqlDatabase::database();
+    if (!db.transaction()) {
+      qCritical() << "Transaction creation failed";
       return;
     }
-    // Apply the actions too
-    orig_profile_->ApplyActionShortcuts();
+    if (!Save()) {
+      qCritical() << "Unable to save profile";
+      db.rollback();
+      return;
+    }
+    if (!db.commit()) {
+      qCritical() << "Unable to commit profile";
+      return;
+    }
+
+    // Apply the actions
+    Profile::Current().ApplyActionShortcuts();
   }
   QDialog::done(r);
 }
@@ -92,11 +86,81 @@ void ProfileSettingsDialog::closeEvent(QCloseEvent* event) {
 
 void ProfileSettingsDialog::keyPressEvent(QKeyEvent* event) {
   // Don't let escape close this if there are changes
-  if (event->key() == Qt::Key_Escape && *orig_profile_ != profile_) {
+  if (event->key() == Qt::Key_Escape && !SettingsChanged()) {
     event->ignore();
     return;
   }
   QDialog::keyPressEvent(event);
+}
+
+bool ProfileSettingsDialog::Save() {
+  // Save the rule list stuff
+  QSet<qlonglong> enabled_blocker_list_ids;
+  for (auto& list : temp_blocker_lists_.values()) {
+    if (list.Exists() &&
+        blocker_list_ids_pending_refresh_.contains(list.Id())) {
+      list.SetLastRefreshed(QDateTime());
+    }
+    if (!list.Persist()) return false;
+    if (enabled_blocker_lists_.contains(list.UrlOrLocalPath())) {
+      enabled_blocker_list_ids << list.Id();
+    }
+  }
+  profile_.SetEnabledBlockerListIds(enabled_blocker_list_ids);
+
+  // Save the bubble stuff...
+  if (!Bubble::ResetOrderIndexes()) return false;
+  QSet<qlonglong> existing_ids;
+  for (int i = 0; i < temp_bubbles_.size(); i++) {
+    temp_bubbles_[i].SetOrderIndex(i);
+    if (!temp_bubbles_[i].Persist()) return false;
+    existing_ids << temp_bubbles_[i].Id();
+  }
+  // Delete the ones no longer there
+  for (auto& bubble : Bubble::CachedBubbles()) {
+    if (!existing_ids.contains(bubble.Id())) {
+      if (!Workspace::WorkspacePage::BubbleDeleted(bubble.Id())) return false;
+      if (!bubble.Delete()) return false;
+    }
+  }
+  Bubble::InvalidateCachedBubbles();
+
+  // Save the profile stuff (ignore failures for now...)
+  Profile::Current().CopySettingsFrom(profile_);
+  return Profile::Current().Persist();
+}
+
+bool ProfileSettingsDialog::SettingsChanged() const {
+  return Profile::Current() != profile_ ||
+      temp_bubbles_ != Bubble::CachedBubbles() ||
+      BlockerChanged();
+}
+
+bool ProfileSettingsDialog::BlockerChanged() const {
+  if (!blocker_list_ids_pending_refresh_.isEmpty() ||
+      orig_blocker_lists_.size() != temp_blocker_lists_.size()) {
+    return true;
+  }
+  // They can change what is checked
+  if (enabled_blocker_lists_.size() !=
+      profile_.EnabledBlockerListIds().size()) {
+    return true;
+  }
+  for (const auto& enabled_key : enabled_blocker_lists_) {
+    auto list = temp_blocker_lists_[enabled_key];
+    if (!list.Exists()) return true;
+    if (!profile_.EnabledBlockerListIds().contains(list.Id())) {
+      return true;
+    }
+  }
+  // They can only change the name on local ones
+  for (const auto& orig_list : orig_blocker_lists_) {
+    if (orig_list.IsLocalOnly() && orig_list.Name() !=
+        temp_blocker_lists_.value(orig_list.UrlOrLocalPath()).Name()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 QWidget* ProfileSettingsDialog::CreateSettingsTab() {
@@ -150,7 +214,7 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
     if (existing.isEmpty()) {
       existing = QSettings().value("profileSettings/cachePathOpen").toString();
     }
-    if (existing.isEmpty()) existing = Profile::Current()->Path();
+    if (existing.isEmpty()) existing = Profile::Current().Path();
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  "Choose Cache Path",
                                                  existing);
@@ -158,34 +222,6 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
       QSettings().setValue("profileSettings/cachePathOpen", dir);
       cache_path_edit->setText(dir);
     }
-  });
-  settings->AddSettingBreak();
-
-  auto enable_net_sec = settings->AddYesNoSetting(
-      "Enable Net Security Expiration",
-      "Enable date-based expiration of built in network security information "
-      "(i.e. certificate transparency logs, HSTS preloading and pinning "
-      "information). Enabling this option improves network security but may "
-      "cause HTTPS load failures when using CEF binaries built more than 10 "
-      "weeks in the past. See https://www.certificate-transparency.org/ and "
-      "https://www.chromium.org/hsts for details.",
-      profile_.EnableNetSec(),
-      false);
-  connect(enable_net_sec, &QComboBox::currentTextChanged, [=]() {
-    profile_.SetEnableNetSec(enable_net_sec->currentIndex() == 0);
-    emit Changed();
-  });
-  settings->AddSettingBreak();
-
-  auto user_prefs = settings->AddYesNoSetting(
-      "Persist User Preferences",
-      "Whether to persist user preferences as a JSON file "
-      "in the cache path. Requires cache to be enabled.",
-      profile_.PersistUserPrefs(),
-      true);
-  connect(user_prefs, &QComboBox::currentTextChanged, [=]() {
-    profile_.SetPersistUserPrefs(user_prefs->currentIndex() == 0);
-    emit Changed();
   });
   settings->AddSettingBreak();
 
@@ -249,7 +285,7 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
       existing =
           QSettings().value("profileSettings/userDataPathOpen").toString();
     }
-    if (existing.isEmpty()) existing = Profile::Current()->Path();
+    if (existing.isEmpty()) existing = Profile::Current().Path();
     auto dir = QFileDialog::getExistingDirectory(this,
                                                  "Choose User Data Path",
                                                  existing);
@@ -259,17 +295,27 @@ QWidget* ProfileSettingsDialog::CreateSettingsTab() {
     }
   });
 
-  for (auto& setting : Profile::PossibleBrowserSettings()) {
+  auto curr_settings = profile_.BrowserSettings();
+  for (const auto& setting : BrowserSetting::kSettings) {
     settings->AddSettingBreak();
 
+    auto selected = 0;
+    if (curr_settings.contains(setting.Key())) {
+      selected = curr_settings[setting.Key()] ? 1 : 2;
+    }
+
     auto box = settings->AddComboBoxSetting(
-          setting.name, setting.desc,
+          setting.Name(), setting.Desc(),
           { "Browser Default", "Enabled", "Disabled" },
-          profile_.GetBrowserSetting(setting.field));
+          selected);
     connect(box, &QComboBox::currentTextChanged, [=]() {
-      profile_.SetBrowserSetting(
-            setting.field,
-            static_cast<Util::SettingState>(box->currentIndex()));
+      auto new_settings = profile_.BrowserSettings();
+      if (box->currentIndex() == 0) {
+        new_settings.remove(setting.Key());
+      } else {
+        new_settings[setting.Key()] = box->currentIndex() == 1;
+      }
+      profile_.SetBrowserSettings(new_settings);
       emit Changed();
     });
   }
@@ -525,10 +571,10 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   list->setSelectionBehavior(QAbstractItemView::SelectRows);
   list->setSelectionMode(QAbstractItemView::SingleSelection);
   // Create a copy of each bubble into a local list
-  for (auto& bubble : profile_.Bubbles()) {
+  for (auto& bubble : temp_bubbles_) {
     auto item = new QListWidgetItem(bubble.Icon(), bubble.FriendlyName());
     item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-    if (in_use_bubble_names_.contains(bubble.Name())) {
+    if (in_use_bubble_ids_.contains(bubble.Id())) {
       item->setText(item->text() + "*");
     }
     list->addItem(item);
@@ -538,7 +584,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   auto in_use_label = new QLabel(
       "* - Bubbles on existing pages cannot be edited or deleted.");
   layout->addWidget(in_use_label, 2, 0, 1, 5);
-  if (in_use_bubble_names_.isEmpty()) in_use_label->setVisible(false);
+  if (in_use_bubble_ids_.isEmpty()) in_use_label->setVisible(false);
   auto new_bubble = new QPushButton("New Bubble");
   layout->addWidget(new_bubble, 3, 0, Qt::AlignRight);
   auto up_bubble = new QPushButton("Move Selected Bubble Up");
@@ -551,7 +597,10 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   layout->addWidget(delete_bubble, 3, 4);
 
   auto bubbles_changed = [=]() {
-    profile_.SetBubbles(temp_bubbles_);
+    // Re-index em
+    for (int i = 0; i < temp_bubbles_.size(); i++) {
+      temp_bubbles_[i].SetOrderIndex(i);
+    }
     emit Changed();
   };
 
@@ -590,7 +639,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
       auto row = list->row(item);
       up_bubble->setEnabled(row > 0);
       down_bubble->setEnabled(row < list->count() - 1);
-      auto editable = !in_use_bubble_names_.contains(temp_bubbles_[row].Name());
+      auto editable = !in_use_bubble_ids_.contains(temp_bubbles_[row].Id());
       edit_bubble->setEnabled(editable);
       delete_bubble->setEnabled(editable && list->count() > 1);
     }
@@ -599,7 +648,7 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   connect(list, &QListWidget::itemSelectionChanged, update_buttons);
   connect(list, &QListWidget::itemDoubleClicked, [=](QListWidgetItem* item) {
     auto row = list->row(item);
-    if (!in_use_bubble_names_.contains(temp_bubbles_[row].Name())) {
+    if (!in_use_bubble_ids_.contains(temp_bubbles_[row].Id())) {
       new_or_edit(row);
     }
   });
@@ -631,6 +680,18 @@ QWidget* ProfileSettingsDialog::CreateBubblesTab() {
   });
   connect(delete_bubble, &QPushButton::clicked, [=]() {
     auto row = list->row(list->selectedItems().first());
+    // Warn if it's in use somewhere
+    if (temp_bubbles_[row].Exists() &&
+        Workspace::WorkspacePage::BubbleInUse(temp_bubbles_[row].Id())) {
+      auto res = QMessageBox::question(
+            this,
+            "Bubble In Use",
+            "This bubble is in use on pages in unopened workspaces. If the "
+            "bubble is deleted, the pages will be suspended and set to use "
+            "the default bubble when opened next.\nAre you sure you want "
+            "to delete this bubble?");
+      if (res != QMessageBox::Yes) return;
+    }
     delete list->takeItem(row);
     temp_bubbles_.removeAt(row);
     bubbles_changed();
@@ -872,33 +933,6 @@ void ProfileSettingsDialog::AddBlockerListUrl(
     cancel();
   });
   dialog->open();
-}
-
-bool ProfileSettingsDialog::BlockerChanged() {
-  if (!blocker_list_ids_pending_refresh_.isEmpty() ||
-      orig_blocker_lists_.size() != temp_blocker_lists_.size()) {
-    return true;
-  }
-  // They can change what is checked
-  if (enabled_blocker_lists_.size() !=
-      profile_.EnabledBlockerListIds().size()) {
-    return true;
-  }
-  for (const auto& enabled_key : enabled_blocker_lists_) {
-    auto list = temp_blocker_lists_[enabled_key];
-    if (!list.Exists()) return true;
-    if (!profile_.EnabledBlockerListIds().contains(list.Id())) {
-      return true;
-    }
-  }
-  // They can only change the name on local ones
-  for (const auto& orig_list : orig_blocker_lists_) {
-    if (orig_list.IsLocalOnly() && orig_list.Name() !=
-        temp_blocker_lists_.value(orig_list.UrlOrLocalPath()).Name()) {
-      return true;
-    }
-  }
-  return false;
 }
 
 }  // namespace doogie

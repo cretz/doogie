@@ -11,7 +11,7 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
     : QTreeWidgetItem(PageTree::kPageItemType),
       browser_(browser),
       workspace_page_(workspace_page) {
-  if (!workspace_page_.Exists()) workspace_page_.Save();
+  if (!workspace_page_.Exists()) workspace_page_.Persist();
   if (!workspace_page_.Icon().isNull()) {
     setIcon(0, workspace_page_.Icon());
     setText(0, workspace_page_.Title());
@@ -28,20 +28,20 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
       setText(0, browser_->CurrentTitle());
       setToolTip(0, browser_->CurrentTitle());
       workspace_page_.SetTitle(browser_->CurrentTitle());
-      workspace_page_.Save();
+      workspace_page_.Persist();
     }
   });
   browser->connect(browser, &BrowserWidget::LoadingStateChanged, [=]() {
     ApplyFavicon();
     if (browser_->CurrentUrl() != workspace_page_.Url()) {
       workspace_page_.SetUrl(browser_->CurrentUrl());
-      workspace_page_.Save();
+      workspace_page_.Persist();
     }
   });
   browser->connect(browser, &BrowserWidget::FaviconChanged, [=]() {
     ApplyFavicon();
     workspace_page_.SetIcon(browser_->CurrentFavicon());
-    workspace_page_.Save();
+    workspace_page_.Persist();
   });
   browser->connect(browser, &BrowserWidget::destroyed, [=]() {
     // If I was current, set the new current as either the prev or next
@@ -91,7 +91,7 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
       // Icon change should happen on load
     }
     workspace_page_.SetSuspended(browser_->Suspended());
-    workspace_page_.Save();
+    workspace_page_.Persist();
   });
   browser->connect(browser, &BrowserWidget::BubbleMaybeChanged, [=]() {
     auto label = qobject_cast<QLabel*>(
@@ -100,8 +100,8 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
       label->setPixmap(browser_->CurrentBubble().Icon().pixmap(16, 16));
       label->setToolTip("Bubble: " + browser_->CurrentBubble().FriendlyName());
     }
-    workspace_page_.SetBubble(browser_->CurrentBubble().Name());
-    workspace_page_.Save();
+    workspace_page_.SetBubbleId(browser_->CurrentBubble().Id());
+    workspace_page_.Persist();
   });
 }
 
@@ -127,7 +127,7 @@ void PageTreeItem::AfterAdded() {
       workspace_page_.ParentId() != (par ? par->WorkspacePage().Id() : -1)) {
     workspace_page_.SetWorkspaceId(workspace.Id());
     workspace_page_.SetParentId(par ? par->WorkspacePage().Id() : -1);
-    workspace_page_.Save();
+    workspace_page_.Persist();
   }
 
   auto tree = static_cast<PageTree*>(treeWidget());
@@ -296,7 +296,7 @@ WorkspaceTreeItem* PageTreeItem::WorkspaceItem() {
 void PageTreeItem::CollapseStateChanged() {
   if (isExpanded() != workspace_page_.Expanded()) {
     workspace_page_.SetExpanded(isExpanded());
-    workspace_page_.Save();
+    workspace_page_.Persist();
   }
 }
 

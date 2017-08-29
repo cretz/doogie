@@ -76,9 +76,9 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   logging_dock_->setVisible(false);
   addDockWidget(Qt::BottomDockWidgetArea, logging_dock_);
   // We'll let the console log on debug
-  #ifndef QT_DEBUG
+#ifndef QT_DEBUG
   qInstallMessageHandler(MainWindow::LogQtMessage);
-  #endif
+#endif
 
   resizeDocks({ blocker_dock_, dev_tools_dock_, logging_dock_ },
               { 300, 300, 300 },
@@ -211,17 +211,14 @@ void MainWindow::SetupActions() {
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
   connect(profile_settings, &QAction::triggered, [=]() {
-    QSet<QString> in_use_names;
+    QSet<qlonglong> in_use_ids;
     for (auto browser : browser_stack_->Browsers()) {
-      in_use_names.insert(browser->CurrentBubble().Name());
+      in_use_ids << browser->CurrentBubble().Id();
     }
-    ProfileSettingsDialog dialog(cef_,
-                                 Profile::Current(),
-                                 in_use_names,
-                                 this);
+    ProfileSettingsDialog dialog(cef_, in_use_ids, this);
     if (dialog.exec() == QDialog::Accepted) {
       if (QDialog::Accepted && dialog.NeedsRestart()) {
-        launch_with_profile_on_close = Profile::Current()->Path();
+        launch_with_profile_on_close = Profile::Current().Path();
         this->close();
       } else {
         blocker_dock_->ProfileUpdated();
@@ -229,8 +226,8 @@ void MainWindow::SetupActions() {
     }
   });
   profile_settings->setText(QString("Profile Settings for '") +
-              Profile::Current()->FriendlyName() + "'");
-  profile_settings->setEnabled(!Profile::Current()->InMemory());
+              Profile::Current().FriendlyName() + "'");
+  profile_settings->setEnabled(!Profile::Current().InMemory());
   connect(ActionManager::Action(ActionManager::ChangeProfile),
           &QAction::triggered, [=]() {
     ProfileChangeDialog dialog(this);
@@ -277,7 +274,7 @@ void MainWindow::SetupActions() {
   });
 
   // Shortcut keys
-  Profile::Current()->ApplyActionShortcuts();
+  Profile::Current().ApplyActionShortcuts();
 
   // Setup menu
   auto menu_action = [](QMenu* menu, ActionManager::Type type) {

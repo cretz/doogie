@@ -205,7 +205,7 @@ int WorkspaceDialog::execManage(QList<Workspace> open_workspaces) {
       for (auto str : workspaces_to_add) {
         Workspace workspace;
         workspace.SetName(str);
-        workspace.Save();
+        workspace.Persist();
       }
       // Updates and deletes
       for (auto& workspace : workspaces) {
@@ -213,7 +213,7 @@ int WorkspaceDialog::execManage(QList<Workspace> open_workspaces) {
           workspace.Delete();
         } else if (names_to_change.contains(workspace.Id())) {
           workspace.SetName(names_to_change[workspace.Id()]);
-          workspace.Save();
+          workspace.Persist();
         }
       }
     }

@@ -15,6 +15,7 @@ SOURCES += \
     blocker_dock.cc \
     blocker_list.cc \
     blocker_rules.cc \
+    browser_setting.cc \
     browser_stack.cc \
     browser_widget.cc \
     bubble.cc \
@@ -48,6 +49,7 @@ HEADERS += \
     blocker_dock.h \
     blocker_list.h \
     blocker_rules.h \
+    browser_setting.h \
     browser_stack.h \
     browser_widget.h \
     bubble.h \

@@ -108,7 +108,7 @@ class BlockerRules {
           const QByteArray& new_target_url) const {
         return { request_type, request_party, new_target_url, target_hosts,
                  target_url_after_host_index, ref_url,
-                 ref_hosts, piece_children };
+                 ref_hosts, piece_children, ignored_file_indexes };
       }
 
       const RequestType request_type;
@@ -124,6 +124,7 @@ class BlockerRules {
       const QSet<QByteArray> ref_hosts;
 
       const PieceChildHash* piece_children;
+      const QSet<int> ignored_file_indexes;
     };
 
     struct Info {
@@ -256,13 +257,15 @@ class BlockerRules {
   StaticRule::FindResult* FindStaticRule(
       const QString& target_url,
       const QString& ref_url,
-      StaticRule::RequestType request_type) const;
+      StaticRule::RequestType request_type,
+      const QSet<int>& ignored_file_indexes = {}) const;
 
   // Caller is responsible for deletion of result.
   StaticRule::FindResult* FindStaticRule(
       const QUrl& target_url,
       const QUrl& ref_url,
-      StaticRule::RequestType request_type) const;
+      StaticRule::RequestType request_type,
+      const QSet<int>& ignored_file_indexes = {}) const;
 
  private:
   // Keyed by the request type or AllRequests if it applies to all.

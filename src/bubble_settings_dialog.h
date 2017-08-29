@@ -12,8 +12,8 @@ class BubbleSettingsDialog : public QDialog {
 
  public:
   // This saves the profile/bubble on success and returns the name
-  // or null on failure
-  static QString NewBubble(QWidget* parent = nullptr);
+  // or -1 on failure
+  static qlonglong NewBubble(QWidget* parent = nullptr);
   // This does not save anything and just updates the reference
   static bool UpdateBubble(Bubble* bubble,
                            QSet<QString> invalid_names,

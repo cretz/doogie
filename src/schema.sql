@@ -1,12 +1,46 @@
 -- Note, this file assumes two-adjacent newlines always means
 -- statement separation.
 --
+-- Profile
+--
+CREATE TABLE IF NOT EXISTS profile (
+  cache_path TEXT,
+  user_agent TEXT,
+  user_data_path TEXT
+);
+
+CREATE TABLE IF NOT EXISTS action_shortcut (
+  key TEXT UNIQUE NOT NULL,
+  shortcuts TEXT NOT NULL
+);
+
+-- Bubble stuff
+--
+CREATE TABLE IF NOT EXISTS bubble (
+  id INTEGER PRIMARY KEY NOT NULL,
+  order_index INTEGER NOT NULL UNIQUE,
+  name TEXT NOT NULL UNIQUE,
+  cache_path TEXT,
+  icon_path TEXT,
+  icon_color TEXT,
+  overrides_blocker_lists BOOLEAN NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS browser_setting (
+  bubble_id INTEGER,
+  key TEXT NOT NULL,
+  value BOOLEAN NOT NULL,
+  FOREIGN KEY(bubble_id) REFERENCES bubble(id) ON DELETE CASCADE,
+  UNIQUE(bubble_id, key)
+);
+
 -- Workspace page stuff
 --
 CREATE TABLE IF NOT EXISTS workspace (
   id INTEGER PRIMARY KEY NOT NULL,
   name TEXT NOT NULL UNIQUE,
-  last_opened INTEGER NOT NULL
+  last_opened INTEGER NOT NULL,
+  open_index INTEGER UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS workspace_page (
@@ -17,11 +51,12 @@ CREATE TABLE IF NOT EXISTS workspace_page (
   icon BLOB,
   title TEXT,
   url TEXT,
-  bubble TEXT,
+  bubble_id INTEGER NOT NULL,
   suspended BOOLEAN,
   expanded BOOLEAN,
   FOREIGN KEY(workspace_id) REFERENCES workspace(id) ON DELETE CASCADE,
-  FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE
+  FOREIGN KEY(parent_id) REFERENCES workspace_page(id) ON DELETE CASCADE,
+  FOREIGN KEY(bubble_id) REFERENCES bubble(id) ON DELETE CASCADE
 );
 
 -- Download stuff
@@ -52,6 +87,14 @@ CREATE TABLE IF NOT EXISTS blocker_list (
   last_refreshed INTEGER,
   expiration_hours INTEGER,
   last_known_rule_count INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS enabled_blocker_list (
+  bubble_id INTEGER,
+  blocker_list_id INTEGER NOT NULL,
+  FOREIGN KEY(bubble_id) REFERENCES bubble(id),
+  FOREIGN KEY(blocker_list_id) REFERENCES blocker_list(id),
+  UNIQUE(bubble_id, blocker_list_id)
 );
 
 -- Page index stuff

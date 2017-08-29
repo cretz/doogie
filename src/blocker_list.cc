@@ -83,7 +83,7 @@ bool BlockerList::Persist() {
     // Yeah, we know this isn't thread safe, we'll try 5 times
     for (int i = 0; i < 5; i++) {
       auto name = QString("blocker_list_%1.cache").arg(qrand());
-      QFile file(QDir(Profile::Current()->Path()).filePath(name));
+      QFile file(QDir(Profile::Current().Path()).filePath(name));
       bool was_created = !file.exists() && file.open(QIODevice::WriteOnly);
       file.close();
       if (was_created) {
@@ -306,7 +306,7 @@ void BlockerList::ApplySqlRecord(const QSqlRecord& record) {
   if (url_.isEmpty()) url_.clear();
   local_path_ = record.value("local_path").toString();
   if (!QDir::isAbsolutePath(local_path_)) {
-    local_path_ = QDir(Profile::Current()->Path()).filePath(local_path_);
+    local_path_ = QDir(Profile::Current().Path()).filePath(local_path_);
   }
   version_ = record.value("version").toLongLong();
   if (!record.isNull("last_refreshed")) {

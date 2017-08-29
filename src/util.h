@@ -7,12 +7,6 @@ namespace doogie {
 
 class Util {
  public:
-  enum SettingState {
-    Default,
-    Enabled,
-    Disabled
-  };
-
   static QPixmap* CachedPixmap(const QString& res_name);
   static QIcon CachedIcon(const QString& res_name);
   static QIcon CachedIconLighterDisabled(const QString& res_name);
