@@ -39,6 +39,7 @@ SOURCES += \
     settings_widget.cc \
     sql.cc \
     ssl_info_action.cc \
+    updater.cc \
     url_edit.cc \
     util.cc \
     workspace.cc \
@@ -73,6 +74,7 @@ HEADERS += \
     settings_widget.h \
     sql.h \
     ssl_info_action.h \
+    updater.h \
     url_edit.h \
     util.h \
     workspace.h \

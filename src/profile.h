@@ -14,6 +14,8 @@ namespace doogie {
 class Profile {
  public:
   static const QString kInMemoryPath;
+  static const QString kAppDataPath;
+  static const QString kDoogieAppDataPath;
 
   static Profile& Current() { return current_; }
 
@@ -80,6 +82,8 @@ class Profile {
 
   void ApplyCefSettings(CefSettings* settings) const;
   void ApplyCefBrowserSettings(CefBrowserSettings* settings) const;
+  void ApplyCefRequestContextSettings(
+      CefRequestContextSettings* settings) const;
 
   void ApplyActionShortcuts() const;
 
@@ -88,7 +92,6 @@ class Profile {
   bool operator!=(const Profile& other) const { return !operator==(other); }
 
  private:
-  static const QString kAppDataPath;
   static bool SetCurrent(const Profile& profile);
 
   explicit Profile(const QString& path);

@@ -129,16 +129,12 @@ void Bubble::ApplyCefBrowserSettings(CefBrowserSettings* settings,
 void Bubble::ApplyCefRequestContextSettings(
     CefRequestContextSettings* settings,
     bool include_current_profile) const {
-  CefSettings global;
   if (include_current_profile) {
-    Profile::Current().ApplyCefSettings(&global);
+    Profile::Current().ApplyCefRequestContextSettings(settings);
   }
   ApplyBrowserSettings(browser_settings_, settings);
 
-  if (cache_path_.isNull()) {
-    CefString(&settings->cache_path) =
-        CefString(&global.cache_path).ToString();
-  } else {
+  if (!cache_path_.isNull()) {
     // Empty/null is disabled, otherwise qualify w/ profile dir if necessary
     if (!cache_path_.isEmpty()) {
       CefString(&settings->cache_path) =

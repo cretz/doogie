@@ -13,6 +13,8 @@ namespace doogie {
 const QString Profile::kInMemoryPath = "<in-mem>";
 const QString Profile::kAppDataPath = QDir::toNativeSeparators(
       QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+const QString Profile::kDoogieAppDataPath = QDir::toNativeSeparators(
+      QDir(kAppDataPath).filePath("Doogie"));
 Profile Profile::current_(kInMemoryPath);
 
 bool Profile::CreateOrLoadProfile(const QString& path, bool set_current) {
@@ -281,6 +283,16 @@ void Profile::ApplyCefSettings(CefSettings* settings) const {
 
 void Profile::ApplyCefBrowserSettings(CefBrowserSettings* settings) const {
   Bubble::ApplyBrowserSettings(browser_settings_, settings);
+}
+
+void Profile::ApplyCefRequestContextSettings(
+    CefRequestContextSettings* settings) const {
+  Bubble::ApplyBrowserSettings(browser_settings_, settings);
+  // Use the global settings to set some of the info
+  CefSettings global_settings;
+  ApplyCefSettings(&global_settings);
+  CefString(&settings->cache_path) =
+      CefString(&global_settings.cache_path).ToString();
 }
 
 void Profile::ApplyActionShortcuts() const {

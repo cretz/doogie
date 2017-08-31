@@ -31,6 +31,8 @@ class MainWindow : public QMainWindow {
   void timerEvent(QTimerEvent* event) override;
 
  private:
+  static const int kStateVersion = 1;
+
   static void LogQtMessage(QtMsgType type,
                            const QMessageLogContext& ctx,
                            const QString& str);
@@ -38,6 +40,8 @@ class MainWindow : public QMainWindow {
   void ShowDevTools(BrowserWidget* browser,
                     const QPoint& inspect_at,
                     bool force_open);
+
+  static MainWindow* instance_;
 
   const Cef& cef_;
   BrowserStack* browser_stack_;
@@ -49,8 +53,7 @@ class MainWindow : public QMainWindow {
   bool attempting_to_close_ = false;
   bool ok_with_terminating_downloads_ = false;
   QString launch_with_profile_on_close;
-  static MainWindow* instance_;
-  static const int kStateVersion = 1;
+  QTimer crl_check_timer_;
 };
 
 }  // namespace doogie

@@ -3,7 +3,7 @@
 #include "action_manager.h"
 #include "cef/cef.h"
 #include "main_window.h"
-#include "page_index.h"
+#include "updater.h"
 
 #ifdef QT_DEBUG
 #include "debug_meta_server.h"
@@ -18,7 +18,8 @@ int main(int argc, char* argv[]) {
   QCoreApplication::setApplicationName("Doogie");
   doogie::ActionManager::CreateInstance(&app);
 
-  doogie::PageIndex::Expirer expirer;
+  // Creating this is enough to start it
+  doogie::Updater updater(cef);
 
   doogie::MainWindow win(cef);
   win.show();
