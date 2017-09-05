@@ -67,6 +67,7 @@ void ActionManager::CreateActions() {
   RegisterAction(Back, "Back");
   RegisterAction(Forward, "Forward");
   RegisterAction(Print, "Print");
+  RegisterAction(Fullscreen, "Fullscreen");
   RegisterAction(ZoomIn, "Zoom In");
   RegisterAction(ZoomOut, "Zoom Out");
   RegisterAction(ResetZoom, "Reset Zoom");
@@ -134,6 +135,7 @@ void ActionManager::CreateActions() {
   shortcuts(ActionManager::Forward,
             "Ctrl+Page Down; Ctrl+Shift+Page Up; Shift+Backspace");
   shortcuts(ActionManager::Print, "Ctrl+P");
+  shortcuts(ActionManager::Fullscreen, "F11");
   shortcuts(ActionManager::ZoomIn, "Ctrl++; Ctrl+=");
   shortcuts(ActionManager::ZoomOut, "Ctrl+-");
   shortcuts(ActionManager::ResetZoom, "Ctrl+0");

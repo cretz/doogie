@@ -65,6 +65,8 @@ class CefWidget : public CefBaseWidget {
   void SetJsDialogCallback(CefHandler::JsDialogCallback callback);
   void SetResourceLoadCallback(CefHandler::ResourceLoadCallback callback);
 
+  void ApplyFullscreen(bool fullscreen);
+
  signals:
   void Closed();
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
@@ -105,6 +107,7 @@ class CefWidget : public CefBaseWidget {
  protected:
   void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
+  void keyPressEvent(QKeyEvent* event) override;
   void UpdateSize() override;
 
  private:
@@ -150,7 +153,8 @@ class CefWidget : public CefBaseWidget {
   CefRefPtr<CefHandler> dev_tools_handler_;
   CefRefPtr<CefBrowser> dev_tools_browser_;
   QPointer<QWidget> override_widget_;
-  bool download_favicon_;
+  bool download_favicon_ = false;
+  bool js_triggered_fullscreen_ = false;
 };
 
 }  // namespace doogie

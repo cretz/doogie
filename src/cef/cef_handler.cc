@@ -46,6 +46,11 @@ void CefHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
   }
 }
 
+void CefHandler::OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
+                                        bool fullscreen) {
+  emit FullscreenModeChange(fullscreen);
+}
+
 void CefHandler::OnBeforeDownload(
     CefRefPtr<CefBrowser> browser,
     CefRefPtr<CefDownloadItem> download_item,
@@ -100,13 +105,8 @@ bool CefHandler::OnJSDialog(CefRefPtr<CefBrowser> browser,
                         callback,
                         suppress_message);
     return true;
-  } else {
-    return false;
   }
-}
-
-void CefHandler::SetJsDialogCallback(JsDialogCallback callback) {
-  js_dialog_callback_ = callback;
+  return false;
 }
 
 bool CefHandler::OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
@@ -117,6 +117,16 @@ bool CefHandler::OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
                               is_reload,
                               callback);
   return true;
+}
+
+bool CefHandler::OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
+                               const CefKeyEvent& event,
+                               CefEventHandle os_event,
+                               bool* is_keyboard_shortcut) {
+  if (pre_key_callback_) {
+    return pre_key_callback_(event, os_event, is_keyboard_shortcut);
+  }
+  return false;
 }
 
 bool CefHandler::OnKeyEvent(CefRefPtr<CefBrowser> browser,

@@ -54,6 +54,7 @@ class BrowserWidget : public QWidget {
   void Back();
   void Forward();
   void Print();
+  void Fullscreen();
   void ShowFind();
   void ExecJs(const QString& js);
 

@@ -11,18 +11,22 @@ void CefBaseWidget::InitWindowInfo() {
 }
 
 void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler) {
-  // This handler doesn't get removed properly if we don't pass "this"
-  //  as the context
-  connect(handler, &CefHandler::KeyEvent, this,
-          [this](const CefKeyEvent& event, CefEventHandle os_event) {
-    // We have to handle Alt+F4 ourselves TODO: right?
-    if (event.is_system_key && event.modifiers & EVENTFLAG_ALT_DOWN &&
-        event.windows_key_code == VK_F4) {
-      window()->close();
-    } else if (os_event) {
-      PostMessage(reinterpret_cast<HWND>(winId()), os_event->message,
+  // Note, we used to handle CefHandler::KeyEvent signal, but this is processed
+  //  *after* JS which means the page can prevent it. Here we now properly
+  //  handle it before JS gets it. The problem is that Qt doesn't tell us
+  //  whether the native event was handled so we can't tell CEF. In theory we
+  //  should be able to translate the native key event to a Qt event and call
+  //  keyPressEvent/keyReleaseEvent and check event::accepted but the
+  //  translation is non-trivial and code reuse is behind Qt private ifaces.
+  auto win_id = reinterpret_cast<HWND>(winId());
+  handler->SetPreKeyCallback([win_id](const CefKeyEvent&,
+                                      CefEventHandle os_event,
+                                      bool*) {
+    if (os_event) {
+      PostMessage(win_id, os_event->message,
                   os_event->wParam, os_event->lParam);
     }
+    return false;
   });
 }
 

@@ -89,6 +89,7 @@ void BrowserStack::SetupActions() {
     enabled(ActionManager::Back, current && current->CanGoBack());
     enabled(ActionManager::Forward, current && current->CanGoForward());
     enabled(ActionManager::Print, current);
+    enabled(ActionManager::Fullscreen, current);
     enabled(ActionManager::ZoomIn, current);
     enabled(ActionManager::ZoomOut, current);
     enabled(ActionManager::ResetZoom, current);

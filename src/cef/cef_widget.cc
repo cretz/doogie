@@ -36,6 +36,10 @@ CefWidget::CefWidget(const Cef& cef,
             new CefWidget::FaviconDownloadCallback(this));
     }
   });
+  connect(handler_, &CefHandler::FullscreenModeChange, [=](bool fullscreen) {
+    js_triggered_fullscreen_ = fullscreen;
+    ApplyFullscreen(fullscreen);
+  });
   connect(handler_, &CefHandler::DownloadRequested,
           this, &CefWidget::DownloadRequested);
   connect(handler_, &CefHandler::DownloadUpdated,
@@ -246,6 +250,17 @@ void CefWidget::SetResourceLoadCallback(
   handler_->SetResourceLoadCallback(callback);
 }
 
+void CefWidget::ApplyFullscreen(bool fullscreen) {
+  if (fullscreen) {
+    setWindowFlags(windowFlags() | Qt::Window);
+    showFullScreen();
+  } else {
+    js_triggered_fullscreen_ = false;
+    setWindowFlags(windowFlags() & (~Qt::Window));
+    showNormal();
+  }
+}
+
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
   // Only focus the browser if it has a document
@@ -259,6 +274,22 @@ void CefWidget::focusOutEvent(QFocusEvent* event) {
   if (browser_) {
     browser_->GetHost()->SetFocus(false);
   }
+}
+
+void CefWidget::keyPressEvent(QKeyEvent* event) {
+  // Exit fullscreen if currently in it and pressing f11 or esc
+  if ((event->key() == Qt::Key_Escape || event->key() == Qt::Key_F11) &&
+      isFullScreen()) {
+    // If it was JS triggered, we have to leave that mode instead
+    // TODO(cretz): Use non-JS method to escape fullscreen some day.
+    if (js_triggered_fullscreen_) {
+      ExecJs("document.webkitExitFullscreen();");
+    } else {
+      ApplyFullscreen(false);
+    }
+    return;
+  }
+  QWidget::keyPressEvent(event);
 }
 
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(

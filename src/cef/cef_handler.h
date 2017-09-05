@@ -104,6 +104,8 @@ class CefHandler :
                        const CefString& value) override;
   void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
                           const std::vector<CefString>& icon_urls) override;
+  void OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
+                              bool fullscreen) override;
 
   // Download handler overrides...
   void OnBeforeDownload(
@@ -142,13 +144,26 @@ class CefHandler :
                   const CefString& default_prompt_text,
                   CefRefPtr<CefJSDialogCallback> callback,
                   bool& suppress_message) override;
-  void SetJsDialogCallback(JsDialogCallback callback);
+  void SetJsDialogCallback(JsDialogCallback callback) {
+    js_dialog_callback_ = callback;
+  }
   bool OnBeforeUnloadDialog(CefRefPtr<CefBrowser> browser,
                             const CefString& message_text,
                             bool is_reload,
                             CefRefPtr<CefJSDialogCallback> callback) override;
 
   // Key handler overrides...
+  typedef std::function<bool(const CefKeyEvent&,
+                             CefEventHandle,
+                             bool*)> PreKeyCallback;
+  bool OnPreKeyEvent(CefRefPtr<CefBrowser> browser,
+                     const CefKeyEvent& event,
+                     CefEventHandle os_event,
+                     bool* is_keyboard_shortcut) override;
+  void SetPreKeyCallback(PreKeyCallback callback) {
+    pre_key_callback_ = callback;
+  }
+
   bool OnKeyEvent(CefRefPtr<CefBrowser> browser,
                   const CefKeyEvent& event,
                   CefEventHandle os_event) override;
@@ -225,6 +240,7 @@ class CefHandler :
   void StatusChanged(const QString& status);
   // Empty if no URL
   void FaviconUrlChanged(const QString& url);
+  void FullscreenModeChange(bool fullscreen);
   void DownloadRequested(const Download& download,
                          CefRefPtr<CefBeforeDownloadCallback> callback);
   void DownloadUpdated(const Download& download);
@@ -261,8 +277,9 @@ class CefHandler :
  private:
   bool load_start_js_no_op_to_create_context_ = true;
   bool popup_as_page_open_ = true;
-  JsDialogCallback js_dialog_callback_;
-  ResourceLoadCallback resource_load_callback_;
+  JsDialogCallback js_dialog_callback_ = nullptr;
+  PreKeyCallback pre_key_callback_ = nullptr;
+  ResourceLoadCallback resource_load_callback_ = nullptr;
 
   IMPLEMENT_REFCOUNTING(CefHandler)
 };

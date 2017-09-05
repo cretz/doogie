@@ -900,6 +900,9 @@ void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::Print),
           &QAction::triggered,
           [=]() { CurrentItem()->Browser()->Print(); });
+  connect(ActionManager::Action(ActionManager::Fullscreen),
+          &QAction::triggered,
+          [=]() { CurrentItem()->Browser()->Fullscreen(); });
   connect(ActionManager::Action(ActionManager::ZoomIn),
           &QAction::triggered, [=]() {
     CurrentItem()->Browser()->SetZoomLevel(

@@ -215,6 +215,12 @@ void BrowserWidget::Print() {
   cef_widg_->Print();
 }
 
+void BrowserWidget::Fullscreen() {
+  if (!cef_widg_->isFullScreen()) {
+    cef_widg_->ApplyFullscreen(true);
+  }
+}
+
 void BrowserWidget::ShowFind() {
   find_widg_->show();
   find_widg_->setFocus();
@@ -314,12 +320,14 @@ QJsonObject BrowserWidget::DebugDump() const {
   };
 }
 
-void BrowserWidget::moveEvent(QMoveEvent*) {
+void BrowserWidget::moveEvent(QMoveEvent* event) {
   UpdateStatusBarLocation();
+  QWidget::moveEvent(event);
 }
 
-void BrowserWidget::resizeEvent(QResizeEvent*) {
+void BrowserWidget::resizeEvent(QResizeEvent* event) {
   UpdateStatusBarLocation();
+  QWidget::resizeEvent(event);
 }
 
 void BrowserWidget::RecreateCefWidget(const QString& url) {
@@ -706,6 +714,7 @@ void BrowserWidget::UpdateSslStatus(bool check_errored) {
       ssl_button_->setDisabled(false);
       // Red when there is a cert error, orange for content error,
       //  green otherwise
+      qDebug() << "!!content status:" << ssl_status_->GetContentStatus();
       if (ssl_status_->GetCertStatus() != CERT_STATUS_NONE) {
         ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
             ":/res/images/fontawesome/unlock.png", "red")));

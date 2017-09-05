@@ -24,6 +24,7 @@ class ActionManager : public QObject {
     Back,
     Forward,
     Print,
+    Fullscreen,
     ZoomIn,
     ZoomOut,
     ResetZoom,

@@ -293,6 +293,7 @@ void MainWindow::SetupActions() {
   menu_action(menu, ActionManager::Back);
   menu_action(menu, ActionManager::Forward);
   menu_action(menu, ActionManager::Print);
+  menu_action(menu, ActionManager::Fullscreen);
   menu_action(menu, ActionManager::ZoomIn);
   menu_action(menu, ActionManager::ZoomOut);
   menu_action(menu, ActionManager::ResetZoom);

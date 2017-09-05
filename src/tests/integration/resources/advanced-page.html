@@ -2,6 +2,10 @@
 <html>
 <head>
   <title>Advanced Page</title>
+  <style type="text/css">
+    #fs-exit { display: none; }
+    :-webkit-full-screen #fs-exit { display: inline; }
+  </style>
 </head>
 <body>
   Links:<br />
@@ -42,7 +46,7 @@
     }
   </script>
   <hr />
-  Microphone ID w/ ?mic: <span id="microphone-id" />
+  Microphone ID w/ ?mic: <span id="microphone-id"></span>
   <script>
     if (url.searchParams.has('mic')) {
       navigator.mediaDevices.getUserMedia({ audio: true })
@@ -50,7 +54,28 @@
     }
   </script>
   <hr />
-  Click <a href="#" onclick="document.body.webkitRequestFullScreen(); return false">here</a> to request full screen
+  <script>
+    document.webkitExitFullscreen = () => console.log('Trying to prevent full screen exit');
+  </script>
+  Click <a href="#" onclick="document.documentElement.webkitRequestFullscreen(); return false">here</a> to request full screen
+  <span id="fs-exit">
+    and <a href="#" onclick="document.webkitExitFullscreen(); return false">here</a> to exit
+  </span>
+  <script>
+    // Try to prevent escape-press
+    const keyEvt = evt => {
+      if (evt.key === 'Escape') {
+        console.log('Stopping escape key')
+        evt.preventDefault()
+        evt.stopImmediatePropagation()
+        evt.stopPropagation()
+        return false
+      }
+      return true
+    }
+    document.onkeydown = keyEvt
+    document.onkeyup = keyEvt
+  </script>
   <hr />
   Click <a href="#" onclick="document.body.requestPointerLock(); return false">here</a> to request pointer lock
   <hr />
