@@ -15,12 +15,12 @@ const CefWindowInfo& CefBaseWidget::WindowInfo() const {
 }
 
 void CefBaseWidget::moveEvent(QMoveEvent* event) {
-  this->UpdateSize();
+  UpdateSize();
   QWidget::moveEvent(event);
 }
 
 void CefBaseWidget::resizeEvent(QResizeEvent* event) {
-  this->UpdateSize();
+  UpdateSize();
   QWidget::resizeEvent(event);
 }
 

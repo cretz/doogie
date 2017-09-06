@@ -1,5 +1,7 @@
 #include "cef/cef_base_widget.h"
 
+#include <X11/Xlib.h>
+
 #include "cef/cef_embed_window_linux.h"
 
 namespace doogie {
@@ -9,13 +11,46 @@ void CefBaseWidget::InitWindowInfo() {
     window_info_.SetAsChild((CefWindowHandle) win->winId(),
                             CefRect(0, 0, width(), height()));
     override_widget_ = QWidget::createWindowContainer(win, this);
+    // We need to remove ourselves if we're still around when this is
+    //  destroyed
+    connect(override_widget_, &QWidget::destroyed, this, [=](QObject*) {
+       deleteLater();
+    });
 }
 
 void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler>) {
   // TODO(cretz): this...
 }
 
+Window GetChild(Window parent) {
+    auto xdisplay = cef_get_xdisplay();
+    Window root_ret;
+    Window parent_ret;
+    Window* children_ret;
+    unsigned int child_count_ret;
+    auto status = XQueryTree(xdisplay, parent, &root_ret, &parent_ret, &children_ret, &child_count_ret);
+    Window ret = 0;
+    if (status != 0 && child_count_ret > 0) {
+      ret = children_ret[0];
+      XFree(children_ret);
+    }
+    return ret;
+}
+
 void CefBaseWidget::UpdateSize() {
+    auto child = GetChild(window_info_.parent_window);
+    if (child > 0) {
+        auto xdisplay = cef_get_xdisplay();
+        XWindowChanges changes = {};
+        changes.x = 0;
+        changes.y = 0;
+        changes.width = override_widget_->width();
+        changes.height = override_widget_->height();
+        XConfigureWindow(xdisplay,
+                         child,
+                         CWX | CWY | CWHeight | CWWidth,
+                         &changes);
+    }
 }
 
 }  // namespace doogie

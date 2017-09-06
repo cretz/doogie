@@ -79,7 +79,7 @@ func run(extraQmakeArgs ...string) error {
 	if err != nil {
 		return err
 	}
-	return execCmd(filepath.Join(target, exeExt("doogie")))
+	return execCmd(filepath.Join(target, exeExt("doogie")), extraArgs()...)
 }
 
 func clean() error {
@@ -357,13 +357,21 @@ func benchmark() error {
 
 func target() (string, error) {
 	target := "debug"
-	if len(os.Args) >= 3 {
+	if len(os.Args) >= 3 && !strings.HasPrefix(os.Args[2], "--") {
 		if os.Args[2] != "release" && os.Args[2] != "debug" {
 			return "", fmt.Errorf("Unknown target '%v'", os.Args[2])
 		}
 		target = os.Args[2]
 	}
 	return target, nil
+}
+
+func extraArgs() []string {
+	argStartIndex := 2
+	if len(os.Args) >= 3 && os.Args[2] == "release" || os.Args[2] == "debug" {
+		argStartIndex = 3
+	}
+	return os.Args[argStartIndex:]
 }
 
 func exeExt(baseName string) string {

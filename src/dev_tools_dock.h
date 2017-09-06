@@ -3,6 +3,7 @@
 
 #include <QtWidgets>
 
+#include "cef/cef_base_widget.h"
 #include "browser_stack.h"
 #include "browser_widget.h"
 
@@ -31,7 +32,7 @@ class DevToolsDock : public QDockWidget {
   const Cef& cef_;
   BrowserStack* browser_stack_;
   QStackedWidget* tools_stack_;
-  QHash<BrowserWidget*, QWidget*> tools_widgets_;
+  QHash<BrowserWidget*, CefBaseWidget*> tools_widgets_;
 };
 
 }  // namespace doogie

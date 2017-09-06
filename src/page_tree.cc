@@ -29,8 +29,9 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   setColumnWidth(PageTreeItem::kBubbleIconColumn, 16);
   header()->setSectionResizeMode(PageTreeItem::kBubbleIconColumn,
                                  QHeaderView::Fixed);
+  setColumnWidth(PageTreeItem::kCloseButtonColumn, 16);
   header()->setSectionResizeMode(PageTreeItem::kCloseButtonColumn,
-                                 QHeaderView::ResizeToContents);
+                                 QHeaderView::Fixed);
   setStyleSheet("QTreeWidget { border: none; }");
 
   // Emit empty on row removal

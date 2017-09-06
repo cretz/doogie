@@ -75,6 +75,10 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
   QCommandLineOption profileOption("doogie-profile");
   profileOption.setValueName("profilePath");
   parser.addOption(profileOption);
+  // This just clears the settings in the registry on start
+  QCommandLineOption clearSettings("doogie-clear-settings");
+  parser.addOption(clearSettings);
+
   QStringList args;
   args.reserve(argc);
   for (int i = 0; i < argc; i++) {
@@ -82,6 +86,12 @@ bool Profile::LoadProfileFromCommandLine(int argc, char* argv[]) {
   }
   // We don't care if it's not successful
   parser.parse(args);
+
+  if (parser.isSet(clearSettings)) {
+    qDebug() << "Clearing registry settings";
+    QSettings("cretz", "Doogie").clear();
+  }
+
   if (parser.isSet(noProfileOption)) {
     profile_path = kInMemoryPath;
   } else if (parser.isSet(profileOption)) {

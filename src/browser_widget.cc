@@ -88,10 +88,8 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   cef_widg_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   cef_widg_->adjustSize();
 
-  auto override_widg = cef_widg_->OverrideWidget();
-  if (override_widg) {
-    layout->addWidget(override_widg, 1, 0);
-  }
+  // We set the view widget afterwards because it is not ready before now
+  layout->addWidget(cef_widg_->ViewWidget(), 1, 0);
 
   find_widg_ = new FindWidget(this);
   layout->addWidget(find_widg_);
@@ -332,10 +330,9 @@ void BrowserWidget::resizeEvent(QResizeEvent* event) {
 
 void BrowserWidget::RecreateCefWidget(const QString& url) {
   // Delete the other one if it's there
-  QWidget* widg_to_replace = cef_widg_;
+  QWidget* widg_to_replace = nullptr;
   if (cef_widg_) {
-    auto override_widg = cef_widg_->OverrideWidget();
-    if (override_widg) widg_to_replace = override_widg;
+    widg_to_replace = cef_widg_->ViewWidget();
     cef_widg_->disconnect();
     cef_widg_->deleteLater();
   }
@@ -519,12 +516,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url) {
   });
 
   if (widg_to_replace) {
-    auto override_widg = cef_widg_->OverrideWidget();
-    if (override_widg) {
-      layout()->replaceWidget(widg_to_replace, override_widg);
-    } else {
-      layout()->replaceWidget(widg_to_replace, cef_widg_);
-    }
+    layout()->replaceWidget(widg_to_replace, cef_widg_->ViewWidget());
   }
 }
 
@@ -714,7 +706,6 @@ void BrowserWidget::UpdateSslStatus(bool check_errored) {
       ssl_button_->setDisabled(false);
       // Red when there is a cert error, orange for content error,
       //  green otherwise
-      qDebug() << "!!content status:" << ssl_status_->GetContentStatus();
       if (ssl_status_->GetCertStatus() != CERT_STATUS_NONE) {
         ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
             ":/res/images/fontawesome/unlock.png", "red")));

@@ -12,7 +12,8 @@ class BlockerRulesTest : public QObject {
   // Auto deleted at end of each test case
   BlockerRules* ParsedRules(const QString& text, int file_index = 1) {
     cleanupLastRules();
-    QTextStream stream(&QString(text));
+    QString text_str(text);
+    QTextStream stream(&text_str);
     last_rules_ = new BlockerRules;
     last_rules_->AddRules(&stream, file_index);
     return last_rules_;

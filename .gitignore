@@ -8,3 +8,4 @@
 /src/tests/integration/node_modules
 /src/tests/integration/temp
 /src/target_wrapper.bat
+/src/target_wrapper.sh

@@ -18,8 +18,9 @@ class CefBaseWidget : public QWidget {
   const CefWindowInfo& WindowInfo() const;
   void ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler);
 
-  // If result is non-null, it needs to replace this widget
-  QPointer<QWidget> OverrideWidget() const { return override_widget_; }
+  QWidget* ViewWidget() {
+    return override_widget_ ? override_widget_ : this;
+  }
 
  protected:
   void moveEvent(QMoveEvent* event) override;

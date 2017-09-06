@@ -49,7 +49,7 @@ void DevToolsDock::BrowserChanged(BrowserWidget* browser) {
   } else {
     auto tools_widg = tools_widgets_[browser];
     if (tools_widg) {
-      tools_stack_->setCurrentWidget(tools_widg);
+      tools_stack_->setCurrentWidget(tools_widg->ViewWidget());
     } else {
       tools_stack_->setCurrentIndex(1);
     }
@@ -59,11 +59,11 @@ void DevToolsDock::BrowserChanged(BrowserWidget* browser) {
 void DevToolsDock::ShowDevTools(BrowserWidget* browser,
                                 const QPoint& inspect_at) {
   // This can be called repeatedly for the same browser
-  auto widg = static_cast<CefBaseWidget*>(tools_widgets_[browser]);
-  if (!widg) {
-    widg = new CefBaseWidget(cef_, tools_stack_);
-    tools_stack_->addWidget(widg);
-    tools_widgets_[browser] = widg;
+  auto base_widg = tools_widgets_[browser];
+  if (!base_widg) {
+    base_widg = new CefBaseWidget(cef_, tools_stack_);
+    tools_stack_->addWidget(base_widg->ViewWidget());
+    tools_widgets_[browser] = base_widg;
     // We make "this" the context of the connections so we can
     //  disconnect later
     // Need to show that close button
@@ -84,8 +84,8 @@ void DevToolsDock::ShowDevTools(BrowserWidget* browser,
     connect(browser, &BrowserWidget::destroyed,
             this, [=]() { DevToolsClosed(browser); });
   }
-  browser->ShowDevTools(widg, inspect_at);
-  tools_stack_->setCurrentWidget(widg);
+  browser->ShowDevTools(base_widg, inspect_at);
+  tools_stack_->setCurrentWidget(base_widg->ViewWidget());
 }
 
 void DevToolsDock::CloseDevTools(BrowserWidget* browser) {
@@ -103,14 +103,14 @@ void DevToolsDock::closeEvent(QCloseEvent* event) {
 }
 
 void DevToolsDock::DevToolsClosed(BrowserWidget* browser) {
-  auto widg = tools_widgets_[browser];
-  if (widg) {
+  auto base_widg = tools_widgets_[browser];
+  if (base_widg) {
     tools_widgets_.remove(browser);
     disconnect(browser, &BrowserWidget::DevToolsLoadComplete, this, nullptr);
     disconnect(browser, &BrowserWidget::DevToolsClosed, this, nullptr);
     disconnect(browser, &BrowserWidget::destroyed, this, nullptr);
-    tools_stack_->removeWidget(widg);
-    delete widg;
+    tools_stack_->removeWidget(base_widg->ViewWidget());
+    delete base_widg;
   }
 }
 
