@@ -28,8 +28,6 @@ class CefWidget : public CefBaseWidget {
 
   std::vector<NavEntry> NavEntries() const;
   CefRefPtr<CefSSLStatus> CurrentSSLStatus() const;
-  // If result is non-null, it needs to replace this widget
-  QPointer<QWidget> OverrideWidget() const;
   void LoadUrl(const QString& url);
   // No frame means main frame
   void ShowStringPage(const QString& url,
@@ -152,7 +150,6 @@ class CefWidget : public CefBaseWidget {
   CefRefPtr<CefBrowser> browser_;
   CefRefPtr<CefHandler> dev_tools_handler_;
   CefRefPtr<CefBrowser> dev_tools_browser_;
-  QPointer<QWidget> override_widget_;
   bool download_favicon_ = false;
   bool js_triggered_fullscreen_ = false;
 };

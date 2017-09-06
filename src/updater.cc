@@ -97,7 +97,7 @@ void Updater::UpdateCrl(const QString& crx_url) const {
   auto buf = new QBuffer;
   buf->open(QIODevice::ReadWrite);
   cef_.Download(crx_url, buf,
-                [=](CefRefPtr<CefURLRequest> req, QIODevice* device) {
+                [=](CefRefPtr<CefURLRequest> /*req*/, QIODevice* device) {
     auto failed_retry = [=](const QString& reason) {
       qWarning() << "Failed CRL update, reason:" << reason;
       QTimer::singleShot(kCrlUpdateFailRetrySeconds * 1000,

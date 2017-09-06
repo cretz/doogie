@@ -2,16 +2,16 @@
 
 namespace doogie {
 
-CefEmbedWindow::CefEmbedWindow(QPointer<CefWidget> cef_widget,
+CefEmbedWindow::CefEmbedWindow(QPointer<CefBaseWidget> cef_base_widget,
                                QWindow* parent)
-    : QWindow(parent), cef_widget_(cef_widget) {}
+    : QWindow(parent), cef_base_widget_(cef_base_widget) {}
 
 void CefEmbedWindow::moveEvent(QMoveEvent*) {
-  if (cef_widget_) cef_widget_->UpdateSize();
+  if (cef_base_widget_) cef_base_widget_->UpdateSize();
 }
 
 void CefEmbedWindow::resizeEvent(QResizeEvent*)  {
-  if (cef_widget_) cef_widget_->UpdateSize();
+  if (cef_base_widget_) cef_base_widget_->UpdateSize();
 }
 
 }  // namespace doogie

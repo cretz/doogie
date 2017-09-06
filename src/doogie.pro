@@ -112,6 +112,10 @@ win32 {
 unix {
     LIBS += -lX11
     QMAKE_RPATHDIR += $ORIGIN
+    QMAKE_CXXFLAGS += -Werror
+
+    SOURCES += \
+        util_linux.cc
 
     release:MOC_DIR = release
     release:OBJECTS_DIR = release

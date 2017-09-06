@@ -408,6 +408,17 @@ func copyResourcesLinux(qmakePath string, target string) error {
 	if err != nil {
 		return err
 	}
+	// Some DLLs are needed in debug only
+	if target == "debug" {
+		err := copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
+			"libQt5Network.so",
+			"libQt5Test.so",
+			"libQt5WebSockets.so",
+		)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Copy over CEF libs
 	err = copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(cefDir, strings.Title(target)), target,

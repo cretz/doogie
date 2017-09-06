@@ -4,7 +4,7 @@
 #include <QtWidgets>
 
 #include "cef/cef.h"
-#include "cef/cef_widget.h"
+#include "cef/cef_base_widget.h"
 
 namespace doogie {
 
@@ -12,7 +12,7 @@ class CefEmbedWindow : public QWindow {
   Q_OBJECT
 
  public:
-  explicit CefEmbedWindow(QPointer<CefWidget> cef_widget,
+  explicit CefEmbedWindow(QPointer<CefBaseWidget> cef_base_widget,
                           QWindow* parent = nullptr);
 
  protected:
@@ -20,7 +20,7 @@ class CefEmbedWindow : public QWindow {
   void resizeEvent(QResizeEvent*) override;
 
  private:
-  QPointer<CefWidget> cef_widget_;
+  QPointer<CefBaseWidget> cef_base_widget_;
 };
 
 }  // namespace doogie

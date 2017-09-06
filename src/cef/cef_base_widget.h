@@ -13,18 +13,25 @@ class CefBaseWidget : public QWidget {
 
  public:
   explicit CefBaseWidget(const Cef& cef, QWidget* parent = nullptr);
-  ~CefBaseWidget();
+  virtual ~CefBaseWidget();
 
   const CefWindowInfo& WindowInfo() const;
   void ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler);
 
+  // If result is non-null, it needs to replace this widget
+  QPointer<QWidget> OverrideWidget() const { return override_widget_; }
+
  protected:
   void moveEvent(QMoveEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
+#if defined(__GNUC__)
+  friend class CefEmbedWindow;
+#endif
   virtual void UpdateSize();
 
   const Cef& cef_;
   CefWindowInfo window_info_;
+  QPointer<QWidget> override_widget_;
 
  private:
   void InitWindowInfo();

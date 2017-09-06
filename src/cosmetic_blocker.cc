@@ -2,7 +2,7 @@
 
 namespace doogie {
 
-void CosmeticBlocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
+void CosmeticBlocker::OnFrameCreated(CefRefPtr<CefBrowser>,
                              CefRefPtr<CefFrame> frame,
                              CefRefPtr<CefV8Context> context) {
   // We are going to create a mutation callback function, use it,
@@ -22,10 +22,10 @@ void CosmeticBlocker::OnFrameCreated(CefRefPtr<CefBrowser> browser,
 }
 
 bool CosmeticBlocker::MutationCallback::Execute(const CefString& name,
-                                        CefRefPtr<CefV8Value> object,
+                                        CefRefPtr<CefV8Value> /*object*/,
                                         const CefV8ValueList& arguments,
-                                        CefRefPtr<CefV8Value>& retval,
-                                        CefString& exception) {
+                                        CefRefPtr<CefV8Value>& /*retval*/,
+                                        CefString& /*exception*/) {
   if (name != "mutationCallback" || arguments.empty()) return false;
   auto arg = arguments[0];
   if (!arg->IsArray()) return false;

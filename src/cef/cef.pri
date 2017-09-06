@@ -4,7 +4,7 @@ SOURCES += \
     cef/cef_app_handler.cc \
     cef/cef_base_widget.cc \
     cef/cef_handler.cc \
-    cef/cef_widget.cc \
+    cef/cef_widget.cc
 
 HEADERS += \
     cef/cef.h \
@@ -28,6 +28,7 @@ win32 {
 
 unix {
     SOURCES += \
+        cef/cef_base_widget_linux.cc \
         cef/cef_embed_window_linux.cc \
         cef/cef_linux.cc \
         cef/cef_widget_linux.cc

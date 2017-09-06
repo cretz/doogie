@@ -92,10 +92,6 @@ CefRefPtr<CefSSLStatus> CefWidget::CurrentSSLStatus() const {
   return visitor->SslStatus();
 }
 
-QPointer<QWidget> CefWidget::OverrideWidget() const {
-  return override_widget_;
-}
-
 void CefWidget::LoadUrl(const QString& url) {
   if (browser_) {
     browser_->GetMainFrame()->LoadURL(CefString(url.toStdString()));

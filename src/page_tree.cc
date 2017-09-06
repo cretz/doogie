@@ -242,7 +242,8 @@ void PageTree::ApplyRecentWorkspacesMenu(QMenu* menu) {
   for (auto& workspace : Workspace::RecentWorkspaces(exclude, 10)) {
     auto id = workspace.Id();
     menu->addAction(workspace.FriendlyName(), [=]() {
-      OpenWorkspace(&Workspace(id));
+      Workspace w(id);
+      OpenWorkspace(&w);
     });
   }
 }
@@ -1071,7 +1072,7 @@ void PageTree::SetupActions() {
     // Find the item below the current one or go to the first one
     if (CurrentItem()) {
       QTreeWidgetItem* item = CurrentItem();
-      while (item = itemBelow(item)) {
+      while ((item = itemBelow(item))) {
         if (item->type() == kPageItemType) {
           setCurrentItem(item, 0,
                          QItemSelectionModel::ClearAndSelect |
@@ -1096,7 +1097,7 @@ void PageTree::SetupActions() {
     // Find the item above the current one or go to the last one
     if (CurrentItem()) {
       QTreeWidgetItem* item = CurrentItem();
-      while (item = itemAbove(item)) {
+      while ((item = itemAbove(item))) {
         if (item->type() == kPageItemType) {
           setCurrentItem(item, 0,
                          QItemSelectionModel::ClearAndSelect |
@@ -1138,7 +1139,8 @@ void PageTree::SetupActions() {
           &QAction::triggered, [=]() {
     WorkspaceDialog dialog(window());
     if (dialog.execOpen(Workspaces()) == QDialog::Accepted) {
-      OpenWorkspace(&dialog.SelectedWorkspace());
+      auto selected = dialog.SelectedWorkspace();
+      OpenWorkspace(&selected);
     }
   });
 }

@@ -37,6 +37,7 @@ class BlockerRules {
                            int file_index,
                            int line_num);
 
+    virtual ~Rule() {}
     virtual CommentRule* AsComment() { return nullptr; }
     virtual StaticRule* AsStatic() { return nullptr; }
     virtual CosmeticRule* AsCosmetic() { return nullptr; }

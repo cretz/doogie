@@ -7,27 +7,19 @@
 
 namespace doogie {
 
-// TODO(cretz): Implement this
-/*
-QPointer<QWidget> CefWidget::EmbedBrowser() {
-  CefWindowInfo win_info;
-  auto win = new CefEmbedWindow(this);
-  win_info.SetAsChild((CefWindowHandle) win->winId(),
-                      CefRect(0, 0, width(), height()));
+void CefWidget::InitBrowser(const Bubble& bubble, const QString& url) {
   CefBrowserSettings settings;
-  CefRefPtr<CefHandler> handler(new CefHandler(main_win,
-                                               url_line_edit,
-                                               this));
-  browser_ = CefBrowserHost::CreateBrowserSync(win_info,
-                                               handler,
-                                               CefString("http://example.com"),
-                                               settings,
-                                               nullptr);
-  return QWidget::createWindowContainer(win, main_win);
+  bubble.ApplyCefBrowserSettings(&settings);
+  browser_ = CefBrowserHost::CreateBrowserSync(
+        window_info_,
+        handler_,
+        CefString(url.toStdString()),
+        settings,
+        bubble.CreateCefRequestContext());
 }
 
-
 void CefWidget::UpdateSize() {
+  CefBaseWidget::UpdateSize();
   if (browser_) {
     auto browser_host = browser_->GetHost();
     auto browser_win = browser_host->GetWindowHandle();
@@ -44,6 +36,5 @@ void CefWidget::UpdateSize() {
     browser_host->NotifyMoveOrResizeStarted();
   }
 }
-*/
 
 }  // namespace doogie

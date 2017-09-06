@@ -539,7 +539,7 @@ void BrowserWidget::RebuildNavMenu() {
   auto entries = cef_widg_->NavEntries();
   // We need to find the "current" index so we can do neg/pos index from that
   int current_item_index = 0;
-  for (int i = 0; i < entries.size(); i++) {
+  for (size_t i = 0; i < entries.size(); i++) {
     if (entries[i].current) {
       current_item_index = i;
       break;

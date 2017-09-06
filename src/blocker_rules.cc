@@ -2,9 +2,13 @@
 
 #include <iterator>
 
+namespace std {
+
 inline uint qHash(const std::string& str) {
   return static_cast<uint>(std::hash<std::string>{}(str));
 }
+
+}  // namespace std
 
 namespace doogie {
 
@@ -287,7 +291,7 @@ BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
     const QString& line, int, int line_num) {
   if (line.isEmpty()) return nullptr;
   auto ret = new StaticRule();
-  auto& rule_bytes = line.toLatin1();
+  auto rule_bytes = line.toLatin1();
 
   // Parse all of the options
   int dollar = rule_bytes.lastIndexOf('$');
@@ -419,7 +423,7 @@ const QHash<BlockerRules::StaticRule::RequestType, QByteArray>
     BlockerRules::StaticRule::kRequestTypeToString = FlipRequestTypes();
 
 BlockerRules::CosmeticRule* BlockerRules::CosmeticRule::ParseRule(
-    const QString& line) {
+    const QString& /*line*/) {
   // TODO(cretz): this
   return nullptr;
 }
@@ -431,7 +435,7 @@ QList<BlockerRules::Rule*> BlockerRules::ParseRules(QTextStream* stream,
   int line_num = 0;
   while (!stream->atEnd()) {
     line_num++;
-    auto& line = stream->readLine();
+    const auto& line = stream->readLine();
     auto rule = Rule::ParseRule(line, file_index, line_num);
     if (rule) ret.append(rule);
   }
@@ -551,9 +555,9 @@ BlockerRules::StaticRule::FindResult* BlockerRules::FindStaticRule(
 
   auto hosts = [](const QString& host) -> QSet<QByteArray> {
     QSet<QByteArray> ret;
-    auto& pieces = host.toLatin1().split('.');
+    auto pieces = host.toLatin1().split('.');
     ret.reserve(pieces.length() - 1);
-    auto& curr = pieces[pieces.length() - 1];
+    auto curr = pieces[pieces.length() - 1];
     for (int i = pieces.length() - 2; i >= 0; i--) {
       curr.prepend('.');
       curr.prepend(pieces[i]);

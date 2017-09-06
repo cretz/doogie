@@ -248,7 +248,7 @@ void BlockerDock::CheckUpdate() {
 }
 
 bool BlockerDock::IsAllowedToLoad(BrowserWidget* browser,
-                                  CefRefPtr<CefFrame> frame,
+                                  CefRefPtr<CefFrame>,
                                   CefRefPtr<CefRequest> request) {
   QMutexLocker locker(&rules_mutex_);
   if (!rules_) return true;
@@ -326,7 +326,7 @@ void BlockerDock::RebuildTable() {
   table_->setSortingEnabled(false);
   table_->setRowCount(0);
 
-  QVector<BlockedRequest>& to_render = current_only_->isChecked() ?
+  const QVector<BlockedRequest>& to_render = current_only_->isChecked() ?
         blocked_requests_by_browser_.value(current_browser_) :
         blocked_requests_;
 
@@ -384,6 +384,9 @@ BlockerRules::StaticRule::RequestType BlockerDock::TypeFromRequest(
     case RT_PING: return BlockerRules::StaticRule::Ping;
     case RT_FONT_RESOURCE: return BlockerRules::StaticRule::Font;
     case RT_MEDIA: return BlockerRules::StaticRule::Media;
+    default:
+      // no-op to satisfy exhaustion warnings
+      break;
   }
   if (target_url.scheme() == "ws" || target_url.scheme() == "wss") {
     return BlockerRules::StaticRule::WebSocket;
