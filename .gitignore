@@ -3,6 +3,7 @@
 /src/Makefile.Debug
 /src/Makefile.Release
 /src/debug
+/src/qrc_doogie.cpp
 /src/release
 /src/.qmake.stash
 /src/tests/integration/node_modules
