@@ -18,8 +18,20 @@ void CefBaseWidget::InitWindowInfo() {
     });
 }
 
-void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler>) {
-  // TODO(cretz): this...
+void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler) {
+  // See cef_base_widget_win's version of this for a more in-depth discussion,
+  //  but basically this sends the same key event the browser gets but has no
+  //  way right now of cancelling the browsre version when it's handled.
+  Window win_id = override_widget_->winId();
+  handler->SetPreKeyCallback([win_id](const CefKeyEvent&,
+                                      CefEventHandle os_event,
+                                      bool*) {
+    if (os_event) {
+      os_event->xkey.window = win_id;
+      XSendEvent(cef_get_xdisplay(), win_id, true, NoEventMask, os_event);
+    }
+    return false;
+  });
 }
 
 Window GetChild(Window parent) {
@@ -28,7 +40,8 @@ Window GetChild(Window parent) {
     Window parent_ret;
     Window* children_ret;
     unsigned int child_count_ret;
-    auto status = XQueryTree(xdisplay, parent, &root_ret, &parent_ret, &children_ret, &child_count_ret);
+    auto status = XQueryTree(xdisplay, parent, &root_ret,
+                             &parent_ret, &children_ret, &child_count_ret);
     Window ret = 0;
     if (status != 0 && child_count_ret > 0) {
       ret = children_ret[0];

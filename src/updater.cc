@@ -11,7 +11,8 @@ Updater::Updater(const Cef& cef, QObject* parent)
 }
 
 const QString Updater::kCrlCheckUrl =
-    "http://clients2.google.com/service/update2/crx?x=id%3Dhfnkpimlhhgieaddgfemjhofmfblmnib%26v%3D%26uc";
+    "http://clients2.google.com/service/update2/crx"
+    "?x=id%3Dhfnkpimlhhgieaddgfemjhofmfblmnib%26v%3D%26uc";
 
 void Updater::ApplyCrlFromFileAndScheduleUpdate() const {
   auto path = CrlFilePath();
