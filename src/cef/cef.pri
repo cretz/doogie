@@ -19,7 +19,6 @@ INCLUDEPATH += $$(CEF_DIR)
 win32 {
     SOURCES += \
         cef/cef_base_widget_win.cc \
-        cef/cef_widget_win.cc \
         cef/cef_win.cc
 
     LIBS += -L$$(CEF_DIR)/$$PROFILE -llibcef
@@ -30,8 +29,7 @@ unix {
     SOURCES += \
         cef/cef_base_widget_linux.cc \
         cef/cef_embed_window_linux.cc \
-        cef/cef_linux.cc \
-        cef/cef_widget_linux.cc
+        cef/cef_linux.cc
     HEADERS += \
         cef/cef_embed_window_linux.h
     LIBS += -L$$(CEF_DIR)/$$PROFILE -lcef

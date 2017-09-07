@@ -288,6 +288,11 @@ void CefWidget::keyPressEvent(QKeyEvent* event) {
   QWidget::keyPressEvent(event);
 }
 
+void CefWidget::UpdateSize() {
+  CefBaseWidget::UpdateSize();
+  if (browser_) browser_->GetHost()->NotifyMoveOrResizeStarted();
+}
+
 void CefWidget::FaviconDownloadCallback::OnDownloadImageFinished(
     const CefString& url, int, CefRefPtr<CefImage> image) {
   // TODO(cretz): should I somehow check if the page has changed before
@@ -333,6 +338,17 @@ bool CefWidget::NavEntryCurrentSslVisitor::Visit(
     int, int) {
   if (entry->IsValid() && current) ssl_status_ = entry->GetSSLStatus();
   return false;
+}
+
+void CefWidget::InitBrowser(const Bubble& bubble, const QString& url) {
+  CefBrowserSettings settings;
+  bubble.ApplyCefBrowserSettings(&settings);
+  browser_ = CefBrowserHost::CreateBrowserSync(
+        window_info_,
+        handler_,
+        CefString(url.toStdString()),
+        settings,
+        bubble.CreateCefRequestContext());
 }
 
 }  // namespace doogie

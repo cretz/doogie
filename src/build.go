@@ -367,9 +367,12 @@ func target() (string, error) {
 }
 
 func extraArgs() []string {
-	argStartIndex := 2
-	if len(os.Args) >= 3 && os.Args[2] == "release" || os.Args[2] == "debug" {
-		argStartIndex = 3
+	argStartIndex := 1
+	if len(os.Args) > 2 {
+		argStartIndex = 2
+		if os.Args[2] == "release" || os.Args[2] == "debug" {
+			argStartIndex = 3
+		}
 	}
 	return os.Args[argStartIndex:]
 }
