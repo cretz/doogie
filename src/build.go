@@ -368,9 +368,9 @@ func target() (string, error) {
 
 func extraArgs() []string {
 	argStartIndex := 1
-	if len(os.Args) > 2 {
+	if len(os.Args) >= 2 {
 		argStartIndex = 2
-		if os.Args[2] == "release" || os.Args[2] == "debug" {
+		if len(os.Args) > 2 && (os.Args[2] == "release" || os.Args[2] == "debug") {
 			argStartIndex = 3
 		}
 	}
