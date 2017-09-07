@@ -1,3 +1,5 @@
+/docs/_site
+/docs/Gemfile.lock
 /src/doogie.pro.user
 /src/Makefile
 /src/Makefile.Debug
