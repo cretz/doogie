@@ -223,6 +223,19 @@ func buildCefLinux() error {
 			filepath.Join(wrapperDir, "libcef_dll_wrapper_"+target+".a")); err != nil {
 			return fmt.Errorf("Unable to rename .a file: %v", err)
 		}
+		// We also need to run strip on the Release libcef.so per:
+		//	https://bitbucket.org/chromiumembedded/cef/issues/1979
+		if target == "Release" {
+			// Back it up first
+			err := copyIfNotPresent(filepath.Join(cefDir, "Release/libcef.so"),
+				filepath.Join(cefDir, "Release/libcef.fullsym.so"))
+			if err != nil {
+				return fmt.Errorf("Release libcef backup failed: %v", err)
+			}
+			if err = execCmdInDir(cefDir, "strip", "--strip-all", "Release/libcef.so"); err != nil {
+				return fmt.Errorf("Failed stripping symbols: %v", err)
+			}
+		}
 		return nil
 	}
 
