@@ -2,6 +2,7 @@
 layout: default
 ---
 
+<!-- Styles just for this page -->
 <style type="text/css">
   .dos-button {
     background: #00A8A8;
@@ -16,8 +17,25 @@ layout: default
     font: bold 20px courier new;
     text-decoration: none;
   }
+  .feature-item {
+    display: flex;
+  }
+  @media screen and (max-width:990px) {
+    .feature-item {
+      flex-wrap: wrap;
+    }
+    .feature-item > img {
+      padding-bottom: 10px;
+    }
+  }
+  @media screen and (min-width:990px) {
+    .feature-item > img {
+      padding-right: 30px;
+    }
+  }
 </style>
 
+<!-- Top blue hero -->
 <div style="background-color: blue; max-width: 1000px; margin: auto; padding-bottom: 10px;">
   <div style="text-align: center; font: bold 60px courier; color: white;">DOOGIE</div>
   <div style="text-align: center; font: 30px courier new; color: white; margin-top: -10px">
@@ -57,6 +75,7 @@ layout: default
   </div>
 </div>
 
+<!-- Warning about alpha quality -->
 <div style="max-width: 990px; margin: auto; background-color: red; padding: 5px">
   <div style="border: 4px double white; text-align: center;">
     <div style="transform: translateY(-70%); background: white; display: inline-block; font: bold 1em monospace; padding: 2px 5px; color: red;">
@@ -68,27 +87,107 @@ layout: default
   </div>
 </div>
 
+<!-- Overview, screenshot, features, etc -->
 <div style="max-width: 1000px; margin: auto;">
+
   <h2>Overview</h2>
   <p>
-    Doogie is a browser based on <a href="https://www.chromium.org">Chromium</a> (via <a href="https://bitbucket.org/chromiumembedded/cef">CEF</a>) and built using <a href="https://www.qt.io/">Qt</a>. The primary goal is to make a browser that functions more like an <a href="https://en.wikipedia.org/wiki/Integrated_development_environment">IDE</a>. In an era where web browsers continually remove or hide UI, Doogie aims to make it more visible and allow easier cross-contextual browsing. <a href="guide">Read the user guide</a>
+    Doogie is a web browser based on <a href="https://www.chromium.org">Chromium</a> (via <a href="https://bitbucket.org/chromiumembedded/cef">CEF</a>) and built using <a href="https://www.qt.io/">Qt</a>. The primary goal is to make a browser that functions more like an <a href="https://en.wikipedia.org/wiki/Integrated_development_environment">IDE</a>. In an era where web browsers continually remove or hide UI, Doogie aims to make it more visible and allow easier cross-contextual browsing. <a href="guide">Read the user guide</a>
   </p>
+
   <h2>Screenshot</h2>
   <p>
     <a href="img/screenshot-main.png">
-      <img src="img/screenshot-main.png" style="max-width:100%; max-height:100%; border: 3px solid blue;">
+      <img src="img/screenshot-main.png" style="max-width:100%; max-height:100%;">
     </a>
     <br />
     <a href="screenshots">See more screenshots</a>
   </p>
+
   <h2>Features</h2>
-  <p>
-    TODO:
-    * Page tree
-    * Bubbles
-    * Workspaces
-    * Request Blocker
-  </p>
+  <h4>Page Tree</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-page-tree-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        The page tree allows easy navigation of pages via a tree view. It has features for opening child pages (foreground or background), suspension, fast closing gestures, etc. In addition to trees, pages can be organized in workspaces and bubbles.
+      </div>
+      <br />
+      <div>
+        Read more about the <a href="#">Page Tree</a>
+      </div>
+    </div>
+  </div>
+  <hr />
+  <h4>Bubbles</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-bubbles-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        A "bubble" is a context a page runs within. Bubbles can have their own settings, including cache path, which allows you to do things like create an "incognito" bubble, or create separate bubbles with complete separate sookie sets to login to the same site as two different users side-by-side. Bubbles are identified by customizable icons and pages can easily be switched from one bubble to another.
+      </div>
+      <br />
+      <div>
+        Read more about <a href="#">Bubbles</a>
+      </div>
+    </div>
+  </div>
+  <hr />
+  <h4>Workspaces</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-workspaces-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        A "workspace" is a named hierarchy of pages. They can be created, closed, deleted, moved around, and more. A workspace is a good way to quickly reopen a set of pages in a preferred hierarchy.
+      </div>
+      <br />
+      <div>
+        Read more about <a href="#">Workspaces</a>
+      </div>
+    </div>
+  </div>
+  <hr />
+  <h4>Autocomplete and Search</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-autocomplete-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        The address bar offers autocomplete suggestions based on previously opened pages. Also, <a href="https://duckduckgo.com/">DuckDuckGo</a> is integrated where it will always appear as an option to search. Want to search for Google instead? Use DuckDuckGo's <a href="https://duckduckgo.com/bang">!bang support</a>, and type "!g something" and using the search will perform a Google search. In fact, DuckDuckGo appears as the first autocomplete option any time an exclamation point is typed first.
+      </div>
+      <br />
+      <div>
+        Read more about <a href="#">Autocomplete and Search</a>
+      </div>
+    </div>
+  </div>
+  <hr />
+  <h4>Request Blocker</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-request-blocker-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        Doogie supports the <a href="https://adblockplus.org/filters">Adblock Plus filter syntax</a> for URLs. This means you can add <a href="https://filterlists.com/">filter lists</a> and Doogie will prevent the URL from being loaded. 
+      </div>
+      <br />
+      <div>
+        Read more about the <a href="#">Request Blocker</a>
+      </div>
+    </div>
+  </div>
+  <hr />
+  <h4>Page Suspension</h4>
+  <div class="feature-item">
+    <img src="img/screenshot-suspended-simple.png" style="height: 100%;">
+    <div>
+      <div>
+        Pages in the tree can be suspended. This frees the resources the page is using and marks it as disabled. This can be helpful when you have many pages in a hierarchy but do not want all of them open and using resources. 
+      </div>
+      <br />
+      <div>
+        Read more about <a href="#">Page Suspension</a>
+      </div>
+    </div>
+  </div>
   <h2>Not Yet Implemented</h2>
   <p>
     Many features are either not yet implemented or will never be implemented. See the <a href="https://github.com/cretz/doogie/issues">GitHub issues</a>. Some of the major ones are:
@@ -102,9 +201,10 @@ layout: default
       <li><a href="https://github.com/cretz/doogie/issues/5">Microphones and webcams</a></li>
       <li><a href="https://github.com/cretz/doogie/issues/4">Geolocation</a></li>
       <li><a href="https://github.com/cretz/doogie/issues/3">Notifications</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/17">Multiple windows</a></li>
       <li>Plugins</li>
       <li>Extensions</li>
     </ul>
-    ... and much much more. Contributions welcome.
+    ... and much much more. Most of these have to be complete before "beta". Contributions welcome.
   </p>
 </div>

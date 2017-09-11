@@ -706,7 +706,8 @@ void BrowserWidget::UpdateSslStatus(bool check_errored) {
       ssl_button_->setDisabled(false);
       // Red when there is a cert error, orange for content error,
       //  green otherwise
-      if (ssl_status_->GetCertStatus() != CERT_STATUS_NONE) {
+      if (ssl_status_->GetCertStatus() > CERT_STATUS_NONE
+          && ssl_status_->GetCertStatus() < CERT_STATUS_IS_EV) {
         ssl_button_->setIcon(QIcon(*Util::CachedPixmapColorOverlay(
             ":/res/images/fontawesome/unlock.png", "red")));
         ssl_button_->setToolTip("Invalid Certificate");
