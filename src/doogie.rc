@@ -1,2 +1,4 @@
 #define RT_MANIFEST 24
 1 RT_MANIFEST "doogie.manifest"
+
+IDI_ICON1 ICON DISCARDABLE "images\doogie-icon.ico"

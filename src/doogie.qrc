@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/res">
+        <file>images/doogie-icon.ico</file>
         <file>images/loading-icon.gif</file>
         <file>images/fontawesome/arrow-left.png</file>
         <file>images/fontawesome/arrow-right.png</file>

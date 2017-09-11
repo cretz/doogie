@@ -533,7 +533,7 @@ void BrowserWidget::RebuildNavMenu() {
   int current_item_index = 0;
   for (size_t i = 0; i < entries.size(); i++) {
     if (entries[i].current) {
-      current_item_index = i;
+      current_item_index = static_cast<int>(i);
       break;
     }
   }

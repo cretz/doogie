@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <meta name="keywords" content="doogie, browser, web browser, chromium, tree style" />
     <meta name="description" content="Doogie is a Chromium-based power browser with tree-style pages" />
-    <link rel="shortcut icon" href="{{site.github.url}}/img/favicon.png">
+    <link rel="shortcut icon" href="{{ site.github.url }}/img/doogie-icon.png">
     <title>Doogie - A Power Browser</title>
+    <style type="text/css">
+      .desktop-only {
+        display: block;
+      }
+      @media screen and (max-width: 500px) {
+        .desktop-only {
+          display: none;
+        }
+      }
+    </style>
   </head>
-  <body>
+  <body style="margin: auto;">
     <div>
       {{ content }}
     </div>

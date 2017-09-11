@@ -130,7 +130,7 @@ class BlockerRules {
 
     struct Info {
       // We choose vectors here because of size constraints
-      std::bitset<Other> not_request_types;
+      std::bitset<Other + 1> not_request_types;
       QSet<QByteArray> not_ref_domains;
       int file_index = -1;
       int line_num = -1;

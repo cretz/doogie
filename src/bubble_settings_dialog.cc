@@ -17,6 +17,7 @@ qlonglong BubbleSettingsDialog::NewBubble(QWidget* parent) {
     return -1;
   }
   // Save it and clear the cache
+  bubble.SetOrderIndex(Bubble::CachedBubbles().size());
   if (!bubble.Persist()) {
     qCritical() << "Failed to save current profile after bubble add";
     return -1;

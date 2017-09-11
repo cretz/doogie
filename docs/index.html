@@ -1,0 +1,110 @@
+---
+layout: default
+---
+
+<style type="text/css">
+  .dos-button {
+    background: #00A8A8;
+    margin-right: 10px;
+    padding: 10px;
+    display: inline-block;
+    height: 20px;
+    box-shadow: 10px 10px rgba(0, 0, 0, 0.5);
+    margin-top: 10px;
+    vertical-align: center;
+    color: white;
+    font: bold 20px courier new;
+    text-decoration: none;
+  }
+</style>
+
+<div style="background-color: blue; max-width: 1000px; margin: auto; padding-bottom: 10px;">
+  <div style="text-align: center; font: bold 60px courier; color: white;">DOOGIE</div>
+  <div style="text-align: center; font: 30px courier new; color: white; margin-top: -10px">
+    A Power Browser
+  </div>
+  <div style="text-align: center; padding-bottom: 20px;">
+    <a class="dos-button" href="guide">
+      User Guide
+    </a>
+    <a class="dos-button" href="https://github.com/cretz/doogie">
+      GitHub
+    </a>
+    <a class="dos-button" href="screenshots">
+      Screenshots
+    </a>
+  </div>
+  <div class="desktop-only" style="text-align: center; color: white; border: 4px double white; width: 500px; text-align: center; margin: auto;">
+    <div style="transform: translateY(-80%); background: blue; display: inline-block; font-family: monospace; padding: 0px 5px;">
+      Download Latest Alpha Release
+    </div>
+    <div style="display: flex; justify-content: center;">
+      <div style="padding: 10px 20px;">
+        <a href="https://github.com/cretz/doogie/releases" style="text-decoration: none; color: white;">
+          <img src="img/fontawesome-windows-white.png"><br />Windows
+        </a>
+      </div>
+      <div style="padding: 10px 20px;">
+        <a href="https://github.com/cretz/doogie/releases" style="text-decoration: none; color: white;">
+          <img src="img/fontawesome-linux-white.png"><br />Linux<br />(x11)
+        </a>
+      </div>
+      <div title="Not supported yet" style="padding: 10px 20px; color: gray; cursor: not-allowed;">
+        <img src="img/fontawesome-apple-gray.png"><br />macOS<br />
+        (<a href="https://github.com/cretz/doogie/issues/19" style="cursor: auto; color: gray;">not yet</a>)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width: 990px; margin: auto; background-color: red; padding: 5px">
+  <div style="border: 4px double white; text-align: center;">
+    <div style="transform: translateY(-70%); background: white; display: inline-block; font: bold 1em monospace; padding: 2px 5px; color: red;">
+      Warning
+    </div>
+    <div style="color: white; font: bold 1em monospace; padding-bottom: 20px;">
+      This is alpha software and has not been tested for security or stability. Use at your own risk.
+    </div>
+  </div>
+</div>
+
+<div style="max-width: 1000px; margin: auto;">
+  <h2>Overview</h2>
+  <p>
+    Doogie is a browser based on <a href="https://www.chromium.org">Chromium</a> (via <a href="https://bitbucket.org/chromiumembedded/cef">CEF</a>) and built using <a href="https://www.qt.io/">Qt</a>. The primary goal is to make a browser that functions more like an <a href="https://en.wikipedia.org/wiki/Integrated_development_environment">IDE</a>. In an era where web browsers continually remove or hide UI, Doogie aims to make it more visible and allow easier cross-contextual browsing. <a href="guide">Read the user guide</a>
+  </p>
+  <h2>Screenshot</h2>
+  <p>
+    <a href="img/screenshot-main.png">
+      <img src="img/screenshot-main.png" style="max-width:100%; max-height:100%; border: 3px solid blue;">
+    </a>
+    <br />
+    <a href="screenshots">See more screenshots</a>
+  </p>
+  <h2>Features</h2>
+  <p>
+    TODO:
+    * Page tree
+    * Bubbles
+    * Workspaces
+    * Request Blocker
+  </p>
+  <h2>Not Yet Implemented</h2>
+  <p>
+    Many features are either not yet implemented or will never be implemented. See the <a href="https://github.com/cretz/doogie/issues">GitHub issues</a>. Some of the major ones are:
+    <ul>
+      <li><a href="https://github.com/cretz/doogie/issues/19">macOS support</a></li>
+      <li>HTTP <a href="https://github.com/cretz/doogie/issues/26">basic</a> and <a href="https://github.com/cretz/doogie/issues/27">client certificate</a> authentication</li>
+      <li><a href="https://github.com/cretz/doogie/issues/20">Automatic updates</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/14">Cosmetic element hiding based on blocker rules</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/7">Flash</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/1">Form resubmission</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/5">Microphones and webcams</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/4">Geolocation</a></li>
+      <li><a href="https://github.com/cretz/doogie/issues/3">Notifications</a></li>
+      <li>Plugins</li>
+      <li>Extensions</li>
+    </ul>
+    ... and much much more. Contributions welcome.
+  </p>
+</div>

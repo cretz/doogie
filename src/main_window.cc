@@ -26,6 +26,7 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   setFocusPolicy(Qt::FocusPolicy::StrongFocus);
   resize(1024, 768);
   setAcceptDrops(true);
+  setWindowIcon(QIcon(":/res/images/doogie-icon.ico"));
 
   browser_stack_ = new BrowserStack(cef, this);
   connect(browser_stack_, &BrowserStack::ShowDevToolsRequest,
