@@ -1,0 +1,42 @@
+
+<div style="white-space: nowrap; padding-right: 20px;">
+  <h3>User Guide</h3>
+
+  <ul style="list-style-type: square; padding-left: 20px;">
+    <li>
+      <a {% if page.path != 'guide/install.md' %}href="install"{% endif %}>
+        Installation
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/page-tree.md' %}href="page-tree"{% endif %}>
+        Page Tree
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/browser.md' %}href="browser"{% endif %}>
+        Browser Usage
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/general.md' %}href="general"{% endif %}>
+        General Usage
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/bubble.md' %}href="bubble"{% endif %}>
+        Bubbles
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/faq.md' %}href="faq"{% endif %}>
+        FAQ
+      </a>
+    </li>
+    <li>
+      <a {% if page.path != 'guide/develop.md' %}href="develop"{% endif %}>
+        Development
+      </a>
+    </li>
+  </ul>
+</div>

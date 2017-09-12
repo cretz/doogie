@@ -204,6 +204,7 @@ QJsonObject PageTreeItem::DebugDump() const {
 }
 
 bool PageTreeItem::SelfOrAnyChildCollapsed() const {
+  if (childCount() > 0 && !isExpanded()) return true;
   for (int i = 0; i < childCount(); i++) {
     if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildCollapsed()) {
       return true;
@@ -213,6 +214,7 @@ bool PageTreeItem::SelfOrAnyChildCollapsed() const {
 }
 
 bool PageTreeItem::SelfOrAnyChildExpanded() const {
+  if (childCount() > 0 && isExpanded()) return true;
   for (int i = 0; i < childCount(); i++) {
     if (static_cast<PageTreeItem*>(child(i))->SelfOrAnyChildExpanded()) {
       return true;

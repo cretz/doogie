@@ -25,14 +25,13 @@ void CefBaseWidget::resizeEvent(QResizeEvent* event) {
 }
 
 bool CefBaseWidget::IsForwardableKeyEvent(const CefKeyEvent& event) const {
-  // For now, we only forward key events if they have modifiers
-  if (event.modifiers & EVENTFLAG_SHIFT_DOWN ||
-      event.modifiers & EVENTFLAG_CONTROL_DOWN ||
-      event.modifiers & EVENTFLAG_ALT_DOWN ||
-      event.modifiers & EVENTFLAG_COMMAND_DOWN) {
-    return true;
-  }
-  return false;
+  // For now, we forward everything but the tab key sans mods
+  if (event.character != 9) return true;
+  bool has_mods = event.modifiers & EVENTFLAG_SHIFT_DOWN ||
+        event.modifiers & EVENTFLAG_CONTROL_DOWN ||
+        event.modifiers & EVENTFLAG_ALT_DOWN ||
+        event.modifiers & EVENTFLAG_COMMAND_DOWN;
+  return has_mods;
 }
 
 }  // namespace doogie

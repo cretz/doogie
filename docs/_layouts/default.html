@@ -6,14 +6,22 @@
     <meta name="keywords" content="doogie, browser, web browser, chromium, tree style" />
     <meta name="description" content="Doogie is a Chromium-based power browser with tree-style pages" />
     <link rel="shortcut icon" href="{{ site.github.url }}/img/doogie-icon.png">
-    <title>Doogie - A Power Browser</title>
+    <title>
+      {% if page.title %}{{ page.title }} - Doogie{% else %}Doogie - A Power Browser{% endif %}
+    </title>
     <style type="text/css">
       .desktop-only {
         display: block;
       }
+      .mobile-only {
+        display: none;
+      }
       @media screen and (max-width: 500px) {
         .desktop-only {
           display: none;
+        }
+        .mobile-only {
+          display: block;
         }
       }
     </style>

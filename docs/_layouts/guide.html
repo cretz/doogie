@@ -1,0 +1,33 @@
+---
+layout: page
+---
+
+<!-- Super simple hiding menu on mobile -->
+<style type="text/css">
+  @media screen and (max-width: 500px) {
+    .guide-menu {
+      display: none;
+    }
+
+    #guide-menu-checkbox::after {
+      content: "TOC >>";
+      white-space: nowrap;
+    }
+
+    #guide-menu-checkbox:checked::after {
+      content: "<< TOC";
+      white-space: nowrap;
+    }
+
+    #guide-menu-checkbox:checked ~ .guide-menu {
+      display: block;
+    }
+  }
+</style>
+<input id="guide-menu-checkbox" class="mobile-only" type="checkbox" style="width: 0px; cursor: pointer; font-weight: bold;">
+<div class="guide-menu">
+  {% include guide-toc.html %}
+</div>
+<div>
+  {{content}}
+</div>

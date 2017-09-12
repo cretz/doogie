@@ -461,7 +461,7 @@ void PageTree::contextMenuEvent(QContextMenuEvent* event) {
     sub->addAction("New Child Background Page", [=]() {
       NewPage("", affected, false);
     });
-    sub->addAction("New Foreground Child Page", [=]() {
+    sub->addAction("New Child Foreground Page", [=]() {
       auto page = NewPage("", affected, false);
       page->Browser()->FocusUrlEdit();
     });
@@ -1316,7 +1316,7 @@ QList<PageTreeItem*> PageTree::SameHostPages(PageTreeItem* to_comp) {
   while (*it) {
     auto item = AsPageTreeItem(*it);
     if (item && host == QUrl(item->Browser()->CurrentUrl()).host()) {
-      ret.append(ret);
+      ret.append(item);
     }
     it++;
   }
