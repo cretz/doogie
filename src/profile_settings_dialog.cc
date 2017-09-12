@@ -21,12 +21,12 @@ ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
                    Profile::Current().FriendlyName() + "'"),
         0, 0, 1, 2);
 
-  auto tabs = new QTabWidget;
-  tabs->addTab(CreateSettingsTab(), "Browser Settings");
-  tabs->addTab(CreateShortcutsTab(), "Keyboard Shortcuts");
-  tabs->addTab(CreateBubblesTab(), "Bubbles");
-  tabs->addTab(CreateBlockerTab(cef), "Blocker Lists");
-  layout->addWidget(tabs, 1, 0, 1, 2);
+  tabs_ = new QTabWidget;
+  tabs_->addTab(CreateSettingsTab(), "Browser Settings");
+  tabs_->addTab(CreateShortcutsTab(), "Keyboard Shortcuts");
+  tabs_->addTab(CreateBubblesTab(), "Bubbles");
+  tabs_->addTab(CreateBlockerTab(cef), "Blocker Lists");
+  layout->addWidget(tabs_, 1, 0, 1, 2);
   layout->setColumnStretch(0, 1);
 
   auto ok = new QPushButton("Save");

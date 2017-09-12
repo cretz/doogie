@@ -9,6 +9,7 @@
 
 namespace doogie {
 
+// DB model representing a single filter list.
 class BlockerList {
  public:
   static QList<BlockerList> Lists(QSet<qlonglong> only_ids = {});

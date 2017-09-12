@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// Dock window for showing internal log messages.
 class LoggingDock : public QDockWidget {
   Q_OBJECT
 

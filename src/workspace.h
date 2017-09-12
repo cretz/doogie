@@ -6,6 +6,7 @@
 
 namespace doogie {
 
+// DB model for a workspace.
 class Workspace {
  public:
   class WorkspacePage {

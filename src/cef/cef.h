@@ -8,16 +8,27 @@
 
 namespace doogie {
 
+// Common class containing CEF utilities.
 class Cef {
  public:
+  // Initialize CEF. This may not return until the browser is done being
+  // used as a child process. Check EarlyExitCode after calling.
   Cef(int argc, char* argv[]);
+
+  // Shuts down the child process if it is a child.
   ~Cef();
-  // If >= 0, this is a child and not the UI window
-  int EarlyExitCode() const;
+
+  // If the response >= 0, this is a child and not the UI window. The
+  // program should exit early.
+  int EarlyExitCode() const { return early_exit_code_; }
+
+  // Performs a CEF tick in a message loop.
   void Tick() const;
 
-  CefRefPtr<CefAppHandler> AppHandler() const;
+  // The main app handler.
+  CefRefPtr<CefAppHandler> AppHandler() const { return app_handler_; }
 
+  // See other Download overload.
   std::function<void()> Download(
       const QString& url,
       QIODevice* write_to,
@@ -29,6 +40,7 @@ class Cef {
                          uint64 current,
                          uint64 total)> download_progress = nullptr) const;
 
+  // Perform a download using CEF.
   std::function<void()> Download(
       CefRefPtr<CefRequest> request,
       QIODevice* write_to,
@@ -40,6 +52,8 @@ class Cef {
                          uint64 current,
                          uint64 total)> download_progress = nullptr) const;
 
+  // Show the platform-specific cert dialog for the given cert. Returns false
+  // on failure.
   bool ShowCertDialog(CefRefPtr<CefX509Certificate> cert) const;
 
  private:

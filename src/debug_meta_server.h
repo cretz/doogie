@@ -7,6 +7,8 @@
 
 namespace doogie {
 
+// Simple debug server that communicates internal state over web sockets
+// for use by external testing utilities.
 class DebugMetaServer : public QObject {
   Q_OBJECT\
 

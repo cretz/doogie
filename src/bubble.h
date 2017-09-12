@@ -12,6 +12,7 @@ namespace doogie {
 
 class Profile;
 
+// DB model for a bubble.
 class Bubble {
  public:
   static Bubble DefaultBubble();

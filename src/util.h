@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// Simple utilities for Qt.
 class Util {
  public:
   static QPixmap* CachedPixmap(const QString& res_name);

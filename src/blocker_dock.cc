@@ -3,6 +3,7 @@
 #include <iterator>
 #include <set>
 
+#include "main_window.h"
 #include "profile.h"
 
 namespace doogie {
@@ -86,6 +87,12 @@ BlockerDock::BlockerDock(const Cef& cef,
       blocked_requests_.clear();
     }
     RebuildTable();
+  });
+  // Show the settings dialog
+  connect(settings_button, &QToolButton::clicked, [=](bool) {
+    MainWindow::EditProfileSettings([=](ProfileSettingsDialog* dialog) {
+      dialog->SetCurrentTab(3);
+    });
   });
   // Remove the refs when destroyed
   connect(browser_stack, &BrowserStack::BrowserDestroyed,

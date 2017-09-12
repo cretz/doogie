@@ -19,10 +19,10 @@ void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler) {
   //  keyPressEvent/keyReleaseEvent and check event::accepted but the
   //  translation is non-trivial and code reuse is behind Qt private ifaces.
   auto win_id = reinterpret_cast<HWND>(winId());
-  handler->SetPreKeyCallback([win_id](const CefKeyEvent&,
-                                      CefEventHandle os_event,
-                                      bool*) {
-    if (os_event) {
+  handler->SetPreKeyCallback([=](const CefKeyEvent& event,
+                                 CefEventHandle os_event,
+                                 bool*) {
+    if (os_event && IsForwardableKeyEvent(event)) {
       PostMessage(win_id, os_event->message,
                   os_event->wParam, os_event->lParam);
     }

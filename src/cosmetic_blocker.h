@@ -7,6 +7,7 @@
 
 namespace doogie {
 
+// Blocker class to be called for element hiding.
 class CosmeticBlocker {
  public:
   void OnFrameCreated(CefRefPtr<CefBrowser> browser,

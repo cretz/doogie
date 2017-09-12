@@ -10,6 +10,7 @@
 
 namespace doogie {
 
+// Main browser widget that includes the CEF browser widget, URL edit box, etc.
 class BrowserWidget : public QWidget {
   Q_OBJECT
 

@@ -7,6 +7,7 @@
 
 namespace doogie {
 
+// Item present in the download list.
 class DownloadListItem : public QListWidgetItem {
  public:
   DownloadListItem();

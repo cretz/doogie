@@ -36,16 +36,8 @@ Cef::~Cef() {
   if (early_exit_code_ < 0) CefShutdown();
 }
 
-int Cef::EarlyExitCode() const {
-  return early_exit_code_;
-}
-
 void Cef::Tick() const {
   CefDoMessageLoopWork();
-}
-
-CefRefPtr<CefAppHandler> Cef::AppHandler() const {
-  return app_handler_;
 }
 
 std::function<void()> Cef::Download(

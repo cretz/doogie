@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// Scrollable widget area for adding browser settings.
 class SettingsWidget : public QScrollArea {
   Q_OBJECT
  public:

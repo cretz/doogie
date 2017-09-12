@@ -11,15 +11,20 @@
 #include "downloads_dock.h"
 #include "logging_dock.h"
 #include "page_tree_dock.h"
+#include "profile_settings_dialog.h"
 
 namespace doogie {
 
+// Primary window. This is currently a singleton.
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
   explicit MainWindow(const Cef& cef, QWidget* parent = nullptr);
   ~MainWindow();
+
+  static void EditProfileSettings(std::function<void(ProfileSettingsDialog*)>
+                                  adjust_dialog_before_show = nullptr);
 
   QJsonObject DebugDump() const;
 
@@ -52,7 +57,7 @@ class MainWindow : public QMainWindow {
   LoggingDock* logging_dock_;
   bool attempting_to_close_ = false;
   bool ok_with_terminating_downloads_ = false;
-  QString launch_with_profile_on_close;
+  QString launch_with_profile_on_close_;
   QTimer crl_check_timer_;
 };
 

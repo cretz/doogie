@@ -6,6 +6,7 @@
 
 namespace doogie {
 
+// Abstraction over Qt's SQL features.
 class Sql {
  public:
   static bool EnsureDatabaseSchema();

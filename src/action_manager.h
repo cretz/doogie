@@ -7,6 +7,9 @@ namespace doogie {
 
 class MainWindow;
 
+// Singleton container for all actions that can occur in the app.
+// This centralizes the QAction instances themselves so shortcuts and
+// other items apply globally.
 class ActionManager : public QObject {
   Q_OBJECT
 

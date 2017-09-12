@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// Class to regularly update things in the background.
 class Updater : public QObject {
   Q_OBJECT
  public:

@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// Main stack widget golding the different browsers.
 class BrowserStack : public QStackedWidget {
   Q_OBJECT
 

@@ -10,6 +10,7 @@
 
 namespace doogie {
 
+// Normal browser widget wrapping CEF.
 class CefWidget : public CefBaseWidget {
   Q_OBJECT
 

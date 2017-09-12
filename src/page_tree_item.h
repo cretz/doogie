@@ -9,6 +9,7 @@
 
 namespace doogie {
 
+// A single item in the page tree.
 class PageTreeItem : public QTreeWidgetItem {
  public:
   static const int kBubbleIconColumn = 1;

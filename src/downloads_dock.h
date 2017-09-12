@@ -7,6 +7,7 @@
 
 namespace doogie {
 
+// Dock window for the current downloads.
 class DownloadsDock : public QDockWidget {
   Q_OBJECT
  public:

@@ -11,6 +11,7 @@
 
 namespace doogie {
 
+// DB model and utilities for profiles.
 class Profile {
  public:
   static const QString kInMemoryPath;

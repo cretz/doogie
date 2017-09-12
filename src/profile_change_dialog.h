@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// Dialog to switch profiles.
 class ProfileChangeDialog : public QDialog {
   Q_OBJECT
 

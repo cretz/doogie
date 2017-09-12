@@ -5,6 +5,8 @@
 
 namespace doogie {
 
+// Metadata model for a browser setting. Doesn't store the actual setting,
+// just has a set of static methods for getting the ones available.
 class BrowserSetting {
   Q_GADGET
 

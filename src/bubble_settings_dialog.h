@@ -7,6 +7,7 @@
 
 namespace doogie {
 
+// Dialog for creating/editing a bubble.
 class BubbleSettingsDialog : public QDialog {
   Q_OBJECT
 

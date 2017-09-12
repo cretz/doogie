@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// Handler for overall app features.
 class CefAppHandler :
     public QObject,
     public CefApp,

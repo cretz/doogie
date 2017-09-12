@@ -11,6 +11,7 @@
 
 namespace doogie {
 
+// The tree of pages.
 class PageTree : public QTreeWidget {
   Q_OBJECT
 

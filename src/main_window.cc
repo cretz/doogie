@@ -40,7 +40,7 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
           [=](BrowserWidget*) {
     attempting_to_close_ = false;
     ok_with_terminating_downloads_ = false;
-    launch_with_profile_on_close = "";
+    launch_with_profile_on_close_ = "";
   });
 
   downloads_dock_ = new DownloadsDock(browser_stack_, this);
@@ -51,7 +51,7 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
   blocker_dock_ = new BlockerDock(cef, browser_stack_, this);
   blocker_dock_->setObjectName("blocker_dock");
   blocker_dock_->setVisible(false);
-  addDockWidget(Qt::LeftDockWidgetArea, blocker_dock_);
+  addDockWidget(Qt::BottomDockWidgetArea, blocker_dock_);
 
   page_tree_dock_ = new PageTreeDock(browser_stack_, this);
   page_tree_dock_->setObjectName("page_tree_dock");
@@ -105,6 +105,24 @@ MainWindow::MainWindow(const Cef& cef, QWidget* parent)
 
 MainWindow::~MainWindow() {
   instance_ = nullptr;
+}
+
+void MainWindow::EditProfileSettings(
+    std::function<void(ProfileSettingsDialog*)> adjust_dialog_before_show) {
+  QSet<qlonglong> in_use_ids;
+  for (auto browser : instance_->browser_stack_->Browsers()) {
+    in_use_ids << browser->CurrentBubble().Id();
+  }
+  ProfileSettingsDialog dialog(instance_->cef_, in_use_ids, instance_);
+  if (adjust_dialog_before_show) adjust_dialog_before_show(&dialog);
+  if (dialog.exec() == QDialog::Accepted) {
+    if (QDialog::Accepted && dialog.NeedsRestart()) {
+      instance_->launch_with_profile_on_close_ = Profile::Current().Path();
+      instance_->close();
+    } else {
+      instance_->blocker_dock_->ProfileUpdated();
+    }
+  }
 }
 
 QJsonObject MainWindow::DebugDump() const {
@@ -171,9 +189,9 @@ void MainWindow::closeEvent(QCloseEvent* event) {
   QSettings settings;
   settings.setValue("mainWin/geom", saveGeometry());
   settings.setValue("mainWin/state", saveState(kStateVersion));
-  if (!launch_with_profile_on_close.isEmpty()) {
-    if (!Profile::LaunchWithProfile(launch_with_profile_on_close)) {
-      launch_with_profile_on_close = "";
+  if (!launch_with_profile_on_close_.isEmpty()) {
+    if (!Profile::LaunchWithProfile(launch_with_profile_on_close_)) {
+      launch_with_profile_on_close_ = "";
       event->ignore();
       return;
     }
@@ -215,19 +233,7 @@ void MainWindow::SetupActions() {
   auto profile_settings =
       ActionManager::Action(ActionManager::ProfileSettings);
   connect(profile_settings, &QAction::triggered, [=]() {
-    QSet<qlonglong> in_use_ids;
-    for (auto browser : browser_stack_->Browsers()) {
-      in_use_ids << browser->CurrentBubble().Id();
-    }
-    ProfileSettingsDialog dialog(cef_, in_use_ids, this);
-    if (dialog.exec() == QDialog::Accepted) {
-      if (QDialog::Accepted && dialog.NeedsRestart()) {
-        launch_with_profile_on_close = Profile::Current().Path();
-        this->close();
-      } else {
-        blocker_dock_->ProfileUpdated();
-      }
-    }
+    EditProfileSettings();
   });
   profile_settings->setText(QString("Profile Settings for '") +
               Profile::Current().FriendlyName() + "'");
@@ -237,7 +243,7 @@ void MainWindow::SetupActions() {
     ProfileChangeDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted) {
       if (dialog.NeedsRestart()) {
-        launch_with_profile_on_close = dialog.ChosenPath();
+        launch_with_profile_on_close_ = dialog.ChosenPath();
         this->close();
       } else {
         Profile::LaunchWithProfile(dialog.ChosenPath());

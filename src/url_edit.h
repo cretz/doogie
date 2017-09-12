@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// URL edit input.
 class UrlEdit : public QLineEdit {
   Q_OBJECT
  public:

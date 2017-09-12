@@ -10,6 +10,7 @@
 
 namespace doogie {
 
+// Dock window for the request blocker.
 class BlockerDock : public QDockWidget {
   Q_OBJECT
 

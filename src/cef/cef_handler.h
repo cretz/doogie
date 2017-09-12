@@ -9,6 +9,9 @@
 
 namespace doogie {
 
+// Handler implementation for all common browser-level events. This mostly
+// just calls signals, but the browser is not included so this handler is
+// expected to be instantiated per browser instance.
 class CefHandler :
     public QObject,
     public CefClient,

@@ -23,10 +23,10 @@ void CefBaseWidget::ForwardKeyboardEventsFrom(CefRefPtr<CefHandler> handler) {
   //  but basically this sends the same key event the browser gets but has no
   //  way right now of cancelling the browsre version when it's handled.
   Window win_id = override_widget_->winId();
-  handler->SetPreKeyCallback([win_id](const CefKeyEvent&,
-                                      CefEventHandle os_event,
-                                      bool*) {
-    if (os_event) {
+  handler->SetPreKeyCallback([=](const CefKeyEvent& event,
+                                 CefEventHandle os_event,
+                                 bool*) {
+    if (os_event && IsForwardableKeyEvent(event)) {
       os_event->xkey.window = win_id;
       XSendEvent(cef_get_xdisplay(), win_id, true, NoEventMask, os_event);
     }

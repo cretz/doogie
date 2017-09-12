@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// Customized action to show SSL details on lock-icon click.
 class SslInfoAction : public QWidgetAction {
   Q_OBJECT
 

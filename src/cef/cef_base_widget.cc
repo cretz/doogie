@@ -24,4 +24,15 @@ void CefBaseWidget::resizeEvent(QResizeEvent* event) {
   QWidget::resizeEvent(event);
 }
 
+bool CefBaseWidget::IsForwardableKeyEvent(const CefKeyEvent& event) const {
+  // For now, we only forward key events if they have modifiers
+  if (event.modifiers & EVENTFLAG_SHIFT_DOWN ||
+      event.modifiers & EVENTFLAG_CONTROL_DOWN ||
+      event.modifiers & EVENTFLAG_ALT_DOWN ||
+      event.modifiers & EVENTFLAG_COMMAND_DOWN) {
+    return true;
+  }
+  return false;
+}
+
 }  // namespace doogie

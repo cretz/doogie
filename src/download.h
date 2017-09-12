@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// DB model representing a known download.
 class Download {
  public:
   enum State {

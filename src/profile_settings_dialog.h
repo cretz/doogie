@@ -9,6 +9,7 @@
 
 namespace doogie {
 
+// Dialog to edit profile settings.
 class ProfileSettingsDialog : public QDialog {
   Q_OBJECT
 
@@ -16,6 +17,7 @@ class ProfileSettingsDialog : public QDialog {
   explicit ProfileSettingsDialog(const Cef& cef,
                                  QSet<qlonglong> in_use_bubble_ids,
                                  QWidget* parent = nullptr);
+  void SetCurrentTab(int index) { tabs_->setCurrentIndex(index); }
   bool NeedsRestart() const { return needs_restart_; }
   void done(int r) override;
 
@@ -37,6 +39,7 @@ class ProfileSettingsDialog : public QDialog {
                          const QString& default_url,
                          std::function<void(BlockerList, bool)> callback);
 
+  QTabWidget* tabs_;
   QSet<qlonglong> in_use_bubble_ids_;
   Profile profile_;
   bool needs_restart_ = false;

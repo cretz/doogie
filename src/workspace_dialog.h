@@ -6,6 +6,7 @@
 
 namespace doogie {
 
+// Dialog handlers for selecting and managing workspaces.
 class WorkspaceDialog : public QDialog {
   Q_OBJECT
  public:

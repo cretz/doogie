@@ -8,6 +8,8 @@
 
 namespace doogie {
 
+// Base class of CEF browser widgets. This is used for regular CEF
+// browsers and dev tools.
 class CefBaseWidget : public QWidget {
   Q_OBJECT
 
@@ -36,6 +38,7 @@ class CefBaseWidget : public QWidget {
 
  private:
   void InitWindowInfo();
+  bool IsForwardableKeyEvent(const CefKeyEvent& event) const;
 };
 
 }  // namespace doogie

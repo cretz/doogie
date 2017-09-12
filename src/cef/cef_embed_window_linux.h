@@ -8,6 +8,7 @@
 
 namespace doogie {
 
+// Window for embedding CEF on Linux.
 class CefEmbedWindow : public QWindow {
   Q_OBJECT
 

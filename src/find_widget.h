@@ -5,6 +5,7 @@
 
 namespace doogie {
 
+// Widget for showing the find-in-page feature.
 class FindWidget : public QFrame {
   Q_OBJECT
 

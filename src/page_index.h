@@ -6,6 +6,8 @@
 
 namespace doogie {
 
+// Utility/helper class for doing page index lookups for things like
+// autocomplete.
 class PageIndex {
  public:
   class Expirer {

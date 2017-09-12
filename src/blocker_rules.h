@@ -19,6 +19,8 @@
 
 namespace doogie {
 
+// Class (and nested classes) for parsing and handling of blocker
+// filter lists.
 class BlockerRules {
  public:
 #ifdef USE_QHASH

@@ -7,6 +7,7 @@
 
 namespace doogie {
 
+// Dock window housing the page tree.
 class PageTreeDock : public QDockWidget {
   Q_OBJECT
 

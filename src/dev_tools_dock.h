@@ -9,6 +9,7 @@
 
 namespace doogie {
 
+// Dock window for dev tools.
 class DevToolsDock : public QDockWidget {
   Q_OBJECT
 
