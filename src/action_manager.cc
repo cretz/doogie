@@ -141,7 +141,7 @@ void ActionManager::CreateActions() {
   shortcuts(ActionManager::ResetZoom, "Ctrl+0");
   shortcuts(ActionManager::FindInPage, "Ctrl+F");
   shortcuts(ActionManager::FocusPageTree, "Alt+1");
-  shortcuts(ActionManager::FocusAddressBar, "Alt+2; Ctrl+D");
+  shortcuts(ActionManager::FocusAddressBar, "Alt+2; Alt+D");
   shortcuts(ActionManager::FocusBrowser, "Alt+3");
 }
 

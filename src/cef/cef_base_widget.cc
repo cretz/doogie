@@ -25,13 +25,20 @@ void CefBaseWidget::resizeEvent(QResizeEvent* event) {
 }
 
 bool CefBaseWidget::IsForwardableKeyEvent(const CefKeyEvent& event) const {
-  // For now, we forward everything but the tab key sans mods
-  if (event.character != 9) return true;
-  bool has_mods = event.modifiers & EVENTFLAG_SHIFT_DOWN ||
-        event.modifiers & EVENTFLAG_CONTROL_DOWN ||
-        event.modifiers & EVENTFLAG_ALT_DOWN ||
+  // For now, we forward everything but:
+  //  * tab key (unless Ctrl is pressed)
+  //  * backspace while in edit field
+  // Tab check
+  if (event.character == 9) {
+    bool ctrl_down = event.modifiers & EVENTFLAG_CONTROL_DOWN ||
         event.modifiers & EVENTFLAG_COMMAND_DOWN;
-  return has_mods;
+    return ctrl_down;
+  }
+  // Backspace check
+  if (event.character == 8) {
+    return !event.focus_on_editable_field;
+  }
+  return true;
 }
 
 }  // namespace doogie

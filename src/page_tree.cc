@@ -896,6 +896,9 @@ void PageTree::SetupActions() {
   connect(ActionManager::Action(ActionManager::Stop),
           &QAction::triggered,
           [=]() { CurrentItem()->Browser()->Stop(); });
+  connect(ActionManager::Action(ActionManager::Back),
+          &QAction::triggered,
+          [=]() { CurrentItem()->Browser()->Back(); });
   connect(ActionManager::Action(ActionManager::Forward),
           &QAction::triggered,
           [=]() { CurrentItem()->Browser()->Forward(); });

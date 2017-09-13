@@ -8,6 +8,8 @@ title: Page Tree
 The page tree is a dock window that shows all the open pages in a tree-style hierarchy. The tree pages can be opened,
 moved around, closed, suspended, moved under separate workspaces or bubbles, etc.
 
+![Page Tree](../img/screenshot-page-tree-simple.png)
+
 ## Navigation
 
 The page tree has a "current" page which is signified by bolding the page's title. The current page is the one that will
@@ -19,22 +21,26 @@ Note, these are the default shortcut keys for these actions and may be altered b
 
 ## Selection
 
+![Page Selection](../img/screenshot-page-tree-selection.png)
+
 To select multiple tree pages, a normal rectangle drag can be used, starting by click-dragging off of any existing page.
 A range of tree pages can be selected by selecting one and holding shift while selecting another. Similarly, multiple
 individual tree pages may be selected by pressing ctrl while clicking them.
 
 ## Page Actions
 
-When right-clicking, a context menu appears that allows you to create a new top-level page (see "Adding a Page"), manage
-workspaces (see "Workspaces"), and affect current pages. The list of pages that can be affected can include the
-"Clicked-On Page", the "Current Page" (only if there was no clicked-on page), "Selected Pages" (if applicable), and
-"All Pages". The actions include:
+![Page Tree Menu](../img/screenshot-page-tree-menu.png)
+
+When right-clicking, a context menu appears that allows you to create a new top-level page (see
+[Adding Pages](#adding-pages)), manage workspaces (see [Workspaces](#workspaces)), and affect current pages. The list of
+pages that can be affected can include the "Clicked-On Page", the "Current Page" (only if there was no clicked-on page),
+"Selected Pages" (if applicable), and "All Pages". The actions include:
 
 * **New Child Background Page** (single page only) - Create a new child page in the background
 * **New Child Foreground Page** (single page only) - Create a new child page and navigate to it
 * **Reload Page(s)** - Reload non-suspended page(s)
-* **Suspend Page(s)** - Suspend page(s). See "Page Suspension" section for more information.
-* **Unsuspend Page(s)** - Unsuspend page(s). See "Page Suspension" section for more information.
+* **Suspend Page(s)** - Suspend page(s). See [Page Suspension](#page-suspension) section for more information.
+* **Unsuspend Page(s)** - Unsuspend page(s). See [Page Suspension](#page-suspension) section for more information.
 * **Expand Tree(s)** - Page(s) that have children will be expanded recursively
 * **Collapse Tree(s)** - Page(s) that have children will be collapsed recursively
 * **Duplicate Tree(s)** - Page tree(s) will be copied/recreated in the bottom of the tree
@@ -45,7 +51,7 @@ workspaces (see "Workspaces"), and affect current pages. The list of pages that 
 * **Close Same-Host Page(s)** - Same as selecting same-host pages then doing close page(s)
 * **Close Other/Non-Selected Page(s)** - Same as close page(s) but for the other pages
 * **Close Other/Non-Selected Tree(s)** Same as close tree(s) but for the other trees
-* **Bubble** - Change the bubble for the page(s). See the "Bubbles" page of the guide for more information.
+* **Bubble** - Change the bubble for the page(s). See [Bubbles](bubble) for more information.
 
 ## Rearranging Pages
 
@@ -57,7 +63,7 @@ opening new pages with the same URLs.
 
 Pages can be collapsed or expanded by clicking the collapse/expand icon to the left of the page title.
 
-Pages can be dragged between workspaces as well. See the "Workspaces" section.
+Pages can be dragged between workspaces as well. See the [Workspaces](#workspaces) section.
 
 ## Adding Pages
 
@@ -72,14 +78,17 @@ background child. Pressing `Ctrl` and `Shift` while clicking a link will open th
 
 ## Closing Pages
 
-When a page is closed, its children are also closed if it collapsed. If the page is expanded, the children are instead
-moved up a level where the closed page used to be.
+When a page is closed, its children are also closed if it is collapsed. If the page is expanded, the children are
+instead moved up a level where the closed page used to be.
 
-To close a page, simply click the `X` to the right of the page title. To close multiple pages at once, click-drag across
-the `X` buttons of the pages to be closed. A page may also be closed by pressing `Delete` after clicking it. After
+To close the current page, press `Ctrl+F4` or `Ctrl+W`. To close any page, simply click the **X** to the right of the
+page title. To close multiple pages at once, click-drag across the **X** buttons of the pages to be closed. To close all
+pages, press `Ctrl+Shift+F4` or `Ctrl+Shift+W`. A page may also be closed by pressing `Delete` after clicking it. After
 selecting multiple pages, `Delete` can be used to close all of them.
 
 ## Page Suspension
+
+![Page Suspension](../img/screenshot-suspended-simple.png)
 
 Pages can be marked as suspended. A suspended page has all of its resources freed. It is shown as suspended by having
 the page title grayed out.

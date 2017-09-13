@@ -3,16 +3,35 @@ layout: guide
 title: FAQ
 ---
 
+
 # FAQ
+{:.no_toc}
+
+* toc
+{:toc}
+
+### Where is the macOS version?
+
+The original author does not use an Apple machine, and while one could be used temporarily to build an initial version,
+it might become stale if not maintained. It would be greatly appreciated if someone wanted to step up and support macOS.
+The very few parts that are platform specific are properly segregated and should be easy enough to implement. Please see
+[this issue](https://github.com/cretz/doogie/issues/19) for more details.
 
 ### Why is this so buggy?
 
 This is early alpha software and probably has a ton of bugs. This is also the original author's first foray into modern
 C++, so surely there are mistakes there. They just have to be ironed out as time goes on.
 
+Please report any [issue](develop#issues).
+
+### How do I create an "incognito" or "private mode" bubble?
+
+Simply create a bubble that has no cache. However, right now there is not a setting to prevent it from saving
+autocomplete (see [this issue](https://github.com/cretz/doogie/issues/13)).
+
 ### Where can I donate? How do you plan on monetizing?
 
-There is no monetization attempt at this early stage. If you want to donate, please consider
+There is no monetization attempt (yet?). If you want to donate, please consider
 [donating to CEF](http://www.magpcss.org/ceforum/donate.php) which this project is based on.
 
 ### Why did you choose C++ instead of a safer, more modern language?

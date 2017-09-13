@@ -86,7 +86,7 @@ void ProfileSettingsDialog::closeEvent(QCloseEvent* event) {
 
 void ProfileSettingsDialog::keyPressEvent(QKeyEvent* event) {
   // Don't let escape close this if there are changes
-  if (event->key() == Qt::Key_Escape && !SettingsChanged()) {
+  if (event->key() == Qt::Key_Escape && SettingsChanged()) {
     event->ignore();
     return;
   }
