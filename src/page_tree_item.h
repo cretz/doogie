@@ -29,6 +29,7 @@ class PageTreeItem : public QTreeWidgetItem {
 
   QJsonObject DebugDump() const;
 
+  QList<PageTreeItem*> SelfAndChildren() const;
   bool SelfOrAnyChildCollapsed() const;
   bool SelfOrAnyChildExpanded() const;
   void ExpandSelfAndChildren();

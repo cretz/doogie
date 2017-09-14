@@ -689,10 +689,27 @@ void PageTree::drawRow(QPainter* painter,
 
 void PageTree::dropEvent(QDropEvent* event) {
   if (event->source() == this) {
-    // Due to bad internal Qt logic, we reset the current here
-    auto current = currentItem();
-    QTreeWidget::dropEvent(event);
-    setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
+    // As a special case, copies are duplications and do not call
+    //  the parent which treats them as mime data
+    if (event->dropAction() == Qt::CopyAction) {
+      ActionManager::Action(ActionManager::DuplicateSelectedTrees)->trigger();
+    } else {
+      // Due to bad internal Qt logic, we reset the current here
+      auto current = currentItem();
+      // Due to bad internal Qt logic, we reset expansion on drop completion
+      QSet<PageTreeItem*> expanded_selected;
+      for (const auto item_top : SelectedItemsOnlyHighestLevel()) {
+        for (const auto item : item_top->SelfAndChildren()) {
+          if (item->isExpanded()) expanded_selected << item;
+        }
+      }
+      QTreeWidget::dropEvent(event);
+
+      setCurrentItem(current, 0, QItemSelectionModel::NoUpdate);
+      for (const auto item : expanded_selected) {
+        item->setExpanded(true);
+      }
+    }
   } else {
     if (event->mimeData()->hasUrls() &&
         event->proposedAction() != Qt::CopyAction) {

@@ -206,6 +206,14 @@ QJsonObject PageTreeItem::DebugDump() const {
   };
 }
 
+QList<PageTreeItem*> PageTreeItem::SelfAndChildren() const {
+  QList<PageTreeItem*> ret({ const_cast<PageTreeItem*>(this) });
+  for (int i = 0; i < childCount(); i++) {
+    ret << static_cast<PageTreeItem*>(child(i))->SelfAndChildren();
+  }
+  return ret;
+}
+
 bool PageTreeItem::SelfOrAnyChildCollapsed() const {
   if (childCount() > 0 && !isExpanded()) return true;
   for (int i = 0; i < childCount(); i++) {
