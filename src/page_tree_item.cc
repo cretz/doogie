@@ -44,8 +44,11 @@ PageTreeItem::PageTreeItem(QPointer<BrowserWidget> browser,
     workspace_page_.Persist();
   });
   browser->connect(browser, &BrowserWidget::destroyed, [=]() {
+    // Mark myself invalid so I don't accidentally set myself
+    valid_ = false;
     // If I was current, set the new current as either the prev or next
-    if (treeWidget() && treeWidget()->currentItem() == this) {
+    if (treeWidget() && (!treeWidget()->currentItem() ||
+                         treeWidget()->currentItem() == this)) {
       static_cast<PageTree*>(treeWidget())->SetCurrentClosestTo(this);
     }
     // Move all the children up
@@ -112,7 +115,7 @@ PageTreeItem::~PageTreeItem() {
 }
 
 QPointer<BrowserWidget> PageTreeItem::Browser() const {
-  return browser_;
+  return valid_ ? browser_ : nullptr;
 }
 
 QToolButton* PageTreeItem::CloseButton() const {

@@ -496,6 +496,10 @@ func copyResourcesWindows(qmakePath string, target string) error {
 		for i := range qtDlls {
 			qtDlls[i] = strings.Replace(qtDlls[i], ".dll", "d.dll", -1)
 		}
+		// Also want the PDB files if they are there
+		for _, dll := range qtDlls {
+			qtDlls = append(qtDlls, strings.Replace(dll, ".dll", ".pdb", -1))
+		}
 	}
 	err := copyEachToDirIfNotPresent(filepath.Dir(qmakePath), target, qtDlls...)
 	if err != nil {

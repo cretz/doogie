@@ -341,11 +341,11 @@ void BrowserWidget::RecreateCefWidget(const QString& url,
   QWidget* widg_to_replace = nullptr;
   QSize widg_size = initial_size;
   if (cef_widg_) {
+    // We override the size with the old size here
+    widg_size = cef_widg_->size();
     widg_to_replace = cef_widg_->ViewWidget();
     cef_widg_->disconnect();
     cef_widg_->deleteLater();
-    // We override the size with the old size here
-    widg_size = cef_widg_->size();
   }
   cef_widg_ = new CefWidget(cef_, bubble_, url, this, widg_size);
   cef_widg_->SetResourceLoadCallback(resource_load_callback_);
@@ -442,7 +442,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url,
       RecreateCefWidget("");
       emit SuspensionChanged();
     } else {
-      deleteLater();
+      delete this;
     }
   });
   cef_widg_->SetJsDialogCallback(

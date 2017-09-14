@@ -62,12 +62,14 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
     // Sometimes current isn't set or isn't in the tree anymore
     if (current && indexFromItem(current).isValid()) {
       auto page_item = AsPageTreeItem(current);
-      browser_stack_->setCurrentWidget(page_item->Browser());
       auto new_font = page_item->font(0);
       new_font.setBold(true);
       page_item->setFont(0, new_font);
       // Put the focus in the browser
-      if (page_item->Browser()) page_item->Browser()->FocusBrowser();
+      if (page_item->Browser()) {
+        browser_stack_->setCurrentWidget(page_item->Browser());
+        page_item->Browser()->FocusBrowser();
+      }
     } else {
       // As a special case, we need to set something as current
       // so we do it here. We try previous, but otherwise, we'll just
@@ -388,15 +390,40 @@ void PageTree::WorkspaceAboutToDestroy(WorkspaceTreeItem* item) {
 }
 
 void PageTree::SetCurrentClosestTo(QTreeWidgetItem* item) {
-  // We'll try everything above, then everything below
-  QTreeWidgetItem* new_curr = itemAbove(item);
-  while (new_curr && new_curr->type() != kPageItemType) {
-    new_curr = itemAbove(new_curr);
+  // The rules are, child first, then sibling below,
+  //  then sibling above, then parent
+  // Child first
+  if (item->childCount() > 0 && item->isExpanded()) {
+    setCurrentItem(item->child(0));
+    return;
   }
+  // Sibling below or above
+  auto parent = item->parent();
+  if (!parent) parent = invisibleRootItem();
+  if (parent->childCount() > 1) {
+    auto index = parent->indexOfChild(item);
+    if (index < parent->childCount() - 1) {
+      setCurrentItem(parent->child(index + 1));
+    } else {
+      setCurrentItem(parent->child(index - 1));
+    }
+    return;
+  }
+  // Parent
+  if (parent->type() == kPageItemType) {
+    setCurrentItem(parent);
+    return;
+  }
+  // Ok, just loop and find next visible one below anywhere
+  QTreeWidgetItem* new_curr = itemBelow(item);
+  while (new_curr && new_curr->type() != kPageItemType) {
+    new_curr = itemBelow(new_curr);
+  }
+  // Or above anywhere
   if (!new_curr) {
-    new_curr = itemBelow(item);
+    new_curr = itemAbove(item);
     while (new_curr && new_curr->type() != kPageItemType) {
-      new_curr = itemBelow(new_curr);
+      new_curr = itemAbove(new_curr);
     }
   }
   setCurrentItem(new_curr);

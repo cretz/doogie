@@ -50,6 +50,8 @@ class PageTreeItem : public QTreeWidgetItem {
 
   void CollapseStateChanged();
 
+  bool Valid() const { return valid_; }
+
  private:
   void ApplyFavicon(const QIcon& icon_override = QIcon());
 
@@ -58,6 +60,7 @@ class PageTreeItem : public QTreeWidgetItem {
   QToolButton* close_button_ = nullptr;
   QMetaObject::Connection loading_icon_frame_conn_;
   bool persist_next_close_to_workspace_ = true;
+  bool valid_ = true;
 };
 
 }  // namespace doogie
