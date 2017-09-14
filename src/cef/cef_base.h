@@ -15,6 +15,7 @@
 #include "include/cef_browser.h"
 #include "include/cef_client.h"
 #include "include/cef_file_util.h"
+#include "include/cef_parser.h"
 #include "include/cef_urlrequest.h"
 #include "include/cef_xml_reader.h"
 #include "include/cef_zip_reader.h"

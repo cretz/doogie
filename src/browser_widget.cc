@@ -41,8 +41,8 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   ssl_button_->setPopupMode(QToolButton::InstantPopup);
   ssl_button_->addAction(new SslInfoAction(cef_, this));
 
-  url_edit_ = new UrlEdit(this);
-  connect(url_edit_, &UrlEdit::returnPressed, [=]() {
+  url_edit_ = new UrlEdit(cef, this);
+  connect(url_edit_, &UrlEdit::UrlEntered, [=]() {
     cef_widg_->LoadUrl(url_edit_->text());
     cef_widg_->setFocus();
   });

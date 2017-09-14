@@ -28,6 +28,8 @@ class Cef {
   // The main app handler.
   CefRefPtr<CefAppHandler> AppHandler() const { return app_handler_; }
 
+  bool IsValidUrl(const QString& url, bool allow_no_scheme = true) const;
+
   // See other Download overload.
   std::function<void()> Download(
       const QString& url,

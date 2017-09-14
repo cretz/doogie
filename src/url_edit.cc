@@ -1,11 +1,21 @@
 #include "url_edit.h"
 
+#include "cef/cef.h"
 #include "page_index.h"
 
 namespace doogie {
 
-UrlEdit::UrlEdit(QWidget* parent) : QLineEdit(parent) {
+UrlEdit::UrlEdit(const Cef& cef, QWidget* parent) :
+    QLineEdit(parent), cef_(cef) {
   setPlaceholderText("URL");
+  connect(this, &UrlEdit::returnPressed, [=]() {
+    // Change the text then say it has been entered
+    if (autocomplete_->currentRow() >= 0) {
+      setText(autocomplete_->currentItem()->data(
+                kRoleAutocompleteUrl).toString());
+    }
+    if (!text().isEmpty()) UrlEntered();
+  });
 
   autocomplete_ = new QListWidget(this);
   autocomplete_->setWindowFlags(
@@ -18,12 +28,12 @@ UrlEdit::UrlEdit(QWidget* parent) : QLineEdit(parent) {
   autocomplete_->hide();
   connect(autocomplete_, &QListWidget::itemClicked,
           [=](QListWidgetItem* item) {
-    setText(item->data(Qt::UserRole + 1).toString());
+    autocomplete_->setCurrentItem(item);
     emit returnPressed();
   });
   connect(autocomplete_, &QListWidget::currentRowChanged, [=](int row) {
     if (row >= 0) {
-      setText(autocomplete_->item(row)->data(Qt::UserRole + 1).toString());
+      setText(autocomplete_->item(row)->data(kRoleAutocompleteUrl).toString());
     }
   });
   connect(this, &UrlEdit::textEdited, this, &UrlEdit::HandleTextEdit);
@@ -110,12 +120,22 @@ void UrlEdit::HandleTextEdit(const QString& text) {
     height += autocomplete_->sizeHintForRow(autocomplete_->count() - 1);
   };
 
-  auto starts_with_search = text.startsWith("!");
+  // If it's a valid URL, the first result is always "visit"
+  auto looks_like_url = (text.contains(":/") || text.contains(".")) &&
+      cef_.IsValidUrl(text);
+  auto visit_item = new QListWidgetItem("Visit: " + text);
+  visit_item->setData(kRoleAutocompleteUrl, text);
+  if (looks_like_url) {
+    autocomplete_->addItem(visit_item);
+    incr_height();
+  }
+
+  auto looks_like_search = text.startsWith("!") || text.contains(" !");
   auto search_item = new QListWidgetItem("Search DuckDuckGo for: " + text);
-  search_item->setData(Qt::UserRole + 1,
+  search_item->setData(kRoleAutocompleteUrl,
                        QString("https://duckduckgo.com/?q=") +
                          QUrl::toPercentEncoding(text));
-  if (starts_with_search) {
+  if (looks_like_search) {
     autocomplete_->addItem(search_item);
     incr_height();
   }
@@ -123,15 +143,25 @@ void UrlEdit::HandleTextEdit(const QString& text) {
   for (const auto& suggest : PageIndex::AutocompleteSuggest(text, 10)) {
     auto item = new QListWidgetItem(
           suggest.favicon, suggest.title + " - " + suggest.url);
-    item->setData(Qt::UserRole + 1, suggest.url);
+    item->setData(kRoleAutocompleteUrl, suggest.url);
     autocomplete_->addItem(item);
     incr_height();
   }
 
-  if (!starts_with_search) {
+  if (!looks_like_search) {
     autocomplete_->addItem(search_item);
     incr_height();
   }
+  if (!looks_like_url) {
+    autocomplete_->addItem(visit_item);
+    incr_height();
+  }
+
+  // Set the first one as selected, but block signal so the URL edit
+  //  doesn't change
+  autocomplete_->blockSignals(true);
+  autocomplete_->setCurrentRow(0);
+  autocomplete_->blockSignals(false);\
 
   autocomplete_->move(mapToGlobal(rect().bottomLeft()));
   autocomplete_->setFixedWidth(width());

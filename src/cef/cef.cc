@@ -40,6 +40,16 @@ void Cef::Tick() const {
   CefDoMessageLoopWork();
 }
 
+bool Cef::IsValidUrl(const QString& url, bool allow_no_scheme) const {
+  CefURLParts parts;
+  auto ret = CefParseURL(CefString(url.toStdString()), parts);
+  if (!ret && allow_no_scheme) {
+    ret = CefParseURL(CefString((QString("http://") + url).toStdString()),
+                      parts);
+  }
+  return ret;
+}
+
 std::function<void()> Cef::Download(
     const QString& url,
     QIODevice* write_to,
