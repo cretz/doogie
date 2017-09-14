@@ -97,35 +97,13 @@ PageTree::PageTree(BrowserStack* browser_stack, QWidget* parent)
   });
 
   // Connect the simple close
-  connect(this, &PageTree::ItemClose, [=](PageTreeItem* item) {
-    CloseItem(item);
-  });
-
-  connect(this, &PageTree::ItemCloseRelease, [=](PageTreeItem* item) {
-    auto button_down = QApplication::mouseButtons().testFlag(Qt::LeftButton);
-    if (button_down) {
-      item->CloseButton()->setDown(true);
-
-      // First drag?
-      if (!close_dragging_) {
-        close_dragging_ = true;
-        close_dragging_on_ = item;
-        item->CloseButton()->setChecked(true);
-      }
-
-      // We are dragging, grab the one under the mouse
-      auto local_pos = mapFromGlobal(QCursor::pos());
-      auto mouse_item = AsPageTreeItem(itemAt(local_pos));
-      // Only applies if there is a close button under the mouse. It also
-      // can't be the last one we saw being dragged on
-      if (mouse_item && mouse_item != close_dragging_on_ &&
-          columnAt(local_pos.x()) == PageTreeItem::kCloseButtonColumn) {
-        // Flip the checked state
-        mouse_item->CloseButton()->setChecked(
-              !mouse_item->CloseButton()->isChecked());
-        close_dragging_on_ = mouse_item;
-      }
+  connect(this, &PageTree::ItemCloseRelease, [=]() {
+    // Close all items whose close button is checked
+    QList<PageTreeItem*> items;
+    for (const auto& item : Items()) {
+      if (item->CloseButton()->isChecked()) items << item;
     }
+    CloseItemsInReverseOrder(items);
   });
 
   connect(this, &PageTree::WorkspaceClosed, [=](qlonglong id) {
@@ -844,18 +822,6 @@ void PageTree::mouseReleaseEvent(QMouseEvent* event) {
     rubber_band_->hide();
   } else {
     QTreeWidget::mouseReleaseEvent(event);
-    if (close_dragging_) {
-      // Close-button drag has completed, close what's checked
-      close_dragging_on_ = nullptr;
-      close_dragging_ = false;
-      // Close in reverse
-      auto items = Items();
-      for (auto i = items.crbegin(); i != items.crend(); i++) {
-        if ((*i)->CloseButton()->isChecked()) {
-          CloseItem(*i);
-        }
-      }
-    }
   }
 }
 

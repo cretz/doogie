@@ -106,8 +106,6 @@ class PageTree : public QTreeWidget {
 
   BrowserStack* browser_stack_ = nullptr;
   QMovie* loading_icon_movie_ = nullptr;
-  bool close_dragging_ = false;
-  PageTreeItem* close_dragging_on_ = nullptr;
   QRubberBand* rubber_band_ = nullptr;
   QPoint rubber_band_origin_;
   QItemSelection rubber_band_orig_selected_;
@@ -116,9 +114,7 @@ class PageTree : public QTreeWidget {
   bool has_implicit_workspace_ = false;
 
  signals:
-  void ItemClose(PageTreeItem* item);
-  void ItemClosePress(PageTreeItem* item);
-  void ItemCloseRelease(PageTreeItem* item);
+  void ItemCloseRelease();
   void ItemDestroyed(PageTreeItem* item);
   void TreeEmpty();
   void WorkspaceImplicitnessChanged();

@@ -4,6 +4,7 @@
 #include <QtWidgets>
 
 #include "browser_widget.h"
+#include "page_close_button.h"
 #include "workspace.h"
 #include "workspace_tree_item.h"
 
@@ -19,7 +20,7 @@ class PageTreeItem : public QTreeWidgetItem {
                         const Workspace::WorkspacePage& workspace_page);
   ~PageTreeItem();
   QPointer<BrowserWidget> Browser() const;
-  QToolButton* CloseButton() const;
+  PageCloseButton* CloseButton() const { return close_button_; }
   void AfterAdded();
 
   PageTreeItem* Parent() const;
@@ -58,7 +59,7 @@ class PageTreeItem : public QTreeWidgetItem {
 
   QPointer<BrowserWidget> browser_;
   Workspace::WorkspacePage workspace_page_;
-  QToolButton* close_button_ = nullptr;
+  PageCloseButton* close_button_ = nullptr;
   QMetaObject::Connection loading_icon_frame_conn_;
   bool persist_next_close_to_workspace_ = true;
   bool valid_ = true;
