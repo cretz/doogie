@@ -74,7 +74,14 @@ BrowserWidget::BrowserWidget(const Cef& cef,
   auto top_widg = new QWidget;
   top_widg->setLayout(top_layout);
 
-  RecreateCefWidget(url);
+  // Initial suggested size is the parent minus the top widget's hinted height
+  QSize initial_size;
+  if (parent) {
+    initial_size = QSize(parent->size().width(),
+                         parent->size().height() -
+                         top_widg->sizeHint().height());
+  }
+  RecreateCefWidget(url, initial_size);
 
   auto layout = new QGridLayout;
   layout->addWidget(top_widg, 0, 0);
@@ -328,15 +335,19 @@ void BrowserWidget::resizeEvent(QResizeEvent* event) {
   QWidget::resizeEvent(event);
 }
 
-void BrowserWidget::RecreateCefWidget(const QString& url) {
+void BrowserWidget::RecreateCefWidget(const QString& url,
+                                      const QSize& initial_size) {
   // Delete the other one if it's there
   QWidget* widg_to_replace = nullptr;
+  QSize widg_size = initial_size;
   if (cef_widg_) {
     widg_to_replace = cef_widg_->ViewWidget();
     cef_widg_->disconnect();
     cef_widg_->deleteLater();
+    // We override the size with the old size here
+    widg_size = cef_widg_->size();
   }
-  cef_widg_ = new CefWidget(cef_, bubble_, url, this);
+  cef_widg_ = new CefWidget(cef_, bubble_, url, this, widg_size);
   cef_widg_->SetResourceLoadCallback(resource_load_callback_);
   connect(cef_widg_, &CefWidget::PreContextMenu,
           this, &BrowserWidget::BuildContextMenu);

@@ -14,7 +14,9 @@ class CefBaseWidget : public QWidget {
   Q_OBJECT
 
  public:
-  explicit CefBaseWidget(const Cef& cef, QWidget* parent = nullptr);
+  explicit CefBaseWidget(const Cef& cef,
+                         QWidget* parent = nullptr,
+                         const QSize& initial_size = QSize());
   virtual ~CefBaseWidget();
 
   const CefWindowInfo& WindowInfo() const;

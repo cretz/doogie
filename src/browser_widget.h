@@ -106,7 +106,8 @@ class BrowserWidget : public QWidget {
   void resizeEvent(QResizeEvent* event) override;
 
  private:
-  void RecreateCefWidget(const QString& url);
+  void RecreateCefWidget(const QString& url,
+                         const QSize& initial_size = QSize());
   void ShowAsSuspendedScreenshot();
   void UpdateStatusBarLocation();
   void RebuildNavMenu();

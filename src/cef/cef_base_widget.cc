@@ -2,8 +2,11 @@
 
 namespace doogie {
 
-CefBaseWidget::CefBaseWidget(const Cef& cef, QWidget*  parent)
+CefBaseWidget::CefBaseWidget(const Cef& cef,
+                             QWidget* parent,
+                             const QSize& initial_size)
     : QWidget(parent), cef_(cef) {
+  if (!initial_size.isEmpty()) resize(initial_size);
   InitWindowInfo();
 }
 

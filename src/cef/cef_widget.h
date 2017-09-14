@@ -24,7 +24,8 @@ class CefWidget : public CefBaseWidget {
   explicit CefWidget(const Cef& cef,
                      const Bubble& bubble,
                      const QString& url = "",
-                     QWidget* parent = nullptr);
+                     QWidget* parent = nullptr,
+                     const QSize& initial_size = QSize());
   ~CefWidget();
 
   std::vector<NavEntry> NavEntries() const;
