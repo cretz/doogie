@@ -120,16 +120,6 @@ void UrlEdit::HandleTextEdit(const QString& text) {
     height += autocomplete_->sizeHintForRow(autocomplete_->count() - 1);
   };
 
-  // If it's a valid URL, the first result is always "visit"
-  auto looks_like_url = (text.contains(":/") || text.contains(".")) &&
-      cef_.IsValidUrl(text);
-  auto visit_item = new QListWidgetItem("Visit: " + text);
-  visit_item->setData(kRoleAutocompleteUrl, text);
-  if (looks_like_url) {
-    autocomplete_->addItem(visit_item);
-    incr_height();
-  }
-
   auto looks_like_search = text.startsWith("!") || text.contains(" !");
   auto search_item = new QListWidgetItem("Search DuckDuckGo for: " + text);
   search_item->setData(kRoleAutocompleteUrl,
@@ -137,6 +127,16 @@ void UrlEdit::HandleTextEdit(const QString& text) {
                          QUrl::toPercentEncoding(text));
   if (looks_like_search) {
     autocomplete_->addItem(search_item);
+    incr_height();
+  }
+
+  // If it's a valid UR (but doens't look like search), first result is "visit"
+  auto looks_like_url = (text.contains(":/") || text.contains(".")) &&
+      cef_.IsValidUrl(text);
+  auto visit_item = new QListWidgetItem("Visit: " + text);
+  visit_item->setData(kRoleAutocompleteUrl, text);
+  if (looks_like_url) {
+    autocomplete_->addItem(visit_item);
     incr_height();
   }
 
