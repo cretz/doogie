@@ -1,5 +1,7 @@
 #include "util.h"
 
+#include <unistd.h>
+
 namespace doogie {
 
 bool Util::OpenContainingFolder(const QString& path) {
@@ -9,7 +11,7 @@ bool Util::OpenContainingFolder(const QString& path) {
 }
 
 QString Util::ExePath() {
-  QFileInfo pfi(QString::fromLatin1("/proc/%1/exe").arg(getpid()));
+  QFileInfo pfi(QString::fromLatin1("/proc/%1/exe").arg(::getpid()));
   if (!pfi.exists() || !pfi.isSymLink()) return QString();
   return pfi.canonicalFilePath();
 }
