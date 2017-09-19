@@ -4,6 +4,7 @@
 #include "cef/cef.h"
 #include "main_window.h"
 #include "updater.h"
+#include "util.h"
 
 #ifdef QT_DEBUG
 #include "debug_meta_server.h"
@@ -14,15 +15,12 @@ int main(int argc, char* argv[]) {
   //  like QCoreApplication::applicationDirPath because it requires that we
   //  have an application created already which we don't (and don't want to
   //  because this code is also run for each child process)
-  QStringList lib_paths({});
-#ifdef Q_OS_UNIX
-  QFileInfo pfi(QString::fromLatin1("/proc/%1/exe").arg(getpid()));
-  if (pfi.exists() && pfi.isSymLink()) {
-    auto exe_dir = QFileInfo(pfi.canonicalFilePath()).path();
-    lib_paths << exe_dir;
+  auto exe_path = doogie::Util::ExePath();
+  if (exe_path.isNull()) {
+    qCritical() << "Unable to get exe path";
+    return 2;
   }
-#endif
-  QCoreApplication::setLibraryPaths(lib_paths);
+  QCoreApplication::setLibraryPaths({ QFileInfo(exe_path).dir().path() });
 
   doogie::Cef cef(argc, argv);
   if (cef.EarlyExitCode() >= 0) return cef.EarlyExitCode();

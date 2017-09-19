@@ -10,4 +10,11 @@ bool Util::OpenContainingFolder(const QString& path) {
   return QProcess::startDetached(explorer + " " + param);
 }
 
+QString Util::ExePath() {
+  wchar_t buffer[MAX_PATH];
+  auto ret = GetModuleFileName(nullptr, buffer, MAX_PATH);
+  if (ret == 0) return QString();
+  return QString::fromWCharArray(buffer, ret);
+}
+
 }  // namespace doogie

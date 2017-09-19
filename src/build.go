@@ -567,6 +567,39 @@ func copyResourcesWindows(qmakePath string, target string) error {
 		}
 	}
 
+	// TODO: statically compile this, ref: https://github.com/cretz/doogie/issues/46
+	// Need sqldrivers/ and platforms/ plugins
+	sqlDriversSourceDir := filepath.Join(qmakePath, "../../plugins/sqldrivers")
+	if _, err = os.Stat(sqlDriversSourceDir); os.IsExist(err) {
+		return fmt.Errorf("Unable to find Qt sqldrivers dir: %v", err)
+	}
+	sqlDriversDestDir := filepath.Join(target, "sqldrivers")
+	if err = os.MkdirAll(sqlDriversDestDir, 0755); err != nil {
+		return fmt.Errorf("Unable to create sqldrivers dir: %v", err)
+	}
+	if target == "debug" {
+		err = copyAndChmodEachToDirIfNotPresent(0644, sqlDriversSourceDir, sqlDriversDestDir, "qsqlited.dll")
+	} else {
+		err = copyAndChmodEachToDirIfNotPresent(0644, sqlDriversSourceDir, sqlDriversDestDir, "qsqlite.dll")
+	}
+	if err != nil {
+		return err
+	}
+	platformsSourceDir := filepath.Join(qmakePath, "../../plugins/platforms")
+	if _, err = os.Stat(platformsSourceDir); os.IsExist(err) {
+		return fmt.Errorf("Unable to find Qt platforms dir: %v", err)
+	}
+	platformsDestDir := filepath.Join(target, "platforms")
+	if err = os.MkdirAll(platformsDestDir, 0755); err != nil {
+		return fmt.Errorf("Unable to create platforms dir: %v", err)
+	}
+	// We have to put the windows platform there
+	if target == "debug" {
+		err = copyAndChmodEachToDirIfNotPresent(0644, platformsSourceDir, platformsDestDir, "qwindowsd.dll")
+	} else {
+		err = copyAndChmodEachToDirIfNotPresent(0644, platformsSourceDir, platformsDestDir, "qwindows.dll")
+	}
+
 	// Copy over CEF libs
 	err = copyEachToDirIfNotPresent(filepath.Join(cefDir, strings.Title(target)), target,
 		"libcef.dll",

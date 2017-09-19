@@ -8,4 +8,10 @@ bool Util::OpenContainingFolder(const QString& path) {
     QUrl::fromLocalFile(info.isDir() ? path : info.path()));
 }
 
+QString Util::ExePath() {
+  QFileInfo pfi(QString::fromLatin1("/proc/%1/exe").arg(getpid()));
+  if (!pfi.exists() || !pfi.isSymLink()) return QString();
+  return pfi.canonicalFilePath();
+}
+
 }  // namespace doogie

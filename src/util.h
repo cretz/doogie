@@ -29,6 +29,10 @@ class Util {
   static void RunOnMainThread(std::function<void()> fn);
 
   static bool OpenContainingFolder(const QString& path);
+
+  // Unlike QCoreApplication::applicationFilePath, this does not require a Qt
+  //  application instance to obtain the path. Null string on error.
+  static QString ExePath();
 };
 
 }  // namespace doogie
