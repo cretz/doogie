@@ -312,7 +312,13 @@ func lint() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("python", args...)
+	pycmd := "python"
+	if runtime.GOOS == "linux" {
+		// python by itself may refer to python3 or python2 depending on the distro,
+		// so invoke python2 explicitly.
+		pycmd = "python2"
+	}
+	cmd := exec.Command(pycmd, args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil && len(out) == 0 {
 		return fmt.Errorf("Unable to run cpplint: %v", err)
