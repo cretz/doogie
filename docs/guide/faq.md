@@ -24,6 +24,11 @@ C++, so surely there are mistakes there. They just have to be ironed out as time
 
 Please report any [issue](develop#issues).
 
+### How does Doogie track usage?
+
+It doesn't. There is no way for Doogie to know how popular it is, what features are used more than others, etc. Features
+and bugs will be prioritized by the author, not telemetry analytics (because they don't exist).
+
 ### How do I create an "incognito" or "private mode" bubble?
 
 Simply create a bubble that has no cache. However, right now there is not a setting to prevent it from saving
