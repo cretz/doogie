@@ -176,13 +176,15 @@ func pkg() error {
 		return err
 	}
 
-	// And the locales dir
-	if err = os.MkdirAll(filepath.Join(deployDir, "locales"), 0755); err != nil {
-		return err
-	}
-	err = copyEachToDirIfNotPresent(filepath.Join(target, "locales"), filepath.Join(deployDir, "locales"), "en-US.pak")
-	if err != nil {
-		return err
+	// And other dirs if present in folder
+	subDirs := []string{"locales", "platforms", "sqldrivers"}
+	for _, subDir := range subDirs {
+		srcDir := filepath.Join(target, subDir)
+		if _, err = os.Stat(srcDir); err == nil {
+			if err = copyDirIfNotPresent(srcDir, filepath.Join(deployDir, subDir)); err != nil {
+				return fmt.Errorf("Unable to copy %v: %v", subDir, err)
+			}
+		}
 	}
 
 	// Now create a zip or tar file with all the goods
@@ -423,6 +425,9 @@ func copyResources(qmakePath string, target string) error {
 }
 
 func copyResourcesLinux(qmakePath string, target string) error {
+	if _, err := exec.LookPath("chrpath"); err != nil {
+		return fmt.Errorf("Unable to find chrpath on the PATH: %v", err)
+	}
 	cefDir := os.Getenv("CEF_DIR")
 	if cefDir == "" {
 		return fmt.Errorf("Unable to find CEF_DIR env var")
@@ -430,10 +435,17 @@ func copyResourcesLinux(qmakePath string, target string) error {
 	// Everything read only except by owner
 	// Copy over some Qt DLLs
 	err := copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
-		"libQt5Core.so",
-		"libQt5Gui.so",
-		"libQt5Sql.so",
-		"libQt5Widgets.so",
+		"libQt5Core.so.5",
+		"libQt5Gui.so.5",
+		"libQt5Sql.so.5",
+		"libQt5Widgets.so.5",
+		// TODO: See https://bugreports.qt.io/browse/QTBUG-53865
+		"libicui18n.so.56",
+		"libicuuc.so.56",
+		"libicudata.so.56",
+		// Needed for libqxcb platform
+		"libQt5XcbQpa.so.5",
+		"libQt5DBus.so.5",
 	)
 	if err != nil {
 		return err
@@ -441,12 +453,46 @@ func copyResourcesLinux(qmakePath string, target string) error {
 	// Some DLLs are needed in debug only
 	if target == "debug" {
 		err := copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
-			"libQt5Network.so",
-			"libQt5Test.so",
-			"libQt5WebSockets.so",
+			"libQt5Network.so.5",
+			"libQt5Test.so.5",
+			"libQt5WebSockets.so.5",
 		)
 		if err != nil {
 			return err
+		}
+	}
+
+	// TODO: statically compile this, ref: https://github.com/cretz/doogie/issues/46
+	// Need sqldrivers/ and platforms/ plugins
+	sqlDriversSourceDir := filepath.Join(qmakePath, "../../plugins/sqldrivers")
+	if _, err = os.Stat(sqlDriversSourceDir); os.IsExist(err) {
+		return fmt.Errorf("Unable to find Qt sqldrivers dir: %v", err)
+	}
+	sqlDriversDestDir := filepath.Join(target, "sqldrivers")
+	if err = os.MkdirAll(sqlDriversDestDir, 0755); err != nil {
+		return fmt.Errorf("Unable to create sqldrivers dir: %v", err)
+	}
+	err = copyAndChmodEachToDirIfNotPresent(0644, sqlDriversSourceDir, sqlDriversDestDir, "libqsqlite.so")
+	if err != nil {
+		return err
+	}
+	platformsSourceDir := filepath.Join(qmakePath, "../../plugins/platforms")
+	if _, err = os.Stat(platformsSourceDir); os.IsExist(err) {
+		return fmt.Errorf("Unable to find Qt platforms dir: %v", err)
+	}
+	platformsDestDir := filepath.Join(target, "platforms")
+	if err = os.MkdirAll(platformsDestDir, 0755); err != nil {
+		return fmt.Errorf("Unable to create platforms dir: %v", err)
+	}
+	// We have to reset the rpath on this shared lib. Only do this if it's not already there.
+	platformDestLib := filepath.Join(platformsDestDir, "libqxcb.so")
+	if _, err = os.Stat(platformDestLib); os.IsNotExist(err) {
+		err = copyAndChmodEachToDirIfNotPresent(0644, platformsSourceDir, platformsDestDir, "libqxcb.so")
+		if err != nil {
+			return err
+		}
+		if err = execCmd("chrpath", "-r", "$ORIGIN/..", platformDestLib); err != nil {
+			return fmt.Errorf("Unable to run chrpath: %v", err)
 		}
 	}
 
@@ -563,6 +609,31 @@ func chmodEachInDir(mode os.FileMode, dir string, filenames ...string) error {
 	for _, filename := range filenames {
 		if err := os.Chmod(filepath.Join(dir, filename), mode); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func copyDirIfNotPresent(srcDir string, destDir string) error {
+	// Note, this is not recursive, but it does preserve permissions
+	srcFi, err := os.Stat(srcDir)
+	if err != nil {
+		return fmt.Errorf("Unable to find src dir: %v", err)
+	}
+	if err = os.MkdirAll(destDir, srcFi.Mode()); err != nil {
+		return fmt.Errorf("Unable to create dest dir: %v", err)
+	}
+	files, err := ioutil.ReadDir(srcDir)
+	if err != nil {
+		return fmt.Errorf("Unable to read src dir: %v", err)
+	}
+	for _, file := range files {
+		srcFile := filepath.Join(srcDir, file.Name())
+		if err = copyToDirIfNotPresent(srcFile, destDir); err != nil {
+			return fmt.Errorf("Error copying file: %v", err)
+		}
+		if err = os.Chmod(srcFile, file.Mode()); err != nil {
+			return fmt.Errorf("Unable to chmod file: %v", err)
 		}
 	}
 	return nil

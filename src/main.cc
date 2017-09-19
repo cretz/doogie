@@ -10,6 +10,20 @@
 #endif
 
 int main(int argc, char* argv[]) {
+  // We have to set the library path to the exe dir, but we can't use something
+  //  like QCoreApplication::applicationDirPath because it requires that we
+  //  have an application created already which we don't (and don't want to
+  //  because this code is also run for each child process)
+  QStringList lib_paths({});
+#ifdef Q_OS_UNIX
+  QFileInfo pfi(QString::fromLatin1("/proc/%1/exe").arg(getpid()));
+  if (pfi.exists() && pfi.isSymLink()) {
+    auto exe_dir = QFileInfo(pfi.canonicalFilePath()).path();
+    lib_paths << exe_dir;
+  }
+#endif
+  QCoreApplication::setLibraryPaths(lib_paths);
+
   doogie::Cef cef(argc, argv);
   if (cef.EarlyExitCode() >= 0) return cef.EarlyExitCode();
 

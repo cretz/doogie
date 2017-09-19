@@ -53,6 +53,7 @@ Before running the build script on Linux, you must have the prerequisites:
 * Latest [Linux 64-bit standard dist of CEF](http://opensource.spotify.com/cefbuilds/index.html#linux64_builds)
   extracted w/ `CEF_DIR` environment variable set to the base CEF extracted dir
 * Latest GTK 2.x installed and on the library path
+* The `chrpath` utility on the `PATH`
 * This repo cloned w/ the shell at the `src` folder
 
 ### MacOS Prerequisites
