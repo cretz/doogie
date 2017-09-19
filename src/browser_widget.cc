@@ -474,6 +474,7 @@ void BrowserWidget::RecreateCefWidget(const QString& url,
         } else {
           callback->Continue(true, CefString(result.toStdString()));
         }
+        break;
       }
       default:
         callback->Continue(false, "");
