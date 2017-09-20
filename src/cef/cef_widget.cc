@@ -12,6 +12,7 @@ CefWidget::CefWidget(const Cef& cef,
     : CefBaseWidget(cef, parent, initial_size) {
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
+  setFocusPolicy(Qt::StrongFocus);
   connect(handler_, &CefHandler::PreContextMenu,
           this, &CefWidget::PreContextMenu);
   connect(handler_, &CefHandler::ContextMenuCommand,

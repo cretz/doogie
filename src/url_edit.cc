@@ -39,6 +39,10 @@ UrlEdit::UrlEdit(const Cef& cef, QWidget* parent) :
   connect(this, &UrlEdit::textEdited, this, &UrlEdit::HandleTextEdit);
 }
 
+void UrlEdit::focusInEvent(QFocusEvent* event) {
+  QLineEdit::focusInEvent(event);
+}
+
 void UrlEdit::focusOutEvent(QFocusEvent* event) {
   autocomplete_->hide();
   QLineEdit::focusOutEvent(event);

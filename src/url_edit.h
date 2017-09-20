@@ -16,6 +16,7 @@ class UrlEdit : public QLineEdit {
   void UrlEntered();
 
  protected:
+  void focusInEvent(QFocusEvent* event) override;
   void focusOutEvent(QFocusEvent* event) override;
   void keyPressEvent(QKeyEvent* event) override;
 
