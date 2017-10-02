@@ -235,6 +235,14 @@ class CefHandler :
       const CefString& target_url,
       CefRequestHandler::WindowOpenDisposition target_disposition,
       bool user_gesture) override;
+  bool GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+                          CefRefPtr<CefFrame> frame,
+                          bool is_proxy,
+                          const CefString& host,
+                          int port,
+                          const CefString& realm,
+                          const CefString& scheme,
+                          CefRefPtr<CefAuthCallback> callback) override;
 
  signals:
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
@@ -279,6 +287,13 @@ class CefHandler :
       CefRefPtr<CefSSLInfo> ssl_info,
       CefRefPtr<CefRequestCallback> callback);
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
+  void AuthRequest(CefRefPtr<CefFrame> frame,
+                   bool is_proxy,
+                   const QString& host,
+                   int port,
+                   const QString& realm,
+                   const QString& scheme,
+                   CefRefPtr<CefAuthCallback> callback);
   void BrowserLog(const QString& str);
 
  private:

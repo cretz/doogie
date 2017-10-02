@@ -67,6 +67,12 @@ CefWidget::CefWidget(const Cef& cef,
   });
   connect(handler_, &CefHandler::ShowBeforeUnloadDialog,
           this, &CefWidget::ShowBeforeUnloadDialog);
+  connect(handler_, &CefHandler::AuthRequest,
+          [=](CefRefPtr<CefFrame>, bool, const QString&,
+              int, const QString& realm, const QString&,
+              CefRefPtr<CefAuthCallback> callback) {
+    Util::RunOnMainThread([=]() { AuthRequest(realm, callback); });
+  });
 
   InitBrowser(bubble, url);
 }
@@ -351,6 +357,53 @@ void CefWidget::InitBrowser(const Bubble& bubble, const QString& url) {
         CefString(url.toStdString()),
         settings,
         bubble.CreateCefRequestContext());
+}
+
+void CefWidget::AuthRequest(const QString& realm,
+                            CefRefPtr<CefAuthCallback> callback) const {
+  // Make a simple dialog to grab creds
+  auto layout = new QGridLayout;
+  auto header_label =
+      new QLabel(QString("Authentication requested for: ") + realm);
+  header_label->setTextFormat(Qt::PlainText);
+  layout->addWidget(header_label, 0, 0, 1, 2, Qt::AlignCenter);
+  layout->addWidget(new QLabel("Username:"), 1, 0);
+  auto username = new QLineEdit;
+  layout->addWidget(username, 1, 1);
+  layout->setColumnStretch(1, 1);
+  layout->addWidget(new QLabel("Password:"), 2, 0);
+  auto password = new QLineEdit;
+  password->setEchoMode(QLineEdit::Password);
+  layout->addWidget(password, 2, 1);
+  auto buttons = new QDialogButtonBox;
+  buttons->addButton(QDialogButtonBox::Ok);
+  buttons->addButton(QDialogButtonBox::Cancel);
+  layout->addWidget(buttons, 3, 0, 1, 2, Qt::AlignCenter);
+  auto dialog = new QDialog();
+  dialog->setWindowTitle("Authentication Requested");
+  dialog->setLayout(layout);
+  connect(buttons->button(QDialogButtonBox::Ok), &QPushButton::clicked,
+          dialog, &QDialog::accept);
+  connect(buttons->button(QDialogButtonBox::Cancel), &QPushButton::clicked,
+          dialog, &QDialog::reject);
+
+  if (dialog->exec() == QDialog::Accepted) {
+    // TODO(cretz): downstream issue:
+    //  https://bitbucket.org/chromiumembedded/cef/issues/2275
+    if (username->text().isEmpty()) {
+      QMessageBox::critical(dialog, "Empty Username",
+                            "Empty usernames are not currently supported");
+      // Defer a retry
+      QTimer::singleShot(0, [=]() { AuthRequest(realm, callback); });
+      return;
+    }
+    callback->Continue(CefString(username->text().toStdString()),
+                       CefString(password->text().toStdString()));
+  } else {
+    callback->Cancel();
+  }
+
+  dialog->deleteLater();
 }
 
 }  // namespace doogie

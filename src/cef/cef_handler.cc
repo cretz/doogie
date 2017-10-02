@@ -248,4 +248,19 @@ bool CefHandler::OnOpenURLFromTab(
   return true;
 }
 
+bool CefHandler::GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+                                    CefRefPtr<CefFrame> frame,
+                                    bool is_proxy,
+                                    const CefString& host,
+                                    int port,
+                                    const CefString& realm,
+                                    const CefString& scheme,
+                                    CefRefPtr<CefAuthCallback> callback) {
+  emit AuthRequest(frame, is_proxy,
+                   QString::fromStdString(host.ToString()), port,
+                   QString::fromStdString(realm.ToString()),
+                   QString::fromStdString(scheme.ToString()), callback);
+  return true;
+}
+
 }  // namespace doogie

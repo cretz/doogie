@@ -33,9 +33,33 @@ exports.Harness = class Harness {
     return new Promise((resolve, reject) => {
       const resServe = http.createServer((req, res) => {
         const reqUrl = url.parse(req.url, true)
+
+        // We'll ask for auth or check auth ("user"/"pass") if requested
+        if (reqUrl.query['basicAuth']) {
+          let success = false
+          if (req.headers['authorization']) {
+            const pieces = req.headers['authorization'].split(' ', 2)
+            if (pieces.length == 2) {
+              const creds = (new Buffer(pieces[1], 'base64')).toString().split(':', 2)
+              console.log('Creds:', creds)
+              success = creds.length == 2 && creds[0] === 'user' && creds[1] === 'pass'
+            }
+          }
+          // No auth head means ask and leave
+          if (!success) {
+            res.statusCode = 401
+            res.setHeader('WWW-Authenticate', 'Basic realm="Type \'user\' and \'pass\'"')
+            res.end('<html><body>HTTP basic auth requested</body></html>')
+            return
+          }
+        }
+
         res.writeHead(200)
+        
         // We'll just return if it wants us to hang forever
         if (reqUrl.query['loadForever']) return
+
+        // Read what was asked for
         const stream = fs.createReadStream(
           path.join(this.resourceDir, path.normalize(reqUrl.pathname)))
         stream.once('error', e => {

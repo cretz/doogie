@@ -148,6 +148,9 @@ class CefWidget : public CefBaseWidget {
 
   void InitBrowser(const Bubble& bubble, const QString& url);
 
+  void AuthRequest(const QString& realm,
+                   CefRefPtr<CefAuthCallback> callback) const;
+
   CefRefPtr<CefHandler> handler_;
   CefRefPtr<CefBrowser> browser_;
   CefRefPtr<CefHandler> dev_tools_handler_;

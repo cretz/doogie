@@ -395,7 +395,8 @@ void BrowserWidget::RecreateCefWidget(const QString& url,
     //  as much about the transition type.
     // TODO(cretz): Test when title/favicon is not changed or not present
     if (!is_loading) {
-      PageIndex::MarkVisit(CurrentUrl(), current_title_,
+      auto title = current_title_.isNull() ? "" : current_title_;
+      PageIndex::MarkVisit(CurrentUrl(), title,
                            current_favicon_url_, current_favicon_);
     }
 
