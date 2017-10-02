@@ -433,8 +433,13 @@ func copyResourcesLinux(qmakePath string, target string) error {
 		return fmt.Errorf("Unable to find CEF_DIR env var")
 	}
 	// Everything read only except by owner
+	// Copy over crash reporter cfg
+	err := copyAndChmodEachToDirIfNotPresent(0644, ".", target, "crash_reporter.cfg")
+	if err != nil {
+		return err
+	}
 	// Copy over some Qt DLLs
-	err := copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
+	err = copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(filepath.Dir(qmakePath), "../lib"), target,
 		"libQt5Core.so.5",
 		"libQt5Gui.so.5",
 		"libQt5Sql.so.5",
@@ -517,6 +522,11 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	if cefDir == "" {
 		return fmt.Errorf("Unable to find CEF_DIR env var")
 	}
+	// Copy over crash reporter cfg
+	err := copyEachToDirIfNotPresent(".", target, "crash_reporter.cfg")
+	if err != nil {
+		return err
+	}
 	// Copy over some Qt DLLs
 	qtDlls := []string{
 		"Qt5Core.dll",
@@ -536,7 +546,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 			qtDlls = append(qtDlls, strings.Replace(dll, ".dll", ".pdb", -1))
 		}
 	}
-	err := copyEachToDirIfNotPresent(filepath.Dir(qmakePath), target, qtDlls...)
+	err = copyEachToDirIfNotPresent(filepath.Dir(qmakePath), target, qtDlls...)
 	if err != nil {
 		return err
 	}

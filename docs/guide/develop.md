@@ -14,6 +14,10 @@ Any bugs or enhancement requests can be filed in via [GitHub issues](https://git
 filing a bug, please try to be as descriptive as possible on the issue. Ideally, provide a page or set of pages that
 trigger the error.
 
+If there is a crash, the crash file will be dumped on the user's computer. This can be found at
+`C:\Users\USER_NAME\AppData\Local\Doogie\User Data\Crashpad\reports` on Windows (TODO: where on Linux). Please upload
+this file to the issue tracker for bugs about crashes.
+
 If you are a developer, one of the easiest ways to do this is to add the pages to `src/tests/integration/resources`.
 Then by running `npm run resource-server` from `src/tests/integration` the resources can be browsed via
 http://127.0.0.1:1993 (e.g. [http://127.0.0.1:1993/hello-world.html](http://127.0.0.1:1993/hello-world.html)).
