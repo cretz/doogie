@@ -1225,7 +1225,10 @@ PageTreeItem* PageTree::AddBrowser(QPointer<BrowserWidget> browser,
       parent = browser_item;
     }
     NewPage(url, parent, make_current);
-    if (make_current) browser_item->Browser()->FocusBrowser();
+    // Regardless of how the page is opened, set the focus on
+    //  the current browser
+    auto curr_browser = browser_stack_->CurrentBrowser();
+    if (curr_browser) curr_browser->FocusBrowser();
   });
   return browser_item;
 }

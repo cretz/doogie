@@ -155,6 +155,10 @@ void BrowserWidget::FocusUrlEdit() {
 }
 
 void BrowserWidget::FocusBrowser() {
+  // We clear the focus here first because sometimes this is called
+  //  when it already has focus, but we need to trigger a "change"
+  //  so the underlying piece gets focus.
+  cef_widg_->clearFocus();
   cef_widg_->setFocus();
 }
 

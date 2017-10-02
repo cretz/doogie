@@ -84,7 +84,9 @@ void CefHandler::OnGotFocus(CefRefPtr<CefBrowser> /*browser*/) {
 }
 
 bool CefHandler::OnSetFocus(CefRefPtr<CefBrowser>, FocusSource) {
-  return false;
+  // The return value needs to be true to cancel setting focus. We only
+  //  cancel if the callback says focus is NOT allowed.
+  return focus_allowed_callback_ && !focus_allowed_callback_();
 }
 
 void CefHandler::OnTakeFocus(CefRefPtr<CefBrowser>, bool) {

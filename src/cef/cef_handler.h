@@ -129,6 +129,10 @@ class CefHandler :
                     bool final_update) override;
 
   // Focus handler overrides...
+  typedef std::function<bool()> FocusAllowedCallback;
+  void SetFocusAllowedCallback(FocusAllowedCallback callback) {
+    focus_allowed_callback_ = callback;
+  }
   void OnGotFocus(CefRefPtr<CefBrowser> browser) override;
   bool OnSetFocus(CefRefPtr<CefBrowser> browser, FocusSource source) override;
   void OnTakeFocus(CefRefPtr<CefBrowser> browser, bool next) override;
@@ -280,6 +284,7 @@ class CefHandler :
  private:
   bool load_start_js_no_op_to_create_context_ = true;
   bool popup_as_page_open_ = true;
+  FocusAllowedCallback focus_allowed_callback_ = nullptr;
   JsDialogCallback js_dialog_callback_ = nullptr;
   PreKeyCallback pre_key_callback_ = nullptr;
   ResourceLoadCallback resource_load_callback_ = nullptr;

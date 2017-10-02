@@ -13,6 +13,7 @@ CefWidget::CefWidget(const Cef& cef,
   handler_ = CefRefPtr<CefHandler>(new CefHandler);
   ForwardKeyboardEventsFrom(handler_);
   setFocusPolicy(Qt::StrongFocus);
+  handler_->SetFocusAllowedCallback([=]() { return hasFocus(); });
   connect(handler_, &CefHandler::PreContextMenu,
           this, &CefWidget::PreContextMenu);
   connect(handler_, &CefHandler::ContextMenuCommand,
@@ -261,8 +262,7 @@ void CefWidget::ApplyFullscreen(bool fullscreen) {
 
 void CefWidget::focusInEvent(QFocusEvent* event) {
   QWidget::focusInEvent(event);
-  // Only focus the browser if it has a document
-  if (HasDocument()) {
+  if (browser_) {
     browser_->GetHost()->SetFocus(true);
   }
 }
