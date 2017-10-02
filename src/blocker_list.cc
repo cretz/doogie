@@ -318,7 +318,7 @@ void BlockerList::ApplySqlRecord(const QSqlRecord& record) {
 }
 
 void BlockerList::UpdateFromMeta(BlockerRules::ListMetadata meta) {
-  if (!meta.title.isEmpty()) name_ = meta.title;
+  name_ = meta.title.isEmpty() ? "" : meta.title;
   if (!meta.homepage.isEmpty()) homepage_ = meta.homepage;
   // We have decided not to support redirect
   // if (!meta.redirect.isEmpty()) url_ = meta.redirect;
