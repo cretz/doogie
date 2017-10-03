@@ -24,7 +24,7 @@ class MainWindow : public QMainWindow {
   ~MainWindow();
 
   static void EditProfileSettings(std::function<void(ProfileSettingsDialog*)>
-                                  adjust_dialog_before_show = nullptr);
+                                  adjust_dialog_before_exec = nullptr);
 
   QJsonObject DebugDump() const;
 

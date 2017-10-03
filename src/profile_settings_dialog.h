@@ -19,7 +19,13 @@ class ProfileSettingsDialog : public QDialog {
                                  QWidget* parent = nullptr);
   void SetCurrentTab(int index) { tabs_->setCurrentIndex(index); }
   bool NeedsRestart() const { return needs_restart_; }
+  void TryAddBlockerListUrl(const QString& url) {
+    try_add_blocker_list_url_(url);
+  }
   void done(int r) override;
+
+ signals:
+  void BlockerUrlLoadComplete(BlockerList list, bool ok);
 
  protected:
   void closeEvent(QCloseEvent* event) override;
@@ -35,9 +41,7 @@ class ProfileSettingsDialog : public QDialog {
   QWidget* CreateShortcutsTab();
   QWidget* CreateBubblesTab();
   QWidget* CreateBlockerTab(const Cef& cef);
-  void AddBlockerListUrl(const Cef& cef,
-                         const QString& default_url,
-                         std::function<void(BlockerList, bool)> callback);
+  void AddBlockerListUrl(const Cef& cef, const QString& default_url);
 
   QTabWidget* tabs_;
   QSet<qlonglong> in_use_bubble_ids_;
@@ -51,6 +55,7 @@ class ProfileSettingsDialog : public QDialog {
   // Value is url or local path
   QSet<QString> enabled_blocker_lists_;
   QList<qlonglong> blocker_list_ids_pending_refresh_;
+  std::function<void(const QString&)> try_add_blocker_list_url_;
 
  signals:
   void Changed();

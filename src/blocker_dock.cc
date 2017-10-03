@@ -113,6 +113,20 @@ BlockerDock::BlockerDock(const Cef& cef,
         [=](BrowserWidget* browser,
             CefRefPtr<CefFrame> frame,
             CefRefPtr<CefRequest> request) -> bool {
+    // If the URL is an abp:subscribe URL, add it
+    auto url_str = QString::fromStdString(request->GetURL().ToString());
+    if (url_str.startsWith("abp:subscribe")) {
+      QUrl url(url_str);
+      QUrlQuery url_query(url);
+      auto location = url_query.queryItemValue("location", QUrl::FullyDecoded);
+      if (!location.isEmpty()) {
+        // Defer the subscription so we can cancel the load right now
+        Util::RunOnMainThread([=]() {
+          QTimer::singleShot(0, [=]() { SubscribeRuleList(location); });
+        });
+        return false;
+      }
+    }
     return IsAllowedToLoad(browser, frame, request);
   });
 
@@ -401,6 +415,14 @@ BlockerRules::StaticRule::RequestType BlockerDock::TypeFromRequest(
   // TODO(cretz): Need to support webrtc blocking
   // TODO(cretz): Need to support popup
   return BlockerRules::StaticRule::Other;
+}
+
+void BlockerDock::SubscribeRuleList(const QString& url) {
+  // We show the settings dialog, and attempt to add the URL
+  MainWindow::EditProfileSettings([=](ProfileSettingsDialog* dialog) {
+    dialog->SetCurrentTab(3);
+    dialog->TryAddBlockerListUrl(url);
+  });
 }
 
 }  // namespace doogie

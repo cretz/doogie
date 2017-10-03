@@ -139,7 +139,7 @@ bool BlockerList::Delete() {
                            "DELETE FROM blocker_list WHERE id = ?",
                            { id_ });
   if (!ok) return false;
-  // Try to delete the local file if it had a url
+  // Try to delete the local cache file if it had a url
   if (!url_.isEmpty()) {
     QFile(local_path_).remove();
   }

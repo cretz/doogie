@@ -55,6 +55,8 @@ class BlockerDock : public QDockWidget {
       const QUrl& target_url,
       CefRefPtr<CefRequest> request);
 
+  void SubscribeRuleList(const QString& url);
+
   const Cef& cef_;
   QTableWidget* table_;
   QCheckBox* current_only_;

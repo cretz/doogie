@@ -108,13 +108,17 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::EditProfileSettings(
-    std::function<void(ProfileSettingsDialog*)> adjust_dialog_before_show) {
+    std::function<void(ProfileSettingsDialog*)> adjust_dialog_before_exec) {
   QSet<qlonglong> in_use_ids;
   for (auto browser : instance_->browser_stack_->Browsers()) {
     in_use_ids << browser->CurrentBubble().Id();
   }
   ProfileSettingsDialog dialog(instance_->cef_, in_use_ids, instance_);
-  if (adjust_dialog_before_show) adjust_dialog_before_show(&dialog);
+  if (adjust_dialog_before_exec) {
+    // We still show this first so it will appear in the background
+    dialog.show();
+    adjust_dialog_before_exec(&dialog);
+  }
   if (dialog.exec() == QDialog::Accepted) {
     if (QDialog::Accepted && dialog.NeedsRestart()) {
       instance_->launch_with_profile_on_close_ = Profile::Current().Path();

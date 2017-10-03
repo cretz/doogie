@@ -14,6 +14,7 @@ ProfileSettingsDialog::ProfileSettingsDialog(const Cef& cef,
     : QDialog(parent),
       in_use_bubble_ids_(in_use_bubble_ids),
       profile_(Profile::Current()) {
+  setWindowModality(Qt::WindowModal);
   temp_bubbles_ = Bubble::CachedBubbles();
   auto layout = new QGridLayout;
   layout->addWidget(
@@ -96,12 +97,14 @@ void ProfileSettingsDialog::keyPressEvent(QKeyEvent* event) {
 bool ProfileSettingsDialog::Save() {
   // Save the rule list stuff
   QSet<qlonglong> enabled_blocker_list_ids;
+  QSet<qlonglong> all_list_ids;
   for (auto& list : temp_blocker_lists_.values()) {
     if (list.Exists() &&
         blocker_list_ids_pending_refresh_.contains(list.Id())) {
       list.SetLastRefreshed(QDateTime());
     }
     if (!list.Persist()) return false;
+    all_list_ids << list.Id();
     if (enabled_blocker_lists_.contains(list.UrlOrLocalPath())) {
       enabled_blocker_list_ids << list.Id();
     }
@@ -127,7 +130,15 @@ bool ProfileSettingsDialog::Save() {
 
   // Save the profile stuff (ignore failures for now...)
   Profile::Current().CopySettingsFrom(profile_);
-  return Profile::Current().Persist();
+  if (!Profile::Current().Persist()) return false;
+
+  // Delete the lists no longer there
+  for (auto& list : orig_blocker_lists_) {
+    if (list.Exists() && !all_list_ids.contains(list.Id())) {
+      if (!list.Delete()) return false;
+    }
+  }
+  return true;
 }
 
 bool ProfileSettingsDialog::SettingsChanged() const {
@@ -153,10 +164,13 @@ bool ProfileSettingsDialog::BlockerChanged() const {
       return true;
     }
   }
-  // They can only change the name on local ones
+
   for (const auto& orig_list : orig_blocker_lists_) {
-    if (orig_list.IsLocalOnly() && orig_list.Name() !=
-        temp_blocker_lists_.value(orig_list.UrlOrLocalPath()).Name()) {
+    auto temp_list = temp_blocker_lists_.value(orig_list.UrlOrLocalPath());
+    // IDs have to match
+    if (orig_list.Id() != temp_list.Id()) return true;
+    // They can only change the name on local ones
+    if (orig_list.IsLocalOnly() && orig_list.Name() != temp_list.Name()) {
       return true;
     }
   }
@@ -775,12 +789,17 @@ QWidget* ProfileSettingsDialog::CreateBlockerTab(const Cef& cef) {
   add_url_button->setText("Add From URL");
   button_layout->addWidget(add_url_button);
   connect(add_url_button, &QToolButton::clicked, [=, &cef](bool) {
-    AddBlockerListUrl(cef, "", [=](BlockerList list, bool ok) {
-      if (ok) {
-        add_blocker_list(list);
-        emit Changed();
-      }
-    });
+    AddBlockerListUrl(cef, "");
+  });
+  try_add_blocker_list_url_ = [=, &cef](const QString& url) {
+    AddBlockerListUrl(cef, url);
+  };
+  connect(this, &ProfileSettingsDialog::BlockerUrlLoadComplete,
+          [=](BlockerList list, bool ok) {
+    if (ok) {
+      add_blocker_list(list);
+      emit Changed();
+    }
   });
 
   auto add_local_button = new QToolButton;
@@ -886,53 +905,52 @@ QWidget* ProfileSettingsDialog::CreateBlockerTab(const Cef& cef) {
   return widg;
 }
 
-void ProfileSettingsDialog::AddBlockerListUrl(
-    const Cef& cef,
-    const QString& default_url,
-    std::function<void(BlockerList, bool)> callback) {
+void ProfileSettingsDialog::AddBlockerListUrl(const Cef& cef,
+                                              const QString& default_url) {
   BlockerList empty;
   auto url = QInputDialog::getText(
       this, "Add Blocker List From URL", "List URL:",
       QLineEdit::Normal, default_url, nullptr, Qt::WindowFlags(),
       Qt::ImhUrlCharactersOnly);
   if (url.isEmpty()) {
-    callback(empty, false);
+    emit BlockerUrlLoadComplete(empty, false);
     return;
   }
   if (temp_blocker_lists_.contains(url)) {
     QMessageBox::warning(this, "Add Blocker List", "URL already exists.");
-    QTimer::singleShot(0, [=, &cef, &callback]() {
-      AddBlockerListUrl(cef, url, callback);
-    });
+    emit BlockerUrlLoadComplete(empty, false);
     return;
   }
-  auto dialog = new QProgressDialog("Loading List", "Cancel Load", 0, 0);
+
+  // Open the progress dialog. We do this in a pointer so we can know
+  //  when it's deleted in the callback
+  QPointer<QProgressDialog> progress_dialog =
+      new QProgressDialog("Loading List", "Cancel Load", 0, 0, this);
+  progress_dialog->setWindowModality(Qt::WindowModal);
+  progress_dialog->setMinimumDuration(0);
+  // Resulting list, holds one or none
+  QList<BlockerList> done_list;
   auto cancel = BlockerList::FromUrl(
-        cef, url,
-        [=, &cef](BlockerList list, bool ok) {
-    dialog->reset();
-    dialog->deleteLater();
-    if (!ok) {
-      QMessageBox::warning(this, "Add Blocker List", "Failed to load list.");
-      QTimer::singleShot(0, [=, &cef]() {
-        AddBlockerListUrl(cef, url, callback);
-      });
-      return;
+        cef, url, [=, &done_list](BlockerList list, bool ok) {
+    // We only add this to the done list if the progress dialog is still around
+    if (progress_dialog) {
+      if (ok) done_list << list;
+      progress_dialog->done(ok ? QDialog::Accepted : QDialog::Rejected);
     }
-    if (temp_blocker_lists_.contains(list.Url())) {
-      QMessageBox::warning(this, "Add Blocker List", "URL already exists.");
-      QTimer::singleShot(0, [=, &cef]() {
-        AddBlockerListUrl(cef, url, callback);
-      });
-      return;
-    }
-    callback(list, true);
   });
-  connect(dialog, &QProgressDialog::canceled, [=]() {
-    qDebug() << "Progress cancelled";
-    cancel();
-  });
-  dialog->open();
+  connect(progress_dialog, &QProgressDialog::canceled, cancel);
+  auto result = progress_dialog->exec();
+  // Delete the dialog right away so the callback can't see it
+  delete progress_dialog;
+  if (result == QDialog::Rejected || done_list.isEmpty()) {
+    QMessageBox::warning(nullptr, "Add Blocker List", "Failed to load list.");
+    emit BlockerUrlLoadComplete(empty, false);
+  } else if (temp_blocker_lists_.contains(done_list.first().Url())) {
+    QMessageBox::warning(nullptr, "Add Blocker List", "URL already exists.");
+    emit BlockerUrlLoadComplete(empty, false);
+  } else {
+    emit BlockerUrlLoadComplete(done_list.first(), true);
+  }
 }
 
 }  // namespace doogie
