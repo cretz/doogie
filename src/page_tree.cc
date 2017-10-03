@@ -1261,6 +1261,9 @@ void PageTree::CloseItem(PageTreeItem* item,
   item->SetPersistNextCloseToWorkspace(workspace_persist);
   // We only close children if we're not expanded unless we're foreced
   if (force_close_children || !item->isExpanded()) {
+    // We need to collapse ALL children to make sure this gets
+    //  grandchildren too
+    item->CollapseSelfAndChildren();
     // Close backwards up the list
     for (int i = item->childCount() - 1; i >= 0; i--) {
       auto child = AsPageTreeItem(item->child(i));
