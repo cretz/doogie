@@ -248,7 +248,7 @@ bool CefHandler::OnOpenURLFromTab(
   return true;
 }
 
-bool CefHandler::GetAuthCredentials(CefRefPtr<CefBrowser> browser,
+bool CefHandler::GetAuthCredentials(CefRefPtr<CefBrowser> /*browser*/,
                                     CefRefPtr<CefFrame> frame,
                                     bool is_proxy,
                                     const CefString& host,
