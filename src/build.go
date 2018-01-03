@@ -177,7 +177,7 @@ func pkg() error {
 	}
 
 	// And other dirs if present in folder
-	subDirs := []string{"imageformats", "locales", "platforms", "sqldrivers"}
+	subDirs := []string{"imageformats", "locales", "platforms", "sqldrivers", "styles"}
 	for _, subDir := range subDirs {
 		srcDir := filepath.Join(target, subDir)
 		if _, err = os.Stat(srcDir); err == nil {
@@ -565,6 +565,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	copyPlugins(qmakePath, target, "imageformats", "qgif")
 	copyPlugins(qmakePath, target, "platforms", "qwindows")
 	copyPlugins(qmakePath, target, "sqldrivers", "qsqlite")
+	copyPlugins(qmakePath, target, "styles", "qwindowsvistastyle")
 
 	// Copy over CEF libs
 	err = copyEachToDirIfNotPresent(filepath.Join(cefDir, strings.Title(target)), target,

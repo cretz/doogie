@@ -135,7 +135,6 @@ void PageTreeItem::AfterAdded() {
 
   // Set the icon
   auto label = new QLabel;
-  label->setFixedWidth(16);
   label->setAlignment(Qt::AlignCenter);
   label->setPixmap(browser_->CurrentBubble().Icon().pixmap(16, 16));
   label->setToolTip("Bubble: " + browser_->CurrentBubble().FriendlyName());
