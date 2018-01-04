@@ -123,6 +123,10 @@ func build(extraQmakeArgs ...string) error {
 	makeArgs := []string{}
 	if runtime.GOOS == "windows" {
 		makeExe = "nmake.exe"
+		// Use jom instead if it's on the path
+		if _, err = exec.LookPath("jom.exe"); err == nil {
+			makeExe = "jom.exe"
+		}
 		// This version takes the target name unlike the Linux one
 		makeArgs = []string{target, "/NOLOGO"}
 	}

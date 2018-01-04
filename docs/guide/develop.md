@@ -33,13 +33,15 @@ All instructions below assume the user is in the `src` folder.
 
 Before running the build script on Windows, you must have the prerequisites:
 
-* Latest Qt (5.x) installed w/ `qmake.exe` on the `PATH`
 * Latest CMake installed w/ `cmake.exe` on the `PATH`
 * Latest Python (2.x) installed w/ `python.exe` on the `PATH`
 * Latest Go installed w/ `go.exe` on the `PATH`
-* [MSVC 2015 Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools) installed w/ the following
-  executed to put 64-bit VC compiler on the `PATH`:
-  `"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64`
+* [MSVC 2015 or 2017 Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools) installed w/ the following
+  executed to put 64-bit VC compiler on the `PATH` for MSVC 2015:
+  `"C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64`. Or the following executed for MSVC
+  2017: `"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64`.
+* Latest Qt (5.x) installed w/ `qmake.exe` on the `PATH` corresponding to the chosen MSVC version
+* Optionally, [jom.exe](https://wiki.qt.io/Jom) on the `PATH` to speed up builds
 * Latest [Windows 64-bit standard dist of CEF](http://opensource.spotify.com/cefbuilds/index.html#windows64_builds)
   extracted w/ `CEF_DIR` environment variable set to the base CEF extracted dir
 * This repo cloned w/ the shell at the `src` folder
