@@ -326,6 +326,7 @@ BlockerRules::StaticRule* BlockerRules::StaticRule::ParseRule(
       } else {
         // TODO(cretz): sitekey, donottrack
         qDebug() << "Line" << line_num << "unrecognized option:" << option;
+        return nullptr;
       }
     }
     rule_bytes = rule_bytes.left(dollar);
