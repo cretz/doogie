@@ -34,9 +34,6 @@ void CefAppHandler::OnContextCreated(CefRefPtr<CefBrowser> browser,
       "<doogie>",
       0);
 
-  // Temporarily disable SharedArrayBuffer, ref: https://github.com/cretz/doogie/issues/68
-  frame->ExecuteJavaScript("delete window.SharedArrayBuffer", "<doogie>", 0);
-
   blocker_.OnFrameCreated(browser, frame, context);
 }
 
