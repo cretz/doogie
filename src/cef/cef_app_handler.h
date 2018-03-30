@@ -28,22 +28,6 @@ class CefAppHandler :
   }
 
   // Render process handler overrides...
-  bool OnBeforeNavigation(
-      CefRefPtr<CefBrowser> browser,
-      CefRefPtr<CefFrame> frame,
-      CefRefPtr<CefRequest> request,
-      CefRenderProcessHandler::NavigationType navigation_type,
-      bool is_redirect) override;
-
-  void SetBeforeNavCallback(
-      std::function<bool(CefRefPtr<CefBrowser>,
-                         CefRefPtr<CefFrame>,
-                         CefRefPtr<CefRequest>,
-                         CefRenderProcessHandler::NavigationType,
-                         bool)> before_nav_callback) {
-    before_nav_callback_ = before_nav_callback;
-  }
-
   void OnContextCreated(CefRefPtr<CefBrowser> browser,
                         CefRefPtr<CefFrame> frame,
                         CefRefPtr<CefV8Context> context) override;
@@ -52,11 +36,6 @@ class CefAppHandler :
 
  private:
   CosmeticBlocker blocker_;
-  std::function<bool(CefRefPtr<CefBrowser>,
-                     CefRefPtr<CefFrame>,
-                     CefRefPtr<CefRequest>,
-                     CefRenderProcessHandler::NavigationType,
-                     bool)> before_nav_callback_;
 
   IMPLEMENT_REFCOUNTING(CefAppHandler)
 };
