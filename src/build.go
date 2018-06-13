@@ -493,6 +493,7 @@ func copyResourcesLinux(qmakePath string, target string) error {
 		"libcef.so",
 		"natives_blob.bin",
 		"snapshot_blob.bin",
+		"v8_context_snapshot.bin",
 	)
 	if err != nil {
 		return err
@@ -577,6 +578,7 @@ func copyResourcesWindows(qmakePath string, target string) error {
 		"chrome_elf.dll",
 		"natives_blob.bin",
 		"snapshot_blob.bin",
+		"v8_context_snapshot.bin",
 		"d3dcompiler_43.dll",
 		"d3dcompiler_47.dll",
 		"libEGL.dll",

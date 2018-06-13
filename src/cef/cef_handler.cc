@@ -221,7 +221,8 @@ CefRequestHandler::ReturnValue CefHandler::OnBeforeResourceLoad(
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> /*browser*/,
                                 CefRefPtr<CefFrame> /*frame*/,
                                 CefRefPtr<CefRequest> /*request*/,
-                                bool) {
+                                bool /*user_gesture*/,
+                                bool /*is_redirect*/) {
   return false;
 }
 
