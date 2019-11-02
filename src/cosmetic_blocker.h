@@ -24,7 +24,7 @@ class CosmeticBlocker {
                  CefString& exception) override;
 
    private:
-    IMPLEMENT_REFCOUNTING(MutationCallback)
+    IMPLEMENT_REFCOUNTING(MutationCallback);
   };
 };
 

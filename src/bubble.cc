@@ -306,9 +306,6 @@ void Bubble::ApplyBrowserSettings(
 void Bubble::ApplyBrowserSettings(
     const QHash<BrowserSetting::SettingKey, bool>& source,
     CefRequestContextSettings* target) {
-  if (source.value(BrowserSetting::EnableNetSecurityExpiration, false)) {
-    target->enable_net_security_expiration = 1;
-  }
   if (source.value(BrowserSetting::PersistUserPreferences, false)) {
     target->persist_user_preferences = 1;
   }
@@ -317,9 +314,6 @@ void Bubble::ApplyBrowserSettings(
 void Bubble::ApplyBrowserSettings(
     const QHash<BrowserSetting::SettingKey, bool>& source,
     CefSettings* target) {
-  if (source.value(BrowserSetting::EnableNetSecurityExpiration, false)) {
-    target->enable_net_security_expiration = 1;
-  }
   if (source.value(BrowserSetting::PersistUserPreferences, false)) {
     target->persist_user_preferences = 1;
   }

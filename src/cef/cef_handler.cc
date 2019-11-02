@@ -150,6 +150,7 @@ bool CefHandler::OnBeforePopup(
     CefWindowInfo&,
     CefRefPtr<CefClient>&,
     CefBrowserSettings&,
+    CefRefPtr<CefDictionaryValue>&,
     bool*) {
   if (popup_as_page_open_) {
     emit PageOpen(static_cast<WindowOpenType>(target_disposition),
@@ -207,17 +208,6 @@ void CefHandler::OnLoadError(CefRefPtr<CefBrowser> /*browser*/,
                  QString::fromStdString(failed_url.ToString()));
 }
 
-CefRequestHandler::ReturnValue CefHandler::OnBeforeResourceLoad(
-    CefRefPtr<CefBrowser> /*browser*/,
-    CefRefPtr<CefFrame> frame,
-    CefRefPtr<CefRequest> request,
-    CefRefPtr<CefRequestCallback> /*callback*/) {
-  if (resource_load_callback_ && !resource_load_callback_(frame, request)) {
-    return RV_CANCEL;
-  }
-  return RV_CONTINUE;
-}
-
 bool CefHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> /*browser*/,
                                 CefRefPtr<CefFrame> /*frame*/,
                                 CefRefPtr<CefRequest> /*request*/,
@@ -249,19 +239,41 @@ bool CefHandler::OnOpenURLFromTab(
   return true;
 }
 
+CefRefPtr<CefResourceRequestHandler> CefHandler::GetResourceRequestHandler(
+    CefRefPtr<CefBrowser> /*browser*/,
+    CefRefPtr<CefFrame> /*frame*/,
+    CefRefPtr<CefRequest> /*request*/,
+    bool /*is_navigation*/,
+    bool /*is_download*/,
+    const CefString& /*request_initiator*/,
+    bool& /*disable_default_handling*/) {
+  return this;
+}
+
 bool CefHandler::GetAuthCredentials(CefRefPtr<CefBrowser> /*browser*/,
-                                    CefRefPtr<CefFrame> frame,
+                                    const CefString& origin_url,
                                     bool is_proxy,
                                     const CefString& host,
                                     int port,
                                     const CefString& realm,
                                     const CefString& scheme,
                                     CefRefPtr<CefAuthCallback> callback) {
-  emit AuthRequest(frame, is_proxy,
+  emit AuthRequest(QString::fromStdString(origin_url.ToString()), is_proxy,
                    QString::fromStdString(host.ToString()), port,
                    QString::fromStdString(realm.ToString()),
                    QString::fromStdString(scheme.ToString()), callback);
   return true;
+}
+
+CefResourceRequestHandler::ReturnValue CefHandler::OnBeforeResourceLoad(
+    CefRefPtr<CefBrowser> /*browser*/,
+    CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefRequest> request,
+    CefRefPtr<CefRequestCallback> /*callback*/) {
+  if (resource_load_callback_ && !resource_load_callback_(frame, request)) {
+    return RV_CANCEL;
+  }
+  return RV_CONTINUE;
 }
 
 }  // namespace doogie

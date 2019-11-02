@@ -24,7 +24,8 @@ class CefHandler :
     public CefKeyboardHandler,
     public CefLifeSpanHandler,
     public CefLoadHandler,
-    public CefRequestHandler {
+    public CefRequestHandler,
+    public CefResourceRequestHandler {
   Q_OBJECT
 
  public:
@@ -187,6 +188,7 @@ class CefHandler :
       CefWindowInfo& windowInfo,
       CefRefPtr<CefClient>& client,
       CefBrowserSettings& settings,  // NOLINT(runtime/references)
+      CefRefPtr<CefDictionaryValue>& extra_info,
       bool* no_javascript_access) override;
   bool DoClose(CefRefPtr<CefBrowser> browser) override;
   void OnAfterCreated(CefRefPtr<CefBrowser> browser) override;
@@ -209,17 +211,6 @@ class CefHandler :
                    const CefString& failedUrl) override;
 
   // Request handler overrides...
-  typedef std::function<bool(
-      CefRefPtr<CefFrame> frame,
-      CefRefPtr<CefRequest> request)> ResourceLoadCallback;
-  void SetResourceLoadCallback(ResourceLoadCallback callback) {
-    resource_load_callback_ = callback;
-  }
-  ReturnValue OnBeforeResourceLoad(
-      CefRefPtr<CefBrowser> browser,
-      CefRefPtr<CefFrame> frame,
-      CefRefPtr<CefRequest> request,
-      CefRefPtr<CefRequestCallback> callback) override;
   bool OnBeforeBrowse(CefRefPtr<CefBrowser> browser,
                       CefRefPtr<CefFrame> frame,
                       CefRefPtr<CefRequest> request,
@@ -236,14 +227,35 @@ class CefHandler :
       const CefString& target_url,
       CefRequestHandler::WindowOpenDisposition target_disposition,
       bool user_gesture) override;
+  CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request,
+      bool is_navigation,
+      bool is_download,
+      const CefString& request_initiator,
+      bool& disable_default_handling) override;
   bool GetAuthCredentials(CefRefPtr<CefBrowser> browser,
-                          CefRefPtr<CefFrame> frame,
+                          const CefString& origin_url,
                           bool is_proxy,
                           const CefString& host,
                           int port,
                           const CefString& realm,
                           const CefString& scheme,
                           CefRefPtr<CefAuthCallback> callback) override;
+
+  // Resource request handler overrides...
+  typedef std::function<bool(
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request)> ResourceLoadCallback;
+  void SetResourceLoadCallback(ResourceLoadCallback callback) {
+    resource_load_callback_ = callback;
+  }
+  ReturnValue OnBeforeResourceLoad(
+      CefRefPtr<CefBrowser> browser,
+      CefRefPtr<CefFrame> frame,
+      CefRefPtr<CefRequest> request,
+      CefRefPtr<CefRequestCallback> callback) override;
 
  signals:
   void PreContextMenu(CefRefPtr<CefContextMenuParams> params,
@@ -288,7 +300,7 @@ class CefHandler :
       CefRefPtr<CefSSLInfo> ssl_info,
       CefRefPtr<CefRequestCallback> callback);
   void PageOpen(WindowOpenType type, const QString& url, bool user_gesture);
-  void AuthRequest(CefRefPtr<CefFrame> frame,
+  void AuthRequest(const QString& origin_url,
                    bool is_proxy,
                    const QString& host,
                    int port,
@@ -305,7 +317,7 @@ class CefHandler :
   PreKeyCallback pre_key_callback_ = nullptr;
   ResourceLoadCallback resource_load_callback_ = nullptr;
 
-  IMPLEMENT_REFCOUNTING(CefHandler)
+  IMPLEMENT_REFCOUNTING(CefHandler);
 };
 
 }  // namespace doogie

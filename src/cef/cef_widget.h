@@ -32,8 +32,8 @@ class CefWidget : public CefBaseWidget {
   CefRefPtr<CefSSLStatus> CurrentSSLStatus() const;
   void LoadUrl(const QString& url);
   // No frame means main frame
-  void ShowStringPage(const QString& url,
-                      const QString& contents,
+  void ShowStringPage(const QString& data,
+                      const QString& mime_type,
                       CefRefPtr<CefFrame> frame = nullptr);
   QString CurrentUrl() const;
   bool HasDocument() const;
@@ -120,7 +120,7 @@ class CefWidget : public CefBaseWidget {
                                  CefRefPtr<CefImage> image) override;
    private:
     QPointer<CefWidget> cef_widg_;
-    IMPLEMENT_REFCOUNTING(FaviconDownloadCallback)
+    IMPLEMENT_REFCOUNTING(FaviconDownloadCallback);
     DISALLOW_COPY_AND_ASSIGN(FaviconDownloadCallback);
   };
 
@@ -132,7 +132,7 @@ class CefWidget : public CefBaseWidget {
 
    private:
     std::vector<NavEntry> entries_;
-    IMPLEMENT_REFCOUNTING(NavEntryVisitor)
+    IMPLEMENT_REFCOUNTING(NavEntryVisitor);
   };
 
   class NavEntryCurrentSslVisitor : public CefNavigationEntryVisitor {
@@ -143,7 +143,7 @@ class CefWidget : public CefBaseWidget {
 
    private:
     CefRefPtr<CefSSLStatus> ssl_status_;
-    IMPLEMENT_REFCOUNTING(NavEntryCurrentSslVisitor)
+    IMPLEMENT_REFCOUNTING(NavEntryCurrentSslVisitor);
   };
 
   void InitBrowser(const Bubble& bubble, const QString& url);

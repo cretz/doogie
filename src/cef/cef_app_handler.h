@@ -37,7 +37,7 @@ class CefAppHandler :
  private:
   CosmeticBlocker blocker_;
 
-  IMPLEMENT_REFCOUNTING(CefAppHandler)
+  IMPLEMENT_REFCOUNTING(CefAppHandler);
 };
 
 }  // namespace doogie

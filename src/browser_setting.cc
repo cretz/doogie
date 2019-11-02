@@ -14,12 +14,7 @@ const QList<BrowserSetting> BrowserSetting::kSettings = {
   BrowserSetting(
     BrowserSetting::EnableNetSecurityExpiration,
     "Enable Net Security Expiration?",
-    "Enable date-based expiration of built in network security information "
-    "(i.e. certificate transparency logs, HSTS preloading and pinning "
-    "information). Enabling this option improves network security but may "
-    "cause HTTPS load failures when using CEF binaries built more than 10 "
-    "weeks in the past. See https://www.certificate-transparency.org/ and "
-    "https://www.chromium.org/hsts for details."),
+    "DEPRECATED: No longer takes effect."),
   BrowserSetting(
     BrowserSetting::FileAccessFromFileUrls,
     "File Access From File URLs?",

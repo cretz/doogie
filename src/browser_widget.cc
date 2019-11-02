@@ -127,7 +127,10 @@ BrowserWidget::BrowserWidget(const Cef& cef,
 }
 
 void BrowserWidget::LoadUrl(const QString &url) {
-  url_edit_->setText(url);
+  // If this starts with a data URI for text/html, we are going to be lazy
+  // and assume it's for an error page for now and not change the URL.
+  // TODO: Stop being lazy (and opening security holes) and show errors better
+  if (!url.startsWith("data:text/html;base64,")) url_edit_->setText(url);
   cef_widg_->LoadUrl(url);
 }
 
@@ -184,7 +187,7 @@ QString BrowserWidget::CurrentUrl() const {
   // As a special case, if this URL is invalid, we use
   //  what's in the URL edit box
   auto url = cef_widg_->CurrentUrl();
-  if (url == "data:text/html,chromewebdata") {
+  if (url.startsWith("data:text/html")) {
     url = url_edit_->text();
   }
   return url;
@@ -529,7 +532,10 @@ void BrowserWidget::RecreateCefWidget(const QString& url,
     }
   });
   connect(cef_widg_, &CefWidget::UrlChanged, [=](const QString& url) {
-    url_edit_->setText(url);
+    // If this starts with a data URI for text/html, we are going to be lazy
+    // and assume it's for an error page for now and not change the URL.
+    // TODO: Stop being lazy (and opening security holes) and show errors better
+    if (!url.startsWith("data:text/html;base64,")) url_edit_->setText(url);
   });
 
   if (widg_to_replace) {
@@ -684,7 +690,7 @@ void BrowserWidget::HandleContextMenuCommand(
   }
 }
 
-void BrowserWidget::ShowError(const QString& failed_url,
+void BrowserWidget::ShowError(const QString& /*failed_url*/,
                               const QString& error_text,
                               CefRefPtr<CefFrame> frame) {
   if (!frame || frame->IsMain()) {
@@ -692,10 +698,11 @@ void BrowserWidget::ShowError(const QString& failed_url,
     number_of_load_completes_are_error_ = 2;
   }
   auto new_html =
-      QString("<html><body style=\"background-color: pink;\">"
+      QString("<html><head><title>(error)</title></head>"
+              "<body style=\"background-color: pink;\">"
               "Error loading page: <strong>%1</strong>"
               "</body></html>").arg(error_text);
-  cef_widg_->ShowStringPage(failed_url, new_html, frame);
+  cef_widg_->ShowStringPage(new_html, "text/html", frame);
 }
 
 void BrowserWidget::UpdateSslStatus(bool check_errored) {

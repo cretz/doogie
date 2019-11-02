@@ -100,7 +100,7 @@ class Cef {
                        uint64 current,
                        uint64 total)> download_progress_;
 
-    IMPLEMENT_REFCOUNTING(CallbackFullDownload)
+    IMPLEMENT_REFCOUNTING(CallbackFullDownload);
   };
 
   cef_main_args_t MainArgs(int argc, char* argv[]);

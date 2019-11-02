@@ -579,7 +579,6 @@ func copyResourcesWindows(qmakePath string, target string) error {
 		"natives_blob.bin",
 		"snapshot_blob.bin",
 		"v8_context_snapshot.bin",
-		"d3dcompiler_43.dll",
 		"d3dcompiler_47.dll",
 		"libEGL.dll",
 		"libGLESv2.dll",

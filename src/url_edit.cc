@@ -165,7 +165,7 @@ void UrlEdit::HandleTextEdit(const QString& text) {
   //  doesn't change
   autocomplete_->blockSignals(true);
   autocomplete_->setCurrentRow(0);
-  autocomplete_->blockSignals(false);\
+  autocomplete_->blockSignals(false);
 
   autocomplete_->move(mapToGlobal(rect().bottomLeft()));
   autocomplete_->setFixedWidth(width());

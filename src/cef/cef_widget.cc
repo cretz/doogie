@@ -68,7 +68,7 @@ CefWidget::CefWidget(const Cef& cef,
   connect(handler_, &CefHandler::ShowBeforeUnloadDialog,
           this, &CefWidget::ShowBeforeUnloadDialog);
   connect(handler_, &CefHandler::AuthRequest,
-          [=](CefRefPtr<CefFrame>, bool, const QString&,
+          [=](const QString&, bool, const QString&,
               int, const QString& realm, const QString&,
               CefRefPtr<CefAuthCallback> callback) {
     Util::RunOnMainThread([=]() { AuthRequest(realm, callback); });
@@ -107,13 +107,17 @@ void CefWidget::LoadUrl(const QString& url) {
   }
 }
 
-void CefWidget::ShowStringPage(const QString& url,
-                               const QString& contents,
+void CefWidget::ShowStringPage(const QString& data,
+                               const QString& mime_type,
                                CefRefPtr<CefFrame> frame) {
   if (browser_) {
     auto f = frame ? frame : browser_->GetMainFrame();
-    f->LoadString(CefString(contents.toStdString()),
-                  CefString(url.toStdString()));
+    // Ref https://bitbucket.org/chromiumembedded/cef/issues/2586/loadstring-results-in-terminating-renderer
+    // We must use LoadURL with a data URL
+    std::string data_str = data.toStdString();
+    std::string base64 = CefURIEncode(CefBase64Encode(data_str.data(), data_str.size()), false).ToString();
+    std::string data_uri = "data:" + mime_type.toStdString() + ";base64," + base64;
+    f->LoadURL(data_uri);
   }
 }
 
@@ -356,6 +360,7 @@ void CefWidget::InitBrowser(const Bubble& bubble, const QString& url) {
         handler_,
         CefString(url.toStdString()),
         settings,
+        CefDictionaryValue::Create(),
         bubble.CreateCefRequestContext());
 }
 
