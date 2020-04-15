@@ -491,7 +491,6 @@ func copyResourcesLinux(qmakePath string, target string) error {
 	// Copy over CEF libs
 	err = copyAndChmodEachToDirIfNotPresent(0644, filepath.Join(cefDir, strings.Title(target)), target,
 		"libcef.so",
-		"natives_blob.bin",
 		"snapshot_blob.bin",
 		"v8_context_snapshot.bin",
 	)
@@ -576,7 +575,6 @@ func copyResourcesWindows(qmakePath string, target string) error {
 	err = copyEachToDirIfNotPresent(filepath.Join(cefDir, strings.Title(target)), target,
 		"libcef.dll",
 		"chrome_elf.dll",
-		"natives_blob.bin",
 		"snapshot_blob.bin",
 		"v8_context_snapshot.bin",
 		"d3dcompiler_47.dll",
